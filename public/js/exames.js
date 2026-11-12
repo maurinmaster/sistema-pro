@@ -470,7 +470,7 @@ const ExamesModule = {
 
             let statusBadge = '<span class="status-badge status-pending">Convidado</span>';
             if (c.convite_status === 'pago') {
-                statusBadge = '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">✓ Pago (Asaas)</span>';
+                statusBadge = '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">✓ Pago (Online)</span>';
             } else if (c.convite_status === 'aceito') {
                 statusBadge = '<span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">Aceito (Aguardando Pgto)</span>';
             } else if (c.convite_status === 'recusado') {
@@ -482,13 +482,13 @@ const ExamesModule = {
                 `;
             }
 
-            // Ações e Gateway Asaas
+            // Ações e Cobrança Online
             let asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Aguardando aceite</span>';
             if (c.asaas_invoice_url) {
                 asaasAction = `
                     <div style="display: flex; gap: 6px; align-items: center;">
-                        <a href="${UI.sanitizeUrl(c.asaas_invoice_url)}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="Abrir Fatura do Gateway Asaas">
-                            🔗 Fatura Asaas
+                        <a href="${UI.sanitizeUrl(c.asaas_invoice_url)}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="Abrir Fatura Digital">
+                            🔗 Fatura Digital
                         </a>
                     </div>
                 `;

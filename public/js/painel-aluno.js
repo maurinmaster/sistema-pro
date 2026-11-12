@@ -577,7 +577,7 @@ const PainelAlunoApp = {
                             const vFmt = parseFloat(fatAtrasada.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                             overdueAlertSub.textContent = `Venceu em ${dFmt} • ${vFmt}`;
                         } else {
-                            overdueAlertSub.textContent = 'Regularize via PIX Asaas';
+                            overdueAlertSub.textContent = 'Regularize via PIX';
                         }
                     }
                 }
@@ -2590,7 +2590,7 @@ const PainelAlunoApp = {
                 </button>
             `;
         } else if (ativo.convite_status === 'aceito') {
-            statusPill = `<span class="stat-pill pill-cyan" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; font-weight: 700;">Aguardando Pagamento Asaas</span>`;
+            statusPill = `<span class="stat-pill pill-cyan" style="background: rgba(2, 132, 199, 0.15); color: #0284c7; font-weight: 700;">Aguardando Pagamento</span>`;
             actionBtn = `
                 <button type="button" class="btn btn-primary" onclick="PainelAlunoApp.abrirModalExame(${ativo.convite_id})" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700; color: #fff; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);">
                     <span>Concluir Pagamento PIX (R$ ${valorFmt})</span>
@@ -2678,7 +2678,7 @@ const PainelAlunoApp = {
                     </div>
                     <h4 style="font-size: 16px; font-weight: 800; color: #166534; margin: 0 0 6px 0;">Sua vaga no exame está confirmada!</h4>
                     <p style="font-size: 13px; color: #15803d; margin: 0 0 14px 0; line-height: 1.4;">
-                        O pagamento da taxa de exame foi compensado com sucesso via Gateway Asaas. Parabéns pela dedicação aos treinos marciais!
+                        O pagamento da taxa de exame foi compensado com sucesso. Parabéns pela dedicação aos treinos marciais!
                     </p>
                     <div style="font-size: 12px; color: #64748b;">
                         Data do pagamento: <strong>${convite.data_pagamento ? new Date(convite.data_pagamento).toLocaleString('pt-BR') : 'Hoje'}</strong>
@@ -2694,7 +2694,7 @@ const PainelAlunoApp = {
                 <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 20px; text-align: center;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                        <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">Pagamento da Taxa de Graduação (Asaas)</h4>
+                        <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">Pagamento da Taxa de Graduação</h4>
                     </div>
                     <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">
                         Escaneie o QR Code PIX abaixo ou copie o código Copia e Cola para pagar pelo aplicativo do seu banco:
@@ -2703,7 +2703,7 @@ const PainelAlunoApp = {
                     ${pixQrCodeSrc ? `
                         <div style="display: flex; justify-content: center; margin-bottom: 16px;">
                             <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                                <img src="${pixQrCodeSrc}" alt="QR Code Pix Asaas" style="width: 180px; height: 180px; display: block; object-fit: contain;">
+                                <img src="${pixQrCodeSrc}" alt="QR Code Pix" style="width: 180px; height: 180px; display: block; object-fit: contain;">
                             </div>
                         </div>
                     ` : ''}
@@ -2721,13 +2721,13 @@ const PainelAlunoApp = {
                         ${convite.asaas_invoice_url ? `
                             <a href="${convite.asaas_invoice_url}" target="_blank" 
                                style="padding: 10px 16px; border-radius: 8px; background: #fff; border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                                <span>🔗 Abrir Fatura / Cartão Asaas</span>
+                                <span>🔗 Abrir Fatura / Cartão</span>
                             </a>
                         ` : ''}
                         <button type="button" onclick="PainelAlunoApp.simularPagamentoExame(${convite.convite_id})"
                                 style="padding: 10px 16px; border-radius: 8px; background: #16a34a; border: none; color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
-                                title="Ambiente de Testes / Sandbox Asaas">
-                            <span>⚡ Confirmar Pagamento (Asaas Demo)</span>
+                                title="Ambiente de Testes / Sandbox">
+                            <span>⚡ Confirmar Pagamento (Modo Teste)</span>
                         </button>
                     </div>
                 </div>
@@ -2737,7 +2737,7 @@ const PainelAlunoApp = {
             cobrancaBox.innerHTML = `
                 <div style="text-align: center; padding: 12px 0;">
                     <p style="font-size: 13.5px; color: #475569; margin: 0 0 18px 0; line-height: 1.5;">
-                        Deseja aceitar a convocação para o exame de graduação? Ao aceitar, o Gateway Asaas gerará imediatamente o Pix QR Code e a fatura para pagamento da taxa de <strong>R$ ${valorFmt}</strong>.
+                        Deseja aceitar a convocação para o exame de graduação? Ao aceitar, o sistema gerará imediatamente o Pix QR Code e a fatura para pagamento da taxa de <strong>R$ ${valorFmt}</strong>.
                     </p>
                     <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
                         <button type="button" onclick="PainelAlunoApp.recusarConviteExame(${convite.convite_id})" 
@@ -2746,7 +2746,7 @@ const PainelAlunoApp = {
                         </button>
                         <button type="button" onclick="PainelAlunoApp.aceitarConviteExame(${convite.convite_id})" 
                                 style="padding: 11px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);">
-                            <span>Aceitar e Gerar PIX Asaas</span>
+                            <span>Confirmar e Gerar PIX</span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                         </button>
                     </div>
@@ -2788,7 +2788,7 @@ const PainelAlunoApp = {
 
         } catch (err) {
             console.error('Erro ao aceitar convite:', err);
-            alert('Falha ao processar aceite no Gateway Asaas: ' + err.message);
+            alert('Falha ao processar aceite do exame: ' + err.message);
         }
     },
 
@@ -3142,7 +3142,7 @@ const PainelAlunoApp = {
         box.innerHTML = `
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 16px; text-align: center;">
                 <div class="spinner" style="width: 32px; height: 32px; margin-bottom: 14px;"></div>
-                <strong style="color: #ffffff; font-size: 15px;">Conectando ao Gateway Asaas...</strong>
+                <strong style="color: #ffffff; font-size: 15px;">Conectando ao sistema de pagamento...</strong>
                 <span style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Gerando seu QR Code PIX dinâmico</span>
             </div>
         `;
@@ -3160,7 +3160,7 @@ const PainelAlunoApp = {
 
             const data = await res.json();
             if (!res.ok || !data.success) {
-                throw new Error(data.error || 'Falha ao gerar cobrança no Asaas');
+                throw new Error(data.error || 'Falha ao gerar cobrança');
             }
 
             const fat = data.data;
@@ -3184,7 +3184,7 @@ const PainelAlunoApp = {
 
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
                         <span>📅 Vencimento: <strong>${vencFmt}</strong></span>
-                        <span style="font-size: 11px; color: #94a3b8;">Asaas ID: #${fat.fatura_id}</span>
+                        <span style="font-size: 11px; color: #94a3b8;">Fatura #${fat.fatura_id}</span>
                     </div>
 
                     <div class="asaas-pay-amount-box">
@@ -3208,7 +3208,7 @@ const PainelAlunoApp = {
 
                     ${pixQrSrc ? `
                         <div class="asaas-qr-wrap">
-                            <img src="${pixQrSrc}" alt="QR Code Pix Asaas" class="asaas-qr-img">
+                            <img src="${pixQrSrc}" alt="QR Code Pix" class="asaas-qr-img">
                         </div>
                     ` : ''}
 
@@ -3230,27 +3230,27 @@ const PainelAlunoApp = {
                         ${fat.is_mock ? `
                             <button type="button" onclick="PainelAlunoApp.simularPagamentoMensalidade(${fat.fatura_id})" 
                                     style="width: 100%; padding: 10px 14px; border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #ffffff; font-weight: 800; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
-                                <span>⚡ Simular Confirmação Asaas (Modo Teste)</span>
+                                <span>⚡ Confirmar Pagamento (Modo Teste)</span>
                             </button>
                         ` : ''}
 
                         ${fat.asaas_invoice_url ? `
                             <a href="${fat.asaas_invoice_url}" target="_blank" 
                                style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: #cbd5e1; text-decoration: none; font-size: 12px; font-weight: 600;">
-                                <span>🔗 Pagar com Cartão ou Boleto no Asaas</span>
+                                <span>🔗 Pagar com Cartão ou Boleto</span>
                             </a>
                         ` : ''}
                     </div>
                 </div>
             `;
         } catch (err) {
-            console.error('Erro ao abrir pagamento Asaas:', err);
+            console.error('Erro ao abrir pagamento:', err);
             box.innerHTML = `
                 <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 14px; padding: 24px 16px; text-align: center;">
                     <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
-                    <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 800; color: #fca5a5;">Erro ao Conectar com o Gateway</h4>
+                    <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 800; color: #fca5a5;">Erro ao Gerar Pagamento</h4>
                     <p style="margin: 0 0 16px 0; font-size: 12.5px; color: #fecaca; line-height: 1.45;">
-                        ${this.escapeHtml(err.message || 'Não foi possível gerar a cobrança Asaas. Tente novamente.')}
+                        ${this.escapeHtml(err.message || 'Não foi possível gerar a cobrança. Tente novamente.')}
                     </p>
                     <button type="button" onclick="PainelAlunoApp.openModalPagamentoMensalidade(${targetFatId})" 
                             style="padding: 8px 16px; border-radius: 8px; background: #ef4444; border: none; color: #fff; font-weight: 700; font-size: 12px; cursor: pointer;">
@@ -3313,7 +3313,7 @@ const PainelAlunoApp = {
                             </div>
                             <h4 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #34d399;">Pagamento Confirmado com Sucesso!</h4>
                             <p style="margin: 0 0 16px 0; font-size: 13px; color: #a7f3d0; line-height: 1.45;">
-                                Sua mensalidade foi quitada pelo Gateway Asaas. Seu plano marcial está regularizado e em dia!
+                                Sua mensalidade foi quitada com sucesso. Seu plano marcial está regularizado e em dia!
                             </p>
                             <button type="button" onclick="document.getElementById('modal-pagamento-mensalidade').style.display='none'"
                                     style="padding: 10px 22px; border-radius: 10px; background: #10b981; border: none; color: #ffffff; font-weight: 800; font-size: 13px; cursor: pointer;">
@@ -3649,17 +3649,17 @@ const PainelAlunoApp = {
                 </div>
                 <div style="display: flex; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 8px;">
                     <span style="color: #94a3b8;">Forma de Pagamento:</span>
-                    <strong style="color: #f8fafc; text-transform: uppercase;">${this.escapeHtml(item.metodo_pagamento || (isManual ? 'Dinheiro / Balcão' : 'PIX Asaas'))}</strong>
+                    <strong style="color: #f8fafc; text-transform: uppercase;">${this.escapeHtml(item.metodo_pagamento || (isManual ? 'Dinheiro / Balcão' : 'PIX / Pagamento Online'))}</strong>
                 </div>
                 <div style="display: flex; justify-content: space-between;">
                     <span style="color: #94a3b8;">Canal de Processamento:</span>
-                    <strong style="color: #cbd5e1;">${isManual ? 'Baixa Manual na Recepção / Balcão' : 'Gateway Asaas (PIX / Boleto / Cartão)'}</strong>
+                    <strong style="color: #cbd5e1;">${isManual ? 'Baixa Manual na Recepção / Balcão' : 'Pagamento Online (PIX / Boleto / Cartão)'}</strong>
                 </div>
             </div>
 
             ${item.asaas_payment_id ? `
                 <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 10px; padding: 10px 14px; margin-bottom: 18px; font-size: 11.5px; color: #93c5fd; word-break: break-all;">
-                    <strong>ID Asaas:</strong> ${this.escapeHtml(item.asaas_payment_id)}
+                    <strong>Cód. Transação:</strong> ${this.escapeHtml(item.asaas_payment_id)}
                 </div>
             ` : ''}
 

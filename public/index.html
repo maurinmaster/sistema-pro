@@ -9,11 +9,11 @@
         content="Sistema profissional de gestão de alunos para academias de artes marciais, controle de graduações, menores de idade, faturas e check-in facial.">
 
     <!-- CSS Design Tokens & Components -->
-    <link rel="stylesheet" href="/css/variables.css">
-    <link rel="stylesheet" href="/css/animations.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/components.css">
-    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/variables.css?v=3.7">
+    <link rel="stylesheet" href="/css/animations.css?v=3.7">
+    <link rel="stylesheet" href="/css/style.css?v=3.7">
+    <link rel="stylesheet" href="/css/components.css?v=3.7">
+    <link rel="stylesheet" href="/css/responsive.css?v=3.7">
 </head>
 
 <body>
@@ -720,7 +720,7 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
                         <div>
                             <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0;">Exames de Graduação & Convocação</h2>
-                            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">Configuração de eventos marciais, convocação de atletas aptos e controle de pagamentos via Gateway Asaas</p>
+                            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">Configuração de eventos marciais, convocação de atletas aptos e controle de pagamentos digitais</p>
                         </div>
                         <div style="display: flex; gap: 10px; align-items: center;">
                             <button type="button" class="btn btn-secondary" id="btn-recarregar-exames" title="Recarregar dados">
@@ -791,7 +791,7 @@
                             </div>
                             <div class="stat-value" id="kpi-exames-arrecadado" style="color: #10b981;">R$ 0,00</div>
                             <div class="stat-meta">
-                                <span>Via Gateway Asaas (Pix / Boleto)</span>
+                                <span>Via Pagamentos Online (Pix / Fatura)</span>
                             </div>
                         </div>
                     </div>
@@ -832,7 +832,7 @@
                                     <span class="exame-hub-mini-value" id="detalhe-evento-local">--</span>
                                 </div>
                                 <div class="exame-hub-mini-card" style="border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
-                                    <span class="exame-hub-mini-label" style="color: #34d399;">Taxa Asaas</span>
+                                    <span class="exame-hub-mini-label" style="color: #34d399;">Taxa de Inscrição</span>
                                     <span class="exame-hub-mini-value taxa" id="detalhe-evento-taxa">R$ 0,00</span>
                                 </div>
                             </div>
@@ -855,7 +855,7 @@
                                     <rect x="2" y="4" width="20" height="16" rx="2" />
                                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                                 </svg>
-                                <span>Convites & Inscrições Asaas</span>
+                                <span>Convites & Inscrições</span>
                                 <span class="badge" id="badge-convites-count" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0</span>
                             </button>
                         </div>
@@ -910,7 +910,7 @@
                                             <th>Taxa</th>
                                             <th>Data Convite</th>
                                             <th>Status</th>
-                                            <th>Gateway Asaas</th>
+                                            <th>Pagamento Online</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
@@ -2744,8 +2744,8 @@
     <script src="/js/graduacoes.js"></script>
     <script src="/js/planos.js"></script>
     <script src="/js/wiki.js"></script>
-    <script src="/js/exames.js?v=2.1"></script>
-    <script src="/js/app.js"></script>
+    <script src="/js/exames.js?v=3.7"></script>
+    <script src="/js/app.js?v=3.7"></script>
 </body>
 
 </html>

@@ -872,7 +872,7 @@ router.post('/exames/:conviteId/aceitar', optionalAuth, async (req, res) => {
 
     } catch (err) {
         console.error('Erro ao aceitar convite de exame:', err);
-        res.status(500).json({ success: false, error: 'Erro ao processar aceite e cobrança Asaas: ' + err.message });
+        res.status(500).json({ success: false, error: 'Erro ao processar aceite e cobrança: ' + err.message });
     }
 });
 
@@ -1101,7 +1101,7 @@ router.post('/exames/:conviteId/simular-pagamento', optionalAuth, async (req, re
 
         res.json({
             success: true,
-            message: 'Pagamento simulado e confirmado com sucesso no Gateway Asaas!'
+            message: 'Pagamento simulado e confirmado com sucesso!'
         });
     } catch (err) {
         console.error('Erro ao simular pagamento:', err);

@@ -1534,7 +1534,7 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
                 status_label: isPago ? 'Pago' : (isAtrasado ? 'Em Atraso' : (f.status === 'cancelado' ? 'Cancelado' : 'Pendente')),
                 metodo_pagamento: isPago ? (f.metodo_pagamento || (isManual ? 'dinheiro' : 'pix')) : null,
                 origem_pagamento: isManual ? 'manual' : 'asaas',
-                origem_label: isManual ? 'Manual / Balcão' : 'Gateway Asaas',
+                origem_label: isManual ? 'Manual / Balcão' : 'Pagamento Online',
                 asaas_status: f.asaas_status,
                 asaas_payment_id: f.asaas_payment_id,
                 asaas_invoice_url: f.asaas_invoice_url,
@@ -1566,7 +1566,7 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
                 status_label: isPago ? 'Pago' : (isCancelado ? 'Cancelado' : (c.status === 'aceito' ? 'Aguardando Pagamento' : 'Convocado')),
                 metodo_pagamento: c.asaas_billing_type || 'pix',
                 origem_pagamento: isManual ? 'manual' : 'asaas',
-                origem_label: isManual ? 'Manual / Balcão' : 'Gateway Asaas',
+                origem_label: isManual ? 'Manual / Balcão' : 'Pagamento Online',
                 asaas_status: c.asaas_status,
                 asaas_payment_id: c.asaas_payment_id,
                 asaas_invoice_url: c.asaas_invoice_url,
@@ -1660,11 +1660,11 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Esta fatura já se encontra quitada.' });
         }
 
-        // Se já possui cobrança Asaas ativa e QR Code gerado, retorna imediatamente
+        // Se já possui cobrança ativa e QR Code gerado, retorna imediatamente
         if (fat.asaas_payment_id && fat.asaas_pix_copia_cola) {
             return res.json({
                 success: true,
-                message: 'Cobrança Asaas pronta para pagamento.',
+                message: 'Cobrança pronta para pagamento.',
                 data: {
                     fatura_id: fat.id,
                     competencia: fat.competencia,
@@ -1734,7 +1734,7 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Cobrança Asaas gerada com sucesso!',
+            message: 'Cobrança gerada com sucesso!',
             data: {
                 fatura_id: fat.id,
                 competencia: fat.competencia,
@@ -1750,8 +1750,8 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
             }
         });
     } catch (err) {
-        console.error('Erro ao gerar cobrança Asaas para fatura:', err);
-        res.status(500).json({ success: false, error: err.message || 'Erro ao comunicar com o Gateway Asaas.' });
+        console.error('Erro ao gerar cobrança para fatura:', err);
+        res.status(500).json({ success: false, error: err.message || 'Erro ao comunicar com o serviço de cobrança.' });
     }
 });
 
@@ -1785,7 +1785,7 @@ router.post('/faturas/:id/verificar-asaas', optionalAuth, async (req, res) => {
         }
 
         if (!fat.asaas_payment_id) {
-            return res.status(400).json({ success: false, error: 'Nenhuma cobrança Asaas gerada para esta fatura.' });
+            return res.status(400).json({ success: false, error: 'Nenhuma cobrança ativa gerada para esta fatura.' });
         }
 
         // Se o frontend solicitar simulação de pagamento (ambiente sandbox / mock / teste)
@@ -1822,7 +1822,7 @@ router.post('/faturas/:id/verificar-asaas', optionalAuth, async (req, res) => {
                 WHERE id = ?
             `, [st, fat.id]);
 
-            return res.json({ success: true, pago: true, message: 'Pagamento confirmado com sucesso pelo Asaas!' });
+            return res.json({ success: true, pago: true, message: 'Pagamento confirmado com sucesso!' });
         }
 
         res.json({

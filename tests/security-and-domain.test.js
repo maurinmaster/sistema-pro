@@ -962,7 +962,7 @@ test('Portal do Aluno: Histórico Financeiro Unificado (Mensalidades + Graduaç�
         assert.ok(itemAsaas, 'Fatura Asaas deve constar no histórico');
         assert.equal(itemAsaas.tipo, 'mensalidade');
         assert.equal(itemAsaas.origem_pagamento, 'asaas');
-        assert.equal(itemAsaas.origem_label, 'Gateway Asaas');
+        assert.equal(itemAsaas.origem_label, 'Pagamento Online');
         assert.equal(itemAsaas.status, 'pendente');
 
     } finally {

@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'alunos': { title: 'Gestão de Alunos', desc: 'Dossiê 360°, controle cadastral, responsáveis e graduações' },
                 'checkins': { title: 'Controle de Presença & Check-ins', desc: 'Registro de chamadas, turmas e auditoria de acesso' },
                 'graduacoes': { title: 'Catálogo de Graduações & Exames', desc: 'Faixas, critérios de evolução e quadro de honra' },
-                'exames': { title: 'Exames de Graduação & Convocação', desc: 'Eventos de graduação, convocação de atletas aptos e faturamento Asaas' },
+                'exames': { title: 'Exames de Graduação & Convocação', desc: 'Eventos de graduação, convocação de atletas aptos e controle financeiro' },
                 'financeiro': { title: 'Planos & Gestão Financeira', desc: 'Gestão comercial de planos de treino, mensalidades e faturamento' },
                 'wiki': { title: 'Biblioteca de Golpes & Movimentos (Wiki)', desc: 'Caderno técnico com passo a passo ilustrado, fotos e descrições de execução' }
             };
