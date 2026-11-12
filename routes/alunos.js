@@ -517,13 +517,38 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
 
         const alunoId = result.insertId;
 
-        // Se informou modalidade e nível de graduação inicial
-        if (modalidade_id && graduacao_nivel_id) {
+        // Garante que todo atleta cadastrado já inicie com a primeira graduação
+        let finalModalidadeId = modalidade_id ? parseInt(modalidade_id, 10) : null;
+        let finalGraduacaoNivelId = graduacao_nivel_id ? parseInt(graduacao_nivel_id, 10) : null;
+
+        if (!finalModalidadeId || !finalGraduacaoNivelId) {
+            if (!finalModalidadeId) {
+                const [mods] = await conn.query(`
+                    SELECT id FROM modalidades
+                    WHERE ativo = 1
+                    ORDER BY (nome LIKE '%Muay%') DESC, id ASC
+                    LIMIT 1
+                `);
+                if (mods.length > 0) finalModalidadeId = mods[0].id;
+            }
+
+            if (finalModalidadeId && !finalGraduacaoNivelId) {
+                const [niveis] = await conn.query(`
+                    SELECT id FROM graduacoes_niveis
+                    WHERE modalidade_id = ?
+                    ORDER BY ordem_hierarquica ASC, id ASC
+                    LIMIT 1
+                `, [finalModalidadeId]);
+                if (niveis.length > 0) finalGraduacaoNivelId = niveis[0].id;
+            }
+        }
+
+        if (finalModalidadeId && finalGraduacaoNivelId) {
             await conn.query(`
                 INSERT INTO aluno_graduacoes (
                     aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, observacoes, atual
-                ) VALUES (?, ?, ?, CURDATE(), 'Graduação inicial cadastrada na matrícula.', 1)
-            `, [alunoId, modalidade_id, graduacao_nivel_id]);
+                ) VALUES (?, ?, ?, CURDATE(), 'Graduação inicial automática.', 1)
+            `, [alunoId, finalModalidadeId, finalGraduacaoNivelId]);
         }
 
         // Se informou plano para matrícula imediata (usa MatriculaService centralizado)

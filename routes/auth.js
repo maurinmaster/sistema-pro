@@ -486,6 +486,35 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
 
         const alunoId = alunoResult.insertId;
 
+        // Atribui automaticamente a primeira graduação ao novo atleta cadastrado
+        try {
+            const [mods] = await conn.query(`
+                SELECT id FROM modalidades
+                WHERE ativo = 1
+                ORDER BY (nome LIKE '%Muay%') DESC, id ASC
+                LIMIT 1
+            `);
+            if (mods.length > 0) {
+                const defaultModId = mods[0].id;
+                const [niveis] = await conn.query(`
+                    SELECT id FROM graduacoes_niveis
+                    WHERE modalidade_id = ?
+                    ORDER BY ordem_hierarquica ASC, id ASC
+                    LIMIT 1
+                `, [defaultModId]);
+
+                if (niveis.length > 0) {
+                    await conn.query(`
+                        INSERT INTO aluno_graduacoes (
+                            aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, observacoes, atual
+                        ) VALUES (?, ?, ?, CURDATE(), 'Graduação inicial automática no cadastro.', 1)
+                    `, [alunoId, defaultModId, niveis[0].id]);
+                }
+            }
+        } catch (gradErr) {
+            console.error('[Auth] Aviso: Falha ao atribuir graduação inicial:', gradErr.message);
+        }
+
         // 2. Inserção na tabela relacional de autenticação (usuarios_alunos)
         const [usuarioResult] = await conn.query(`
             INSERT INTO usuarios_alunos (aluno_id, email, senha_hash, status, email_verificado)

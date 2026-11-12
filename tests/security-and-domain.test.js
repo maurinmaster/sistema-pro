@@ -1212,7 +1212,7 @@ test('Gestão de Alunos: Redefinição de Senha, Soft Delete, Lixeira e Exclusã
 // ============================================================================
 // 14. PAINEL DO ALUNO: ALUNO NOVO SEM DADOS SINTÉTICOS OU FICTÍCIOS
 // ============================================================================
-test('Painel do Aluno: Aluno recém-cadastrado não deve conter dados sintéticos ou fictícios', async () => {
+test('Painel do Aluno: Aluno recém-cadastrado deve iniciar com a 1ª graduação e sem medidas/faturas fictícias', async () => {
     const server = app.listen(0);
     const addr = server.address();
     const port = typeof addr === 'object' && addr ? addr.port : 0;
@@ -1221,19 +1221,42 @@ test('Painel do Aluno: Aluno recém-cadastrado não deve conter dados sintético
     let novoAlunoId = null;
 
     try {
-        const [novoIns] = await pool.query(`
-            INSERT INTO alunos (nome_completo, cpf, data_nascimento, genero, email, telefone_whatsapp, status)
-            VALUES ('Atleta Sem Dados Ficticios', '11122233344', '2000-01-01', 'M', 'novo.zerado@exemplo.com', '11999998888', 'ativo')
-        `);
-        novoAlunoId = novoIns.insertId;
+        const adminToken = jwt.sign(
+            { id: 1, email: 'admin@sistema.com', cargo: 'admin' },
+            process.env.JWT_SECRET || 'jwt_secret_dev_123456',
+            { expiresIn: '1h' }
+        );
 
-        // 1. Consulta painel consolidado do novo aluno
+        // 1. Cadastra novo aluno via API sem especificar graduação manualmente
+        const cadRes = await fetch(`${baseUrl}/api/alunos`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                nome_completo: 'Atleta Iniciante Automatico',
+                cpf: '11122233344',
+                data_nascimento: '2000-01-01',
+                genero: 'M',
+                email: 'iniciante.auto@exemplo.com',
+                telefone_whatsapp: '11999998888',
+                status: 'ativo'
+            })
+        });
+
+        assert.equal(cadRes.status, 201, 'Cadastro deve retornar 201');
+        const cadData = await cadRes.json();
+        assert.equal(cadData.success, true);
+        novoAlunoId = cadData.id;
+
+        // 2. Consulta painel consolidado do novo aluno
         const resPainel = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${novoAlunoId}`);
         assert.equal(resPainel.status, 200);
         const dataPainel = await resPainel.json();
 
         assert.equal(dataPainel.success, true);
-        assert.equal(dataPainel.aluno.nome_completo, 'Atleta Sem Dados Ficticios');
+        assert.equal(dataPainel.aluno.nome_completo, 'Atleta Iniciante Automatico');
 
         // Medidas devem ser estritamente nulas sem fallbacks artificiais
         assert.equal(dataPainel.aluno.medidas.peso_kg, null, 'Peso não deve inventar valor fictício');
@@ -1249,14 +1272,19 @@ test('Painel do Aluno: Aluno recém-cadastrado não deve conter dados sintético
         // Situação de plano e financeira
         assert.equal(dataPainel.plano, null, 'Aluno sem matrícula não deve ter objeto de plano');
 
-        // Graduação e avaliações técnicas
-        assert.equal(dataPainel.graduacao.atual, null, 'Aluno novo não deve ter graduação ativa vinculada');
+        // Todo atleta cadastrado já inicia com a primeira graduação
+        assert.ok(dataPainel.graduacao.atual, 'Aluno deve iniciar com graduação inicial');
+        assert.equal(dataPainel.graduacao.atual.nivel_nome, 'Prajied Branco (Iniciante)');
+        assert.ok(dataPainel.graduacao.muay_thai, 'Deve vincular Prajied de Muay Thai');
+        assert.equal(dataPainel.graduacao.muay_thai.ordem_hierarquica, 1);
+
+        // Mas sem avaliação fake do professor
         assert.equal(dataPainel.graduacao.avaliacao, null, 'Aluno novo sem avaliação não deve ter pontuação ou aptidão fake');
-        assert.equal(dataPainel.prontidao_exame.apto_exame, false, 'Aluno sem graduação ou técnicas não deve estar apto para exame');
-        assert.equal(dataPainel.prontidao_exame.percentual_prontidao, 0, 'Prontidão deve ser 0% sem técnicas vinculadas');
+        assert.equal(dataPainel.prontidao_exame.apto_exame, false, 'Aluno novo não deve estar apto para exame de imediato');
+        assert.equal(dataPainel.prontidao_exame.percentual_prontidao, 0, 'Prontidão deve iniciar em 0%');
         assert.equal(dataPainel.frequencia.activity_growth.length, 0, 'Activity growth não deve conter semanas sintéticas simuladas');
 
-        // 2. Consulta histórico financeiro
+        // 3. Consulta histórico financeiro
         const resFin = await fetch(`${baseUrl}/api/aluno/historico-financeiro?aluno_id=${novoAlunoId}`);
         assert.equal(resFin.status, 200);
         const dataFin = await resFin.json();
@@ -1269,6 +1297,7 @@ test('Painel do Aluno: Aluno recém-cadastrado não deve conter dados sintético
 
     } finally {
         if (novoAlunoId) {
+            await pool.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [novoAlunoId]).catch(() => {});
             await pool.query('DELETE FROM alunos WHERE id = ?', [novoAlunoId]).catch(() => {});
         }
         server.close();

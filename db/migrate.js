@@ -386,6 +386,35 @@ async function runMigrations() {
         await ensureColumn('alunos', 'deleted_at', 'DATETIME NULL DEFAULT NULL AFTER updated_at');
         await pool.query('ALTER TABLE alunos ADD INDEX idx_alunos_deleted_at (deleted_at)').catch(() => {});
 
+        // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
+        const [alunosSemGrad] = await pool.query(`
+            SELECT a.id FROM alunos a
+            LEFT JOIN aluno_graduacoes ag ON ag.aluno_id = a.id
+            WHERE a.deleted_at IS NULL AND ag.id IS NULL
+        `);
+
+        if (alunosSemGrad.length > 0) {
+            const [mods] = await pool.query(`
+                SELECT id FROM modalidades WHERE ativo = 1 ORDER BY (nome LIKE '%Muay%') DESC, id ASC LIMIT 1
+            `);
+            if (mods.length > 0) {
+                const modId = mods[0].id;
+                const [niveis] = await pool.query(`
+                    SELECT id FROM graduacoes_niveis WHERE modalidade_id = ? ORDER BY ordem_hierarquica ASC, id ASC LIMIT 1
+                `, [modId]);
+                if (niveis.length > 0) {
+                    const nivelId = niveis[0].id;
+                    for (const a of alunosSemGrad) {
+                        await pool.query(`
+                            INSERT INTO aluno_graduacoes (aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, observacoes, atual)
+                            VALUES (?, ?, ?, CURDATE(), 'Graduação inicial automática.', 1)
+                        `, [a.id, modId, nivelId]);
+                    }
+                    console.log(`🥋 [Migration] Primeira graduação atribuída para ${alunosSemGrad.length} atletas que estavam sem nível.`);
+                }
+            }
+        }
+
         console.log('✅ Schema do banco de dados sincronizado com sucesso!');
     } catch (err) {
         console.error('❌ Erro ao executar migrations:', err.message);
