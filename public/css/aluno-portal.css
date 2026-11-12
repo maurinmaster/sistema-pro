@@ -1,0 +1,1185 @@
+/* ==========================================================================
+   PORTAL DO ALUNO (MOBILE-FIRST) - ESTÉTICA INSPIRADA NO PRINT DE REFERÊNCIA
+   Paleta: Warm Cream (#FAF7F2) + Crisp White Cards (#FFFFFF) + Dark Charcoal Panel (#242427)
+   ========================================================================== */
+
+:root {
+    --portal-bg: #f8f5f0;
+    --portal-surface: #ffffff;
+    --portal-dark: #242427;
+    --portal-dark-card: #323236;
+    --portal-dark-border: rgba(255, 255, 255, 0.09);
+    --portal-text-main: #1f242d;
+    --portal-text-muted: #7c8493;
+    --portal-border: #ece7df;
+
+    --pastel-peach: #f9dcc4;
+    --pastel-peach-icon: #e89958;
+    --pastel-rose: #fbdce2;
+    --pastel-rose-icon: #e06d85;
+    --pastel-sky: #d5f1f9;
+    --pastel-sky-icon: #3ba3c4;
+    --pastel-mint: #c8f7dc;
+    --pastel-mint-text: #137347;
+
+    --radius-xl: 24px;
+    --radius-lg: 18px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+
+    --shadow-soft: 0 10px 30px rgba(31, 36, 45, 0.05);
+    --shadow-dark: 0 18px 40px rgba(0, 0, 0, 0.25);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body.portal-body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: linear-gradient(135deg, #eef1f8 0%, #f9ebe8 100%);
+    color: var(--portal-text-main);
+    min-height: 100vh;
+    padding-bottom: 84px; /* Espaço p/ bottom nav no mobile */
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Container Principal App Shell */
+.portal-shell {
+    max-width: 1380px;
+    margin: 0 auto;
+    background: var(--portal-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* Barra de Navegação (Bottom Bar no Mobile -> Sidebar Slim no Desktop) */
+.portal-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 68px;
+    background: #ffffff;
+    border-top: 1px solid var(--portal-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    z-index: 100;
+    padding: 0 12px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.05);
+}
+
+.portal-brand-logo {
+    display: none;
+}
+
+.portal-nav-links {
+    display: flex;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
+    list-style: none;
+}
+
+.portal-nav-btn {
+    background: transparent;
+    border: none;
+    color: #8c93a0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.portal-nav-btn svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.portal-nav-btn.active {
+    background: #242427;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(36, 36, 39, 0.25);
+}
+
+.portal-nav-badge {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+/* Conteúdo Principal: Mobile-First (Coluna Única -> Grid Duplo no Desktop) */
+.portal-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    padding: 18px 16px 32px;
+    flex: 1;
+}
+
+/* Coluna Clara (Esquerda no Desktop) */
+.portal-main-col {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+    min-width: 0;
+}
+
+/* Top Header */
+.portal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.portal-header-title h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--portal-text-main);
+    letter-spacing: -0.02em;
+}
+
+.portal-header-title p {
+    font-size: 13px;
+    color: var(--portal-text-muted);
+    margin-top: 2px;
+}
+
+.portal-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.portal-icon-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid var(--portal-border);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--portal-text-main);
+    cursor: pointer;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    transition: transform 0.15s ease;
+}
+
+.portal-icon-btn:hover {
+    transform: translateY(-1px);
+}
+
+.portal-avatar-top {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: var(--shadow-soft);
+}
+
+/* Banner de Modo Visualização (quando Admin/Professor abre o painel de um aluno) */
+.staff-preview-bar {
+    background: #242427;
+    color: #fff;
+    padding: 10px 16px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    flex-wrap: wrap;
+}
+
+.staff-preview-bar select {
+    background: #323236;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.18);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+/* 3 Cards de Resumo (Estilo Health Overview do Print) */
+.overview-cards-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+}
+
+@media (min-width: 540px) {
+    .overview-cards-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.overview-card {
+    background: var(--portal-surface);
+    border-radius: var(--radius-lg);
+    padding: 18px 18px 14px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(236, 231, 223, 0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+}
+
+.overview-card-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.overview-icon-box {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.overview-icon-box.peach {
+    background: var(--pastel-peach);
+    color: #c96f28;
+}
+
+.overview-icon-box.rose {
+    background: var(--pastel-rose);
+    color: #c94a64;
+}
+
+.overview-icon-box.sky {
+    background: var(--pastel-sky);
+    color: #2181a1;
+}
+
+.overview-card-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--portal-text-main);
+    line-height: 1.25;
+}
+
+.overview-card-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--portal-text-main);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.overview-card-value small {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--portal-text-muted);
+}
+
+.overview-pill {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    width: fit-content;
+    margin-bottom: 8px;
+}
+
+.overview-pill.peach {
+    background: #fdf0e4;
+    color: #b86622;
+}
+
+.overview-pill.rose {
+    background: #fdedf0;
+    color: #bf435d;
+}
+
+.overview-pill.sky {
+    background: #e6f6fb;
+    color: #1d7a99;
+}
+
+.overview-sparkline {
+    width: 100%;
+    height: 38px;
+    display: block;
+}
+
+/* Card de Gráfico de Evolução de Treinos ("Activity Growth" do Print) */
+.portal-white-card {
+    background: var(--portal-surface);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(236, 231, 223, 0.6);
+}
+
+.portal-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.portal-card-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--portal-text-main);
+}
+
+.portal-badge-select {
+    background: #f8f5f0;
+    border: 1px solid var(--portal-border);
+    border-radius: 10px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--portal-text-main);
+}
+
+/* Barras Verticais Estilo "Activity Growth" */
+.activity-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    height: 150px;
+    gap: 8px;
+    padding: 12px 4px 6px;
+    border-bottom: 1px dashed #ece7df;
+}
+
+.activity-bar-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.activity-bar-seg {
+    width: 6px;
+    border-radius: 999px;
+    transition: height 0.3s ease;
+}
+
+.activity-bar-seg.gold { background: #d4943a; }
+.activity-bar-seg.teal { background: #438a94; }
+.activity-bar-seg.coral { background: #cf6b68; }
+
+.activity-bar-label {
+    font-size: 10px;
+    color: var(--portal-text-muted);
+    margin-top: 6px;
+    font-weight: 600;
+}
+
+.activity-legend {
+    display: flex;
+    gap: 18px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: var(--portal-text-muted);
+}
+
+.activity-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+/* Banner de Destaque ("Upcoming Appointment" do Print) */
+.upcoming-banner-card {
+    background: var(--portal-surface);
+    border-radius: var(--radius-lg);
+    padding: 16px 20px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid rgba(236, 231, 223, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.upcoming-banner-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--portal-text-main);
+}
+
+.upcoming-date-pill {
+    background: var(--pastel-sky);
+    color: #19718e;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 8px;
+}
+
+.upcoming-desc {
+    font-size: 13px;
+    color: var(--portal-text-muted);
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   PAINEL ESCURO DO LUTADOR (DIREITA NO DESKTOP / HERO CARD NO MOBILE)
+   Estilo idêntico ao bloco escuro "BMI Calculator / Body Measurements" do Print
+   ========================================================================== */
+.fighter-dark-panel {
+    background: var(--portal-dark);
+    color: #ffffff;
+    border-radius: var(--radius-xl);
+    padding: 22px 20px;
+    box-shadow: var(--shadow-dark);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+}
+
+.dark-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.dark-panel-header h2 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: #f4f4f6;
+}
+
+.modality-switcher-select {
+    background: transparent;
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 10px;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.modality-switcher-select option {
+    background: #242427;
+    color: #fff;
+}
+
+/* Grid Superior do Painel Escuro: Réguas Pastel + Card de Aptidão (Estilo BMI) */
+.aptidao-top-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+@media (min-width: 480px) {
+    .aptidao-top-grid {
+        grid-template-columns: 155px 1fr;
+    }
+}
+
+.ruler-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ruler-pill-card {
+    border-radius: 14px;
+    padding: 10px 14px;
+    color: #1f242d;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 68px;
+    position: relative;
+}
+
+.ruler-pill-card.peach {
+    background: var(--pastel-peach);
+}
+
+.ruler-pill-card.sky {
+    background: var(--pastel-sky);
+}
+
+.ruler-ticks {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    margin-bottom: 6px;
+    opacity: 0.45;
+}
+
+.ruler-ticks span {
+    width: 1.5px;
+    height: 8px;
+    background: #1f242d;
+    display: inline-block;
+}
+
+.ruler-ticks span:nth-child(3n) {
+    height: 12px;
+}
+
+.ruler-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.ruler-row strong {
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* Card de Índice de Aptidão p/ Próximo Nível */
+.aptidao-index-card {
+    background: var(--portal-dark-card);
+    border-radius: 16px;
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border: 1px solid var(--portal-dark-border);
+}
+
+.aptidao-index-title {
+    font-size: 12px;
+    color: #a1a1aa;
+    font-weight: 500;
+}
+
+.aptidao-index-middle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 10px 0 14px;
+    gap: 8px;
+}
+
+.aptidao-score-number {
+    font-family: 'Outfit', sans-serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.aptidao-status-badge {
+    padding: 4px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.aptidao-status-badge.apto {
+    background: var(--pastel-mint);
+    color: var(--pastel-mint-text);
+}
+
+.aptidao-status-badge.evolucao {
+    background: #fde68a;
+    color: #78350f;
+}
+
+.aptidao-gradient-bar-wrap {
+    position: relative;
+    padding-top: 4px;
+}
+
+.aptidao-gradient-track {
+    height: 7px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #93c5fd 0%, #6ee7b7 38%, #fde047 72%, #fb7185 100%);
+    position: relative;
+}
+
+.aptidao-thumb-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid #ffffff;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    transition: left 0.3s ease;
+}
+
+.aptidao-scale-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: #9ca3af;
+    margin-top: 6px;
+}
+
+/* Divisória sutil no painel escuro */
+.dark-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Seção Inferior do Painel Escuro: Silhueta do Lutador(a) + Cards Brancos */
+.fighter-showcase-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fighter-showcase-header h3 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 17px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.fighter-showcase-header p {
+    font-size: 12px;
+    color: #a1a1aa;
+}
+
+.fighter-shape-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #35353a;
+    color: #d4d4d8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    width: fit-content;
+    margin-top: 4px;
+}
+
+.avatar-customizer-trigger {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.avatar-customizer-trigger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(37, 99, 235, 0.45);
+}
+
+.jj-outfit-switch {
+    display: inline-flex;
+    background: #1c1c1f;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 9px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.jj-outfit-btn {
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.jj-outfit-btn.active {
+    background: #ffffff;
+    color: #18181b;
+    font-weight: 700;
+}
+
+/* Estúdio de Customização do Avatar */
+.avatar-customizer-drawer {
+    background: #2d2d32;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+.customizer-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+}
+
+.customizer-header-row strong {
+    font-size: 13px;
+    color: #ffffff;
+}
+
+.customizer-close-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: none;
+    color: #d4d4d8;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.customizer-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.customizer-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: #a1a1aa;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.customizer-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.customizer-chip {
+    background: #1f1f23;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #d4d4d8;
+    border-radius: 8px;
+    padding: 5px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.customizer-chip.active {
+    background: #3b82f6;
+    border-color: #60a5fa;
+    color: #ffffff;
+}
+
+.customizer-swatch-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-swatch.active {
+    transform: scale(1.16);
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.35);
+}
+
+.avatar-presets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+}
+
+.preset-card {
+    background: #1f1f23;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+    color: #e4e4e7;
+}
+
+.preset-card:hover {
+    border-color: rgba(96, 165, 250, 0.5);
+    transform: translateY(-1px);
+}
+
+.preset-card.active {
+    background: rgba(37, 99, 235, 0.2);
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.28);
+}
+
+.preset-thumb {
+    width: 100%;
+    height: 92px;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 8px;
+    background: #242427;
+}
+
+.preset-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.preset-meta strong {
+    font-size: 11px;
+    color: #ffffff;
+    line-height: 1.2;
+}
+
+.preset-meta span {
+    font-size: 10px;
+    color: #a1a1aa;
+    line-height: 1.2;
+}
+
+.customizer-save-btn {
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 2px;
+    transition: background 0.15s ease;
+}
+
+.customizer-save-btn:hover {
+    background: #059669;
+}
+
+.fighter-stage-grid {
+    display: grid;
+    grid-template-columns: 125px 1fr;
+    gap: 14px;
+    align-items: center;
+}
+
+.fighter-stat-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fighter-white-box {
+    background: #ffffff;
+    color: #1f242d;
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.fighter-white-box-label {
+    font-size: 11px;
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.fighter-white-box-val {
+    font-family: 'Outfit', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.fighter-silhouette-canvas {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 370px;
+    position: relative;
+    overflow: hidden;
+    border-radius: 18px;
+    background: #1f232a;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+}
+
+.fighter-svg {
+    width: 100%;
+    max-width: 245px;
+    height: auto;
+    display: block;
+}
+
+/* Checklist de Requisitos do Professor dentro do Painel */
+.requisitos-checklist-box {
+    background: var(--portal-dark-card);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--portal-dark-border);
+}
+
+.requisitos-checklist-box h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f4f4f6;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.req-item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 12px;
+    color: #d4d4d8;
+}
+
+.req-item-row:last-child {
+    border-bottom: none;
+}
+
+.req-check-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    flex-shrink: 0;
+}
+
+.req-check-icon.done {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.req-check-icon.pending {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+/* Abas de Seções do Portal */
+.portal-tab-pane {
+    display: none;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.portal-tab-pane.active {
+    display: flex;
+}
+
+/* Lista de Avisos (Gerais e Individuais) */
+.aviso-card-item {
+    background: #f8f5f0;
+    border: 1px solid var(--portal-border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+.aviso-card-item.individual {
+    background: #fff9f2;
+    border-color: #f3d1b0;
+}
+
+.aviso-tag-pill {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 999px;
+    width: fit-content;
+}
+
+.aviso-tag-pill.individual {
+    background: var(--pastel-peach);
+    color: #9c4f14;
+}
+
+.aviso-tag-pill.geral {
+    background: var(--pastel-sky);
+    color: #166580;
+}
+
+/* Tabelas e Cards de Pagamentos / Graduações */
+.fatura-row-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: #f8f5f0;
+    border: 1px solid var(--portal-border);
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.grad-history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: #f8f5f0;
+    border: 1px solid var(--portal-border);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Responsividade Desktop (>= 1024px): Sidebar Slim à Esquerda + Painel Escuro à Direita igual ao Print */
+@media (min-width: 1024px) {
+    body.portal-body {
+        padding: 24px;
+    }
+
+    .portal-shell {
+        border-radius: 32px;
+        min-height: calc(100vh - 48px);
+        flex-direction: row;
+        overflow: hidden;
+        box-shadow: 0 25px 60px rgba(31, 36, 45, 0.12);
+    }
+
+    .portal-nav {
+        position: static;
+        width: 82px;
+        height: auto;
+        border-top: none;
+        border-right: 1px solid var(--portal-border);
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 28px 0;
+        gap: 36px;
+        box-shadow: none;
+    }
+
+    .portal-brand-logo {
+        display: flex;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        background: #fdf4e7;
+        color: #c78b3b;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .portal-nav-links {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .portal-nav-btn span {
+        display: none;
+    }
+
+    .portal-nav-btn {
+        width: 46px;
+        height: 46px;
+        padding: 0;
+    }
+
+    .portal-content-wrapper {
+        flex-direction: row;
+        padding: 26px 26px;
+        gap: 26px;
+        align-items: stretch;
+    }
+
+    .fighter-dark-panel {
+        width: 410px;
+        flex-shrink: 0;
+    }
+}
+

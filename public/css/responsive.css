@@ -1,0 +1,325 @@
+/* ==========================================================================
+   SISTEMA DE RESPONSIVIDADE PROFISSIONAL (Mobile, Tablet, Desktop)
+   ========================================================================== */
+
+/* Botões do Menu Mobile (Escondidos por padrão no Desktop) */
+.mobile-menu-toggle {
+    display: none;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    flex-shrink: 0;
+}
+
+.mobile-menu-toggle svg {
+    width: 22px;
+    height: 22px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+.mobile-sidebar-close {
+    display: none;
+    margin-left: auto;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.mobile-sidebar-close svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+}
+
+/* Backdrop escuro quando a sidebar abre no mobile */
+.sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(9, 13, 22, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 140;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-backdrop.active {
+    display: block;
+    opacity: 1;
+}
+
+/* ==========================================================================
+   BREAKPOINT: TABLET & TELAS INTERMEDIÁRIAS (<= 1024px)
+   ========================================================================== */
+@media (max-width: 1024px) {
+    :root {
+        --sidebar-width: 240px;
+    }
+
+    .page-container {
+        padding: 24px 20px;
+    }
+
+    .topbar {
+        padding: 0 20px;
+    }
+
+    /* Grid do dashboard em 1 coluna */
+    #view-dashboard > div[style*="grid-template-columns: 2fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+    }
+}
+
+/* ==========================================================================
+   BREAKPOINT: TABLET VERTICAL & SMARTPHONES (<= 868px)
+   ========================================================================== */
+@media (max-width: 868px) {
+    /* Ativa menu hamburger */
+    .mobile-menu-toggle {
+        display: flex;
+    }
+
+    .mobile-sidebar-close {
+        display: flex;
+    }
+
+    /* Sidebar vira gaveta Off-Canvas */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 280px;
+        z-index: 150;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: none;
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+        box-shadow: 10px 0 30px rgba(0, 0, 0, 0.6);
+    }
+
+    /* Conteúdo principal ocupa 100% da largura */
+    .main-wrapper {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    /* Topbar compacta */
+    .topbar {
+        height: 64px;
+        padding: 0 16px;
+    }
+
+    .page-title h2 {
+        font-size: 16px;
+    }
+
+    .page-title p {
+        display: none; /* Oculta subtítulo longo para economizar espaço */
+    }
+
+    .topbar-actions {
+        gap: 8px;
+    }
+
+    .topbar-actions .btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    /* Barra de busca e filtros da lista de alunos */
+    .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .search-box {
+        min-width: 100%;
+        width: 100%;
+    }
+
+    .filter-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .filter-group select {
+        width: 100%;
+    }
+
+    /* Formulários em Modais: colunas viram 1 única coluna */
+    .form-grid, .form-grid-3 {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+
+    /* Modais com melhor aproveitamento em tela cheia */
+    .modal-overlay {
+        padding: 12px;
+        align-items: flex-end; /* Abre no estilo 'bottom sheet' moderno em smartphones */
+    }
+
+    .modal-box {
+        max-height: 90vh;
+        border-radius: var(--radius-lg) var(--radius-lg) var(--radius-md) var(--radius-md);
+    }
+
+    .modal-header {
+        padding: 16px 18px;
+    }
+
+    .modal-body {
+        padding: 18px;
+    }
+
+    .modal-footer {
+        padding: 14px 18px;
+    }
+
+    /* Dossiê 360 responsivo */
+    .dossier-tabs {
+        padding-bottom: 4px;
+        scrollbar-width: none;
+    }
+
+    .dossier-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .dossier-tab-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    /* Contrato / Matrícula atual dentro do Dossiê */
+    div[style*="grid-template-columns: repeat(4, 1fr)"] {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+    }
+}
+
+/* ==========================================================================
+   BREAKPOINT: SMARTPHONES PEQUENOS (<= 520px)
+   ========================================================================== */
+@media (max-width: 520px) {
+    .page-container {
+        padding: 16px 12px;
+    }
+
+    /* Stats Grid em 2 colunas compactas */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .stat-card {
+        padding: 14px 12px;
+    }
+
+    .stat-title {
+        font-size: 11px;
+    }
+
+    .stat-value {
+        font-size: 20px;
+    }
+
+    .stat-icon {
+        width: 28px;
+        height: 28px;
+    }
+
+    .stat-icon svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .stat-meta {
+        font-size: 10px;
+    }
+
+    /* Topbar com botões ícone em telas minúsculas */
+    .topbar-actions .btn span {
+        display: none; /* Mostra apenas o ícone */
+    }
+
+    .topbar-actions .btn {
+        padding: 8px 10px;
+    }
+
+    /* Filtros da tabela de alunos em 1 coluna */
+    .filter-group {
+        grid-template-columns: 1fr;
+    }
+
+    /* Ajuste de tabela com scroll suave */
+    .data-table th, .data-table td {
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+
+    .aluno-avatar {
+        width: 36px;
+        height: 36px;
+    }
+
+    .aluno-info-primary {
+        font-size: 13px;
+    }
+
+    /* Modais ocupam toda a largura */
+    .modal-overlay {
+        padding: 0;
+    }
+
+    .modal-box {
+        max-height: 96vh;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    }
+
+    /* Toasts em mobile */
+    .toast-container {
+        left: 12px;
+        right: 12px;
+        bottom: 16px;
+    }
+
+    .toast {
+        min-width: 100%;
+        max-width: 100%;
+    }
+}

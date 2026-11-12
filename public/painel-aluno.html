@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIZEN PRO • Painel do Atleta</title>
+    <meta name="description"
+        content="Painel do aluno KAIZEN CT PRO: acompanhe seu plano, frequência, graduações, medidas físicas, avisos e conquistas marciais.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=3.0">
+</head>
+
+<body>
+    <!-- App Container Geral -->
+    <div class="dashboard-shell">
+
+        <!-- ============================================================= -->
+        <!-- 1. BARRA LATERAL NAVEGAÇÃO (DOCK VERTICAL)                    -->
+        <!-- ============================================================= -->
+        <aside class="sidebar-dock">
+            <div class="dock-top">
+                <a href="/painel" class="dock-logo" title="KAIZEN CT PRO">
+                    <div class="logo-circle">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
+                            <path d="M12 8v8" />
+                            <path d="M8 12h8" />
+                        </svg>
+                    </div>
+                </a>
+
+                <nav class="dock-nav">
+                    <button type="button" class="dock-btn active" data-tab="visao-geral" title="Visão Geral">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="2" />
+                            <rect x="14" y="3" width="7" height="7" rx="2" />
+                            <rect x="14" y="14" width="7" height="7" rx="2" />
+                            <rect x="3" y="14" width="7" height="7" rx="2" />
+                        </svg>
+                    </button>
+                    <button type="button" class="dock-btn" data-tab="tecnicas" title="Wiki de Técnicas">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                    </button>
+                    <button type="button" class="dock-btn" data-tab="faturas" title="Faturas & Pagamentos">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
+                            <line x1="1" y1="10" x2="23" y2="10"/>
+                            <line x1="5" y1="15" x2="9" y2="15"/>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+
+            <div class="dock-bottom">
+                <button type="button" class="dock-btn btn-logout" id="btn-logout" title="Sair do Portal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ============================================================= -->
+        <!-- 2. COLUNA CENTRAL (LIGHT THEME - CONFORME PRINT)              -->
+        <!-- ============================================================= -->
+        <main class="main-content">
+            <!-- ========================================================= -->
+            <!-- SPA VIEW 1: VISÃO GERAL / DASHBOARD PRINCIPAL             -->
+            <!-- ========================================================= -->
+            <div class="spa-view" id="spa-view-dashboard">
+                <!-- Header do Painel -->
+                <header class="content-header">
+                    <div>
+                        <h1 class="header-title" id="student-welcome-title">Visão Geral do Atleta</h1>
+                        <p class="header-date" id="current-formatted-date">Carregando...</p>
+                    </div>
+
+                    <div class="header-actions">
+                        <button type="button" class="header-icon-btn" id="btn-open-notices" title="Avisos da Academia">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                            </svg>
+                            <span class="notification-badge"></span>
+                        </button>
+
+                        <div class="student-profile-pill" id="btn-edit-student-profile" title="Ver dados do perfil">
+                            <img id="header-avatar-img"
+                                src="https://ui-avatars.com/api/?name=Atleta&background=0284c7&color=fff" alt="Avatar">
+                            <div
+                                style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2;">
+                                <span id="header-student-name">Atleta</span>
+                                <span class="header-athlete-title" id="header-athlete-title">Iniciante Focado</span>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- Banner / Card de Convocação de Exame de Graduação -->
+                <div id="exam-invitation-container" style="display: none; margin-bottom: 24px;"></div>
+
+                <!-- 3 Cards de Indicadores Rápidos (Topo) -->
+                <div class="stats-cards-grid">
+                    <!-- Card 1: Frequência -->
+                    <div class="stat-card">
+                        <div class="stat-card-head">
+                            <div class="stat-icon-wrap icon-amber">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path
+                                        d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+                                </svg>
+                            </div>
+                            <span class="stat-tag-label">Frequência Mensal</span>
+                        </div>
+                        <div class="stat-metric-row">
+                            <span class="stat-big-num" id="stat-presencas-num">0</span>
+                            <span class="stat-unit">treinos</span>
+                        </div>
+                        <div class="stat-footer-row">
+                            <span class="stat-pill pill-amber" id="stat-presencas-pill">Alta Frequência</span>
+                            <div class="stat-mini-sparkline spark-amber">
+                                <svg viewBox="0 0 100 24" preserveAspectRatio="none">
+                                    <path d="M0,18 Q20,22 40,10 T80,14 T100,6" fill="none" stroke="currentColor"
+                                        stroke-width="3" stroke-linecap="round" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Plano Contratado -->
+                    <div class="stat-card">
+                        <div class="stat-card-head">
+                            <div class="stat-icon-wrap icon-rose">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12" />
+                                </svg>
+                            </div>
+                            <span class="stat-tag-label">Plano de Treino</span>
+                        </div>
+                        <div class="stat-metric-row">
+                            <span class="stat-big-num" id="stat-plano-nome"
+                                style="font-size: 20px; line-height: 1.3;">Muay Thai</span>
+                        </div>
+                        <div class="stat-footer-row">
+                            <span class="stat-pill pill-rose" id="stat-plano-status">Plano Ativo</span>
+                            <div class="stat-mini-sparkline spark-rose">
+                                <svg viewBox="0 0 100 24" preserveAspectRatio="none">
+                                    <path d="M0,12 Q25,6 50,16 T75,8 T100,10" fill="none" stroke="currentColor"
+                                        stroke-width="3" stroke-linecap="round" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Graduação Atual (Clique abre a Wiki diretamente via SPA) -->
+                    <div class="stat-card" id="card-graduacao-atual-click" style="cursor: pointer;"
+                        title="Clique para abrir a Wiki de Técnicas desta faixa"
+                        onclick="PainelAlunoApp.switchView('wiki')">
+                        <div class="stat-card-head">
+                            <div class="stat-icon-wrap icon-cyan">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="8" r="6" />
+                                    <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                                </svg>
+                            </div>
+                            <span class="stat-tag-label">Graduação Atual</span>
+                        </div>
+                        <div class="stat-metric-row">
+                            <span class="stat-big-num" id="stat-graduacao-nome"
+                                style="font-size: 19px; line-height: 1.3;">Prajied Branco</span>
+                        </div>
+                        <div class="stat-footer-row">
+                            <span class="stat-pill pill-cyan" id="stat-graduacao-status">Em Avaliação</span>
+                            <span class="stat-card-action">
+                                <span>Ver Wiki</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grade de Engajamento: Barra de Prontidão de Faixa -->
+                <div class="engagement-hero-grid readiness-only-grid">
+                    <!-- Barra de Prontidão para o Exame de Faixa (Gamificação da Wiki) -->
+                    <div class="engagement-card readiness-hero-card">
+                        <div class="engagement-card-head">
+                            <div class="readiness-icon-badge">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="8" r="6" />
+                                    <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                                </svg>
+                            </div>
+                            <div class="readiness-head-info">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                    <h3 class="engagement-card-title">Prontidão para Exame</h3>
+                                    <span class="readiness-belt-badge" id="readiness-belt-badge">Faixa Atual</span>
+                                </div>
+                                <p class="engagement-card-subtitle" id="readiness-summary-subtitle">Carregando currículo
+                                    técnico...</p>
+                            </div>
+                        </div>
+
+                        <!-- Barra de Prontidão de Graduação com Marcador da Meta Mínima -->
+                        <div class="readiness-progress-wrap">
+                            <div class="readiness-progress-labels">
+                                <span id="readiness-counter-text">0 de 0 técnicas dominadas</span>
+                                <span class="readiness-percent-pill" id="readiness-percent-pill">0%</span>
+                            </div>
+                            <div class="readiness-progress-track">
+                                <div class="readiness-progress-bar" id="readiness-progress-bar" style="width: 0%;">
+                                </div>
+                                <div class="readiness-target-marker" id="readiness-target-marker"
+                                    title="Meta mínima para exame"></div>
+                            </div>
+                            <div class="readiness-footer-row">
+                                <span class="readiness-status-msg" id="readiness-status-msg">Consulte as técnicas
+                                    requeridas</span>
+                                <button type="button" class="btn-readiness-wiki"
+                                    onclick="PainelAlunoApp.switchView('wiki')" title="Abrir técnicas da faixa na Wiki">
+                                    <span>Treinar na Wiki</span>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Central: Gráfico de Evolução de Desempenho Técnico -->
+                <section class="activity-growth-card">
+                    <div class="activity-card-header">
+                        <h2 class="activity-title">Evolução Técnica & Desempenho</h2>
+                        <div class="period-select-wrap">
+                            <select id="select-activity-period" class="period-select">
+                                <option value="current">Ciclo Atual (2026)</option>
+                                <option value="last">Ciclo Anterior</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Barras Empilhadas Interativas do Gráfico -->
+                    <div class="chart-bars-container" id="activity-chart-bars">
+                        <!-- Renderizado dinamicamente pelo JavaScript com SVG / colunas -->
+                    </div>
+
+                    <!-- Legenda do Gráfico -->
+                    <div class="chart-legend-row">
+                        <div class="legend-item"><span class="legend-dot dot-rose"></span> Avaliação Técnica (Graduação)
+                        </div>
+                        <div class="legend-item"><span class="legend-dot dot-cyan"></span> Clinch & Sparring</div>
+                        <div class="legend-item"><span class="legend-dot dot-amber"></span> Condicionamento Físico</div>
+                    </div>
+                </section>
+
+                <!-- Card Inferior: Avisos, Campanhas & Próximo Evento (Upcoming Appointment) -->
+                <section class="upcoming-appointment-card" id="upcoming-card">
+                    <div class="appointment-left">
+                        <span class="appointment-label">Aviso & Campanha da Academia</span>
+                        <h3 class="appointment-title" id="upcoming-title">Exame de Graduação de Fim de Ano</h3>
+                        <p class="appointment-sub" id="upcoming-desc">Inscrições abertas para avaliação técnica e
+                            entrega oficial de graus.</p>
+                    </div>
+                    <div class="appointment-right">
+                        <span class="appointment-date-badge" id="upcoming-date-badge">28 Nov 2026</span>
+                        <button type="button" class="btn-appointment-action" id="btn-view-all-notices">Ver
+                            Avisos</button>
+                    </div>
+                </section>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- SPA VIEW 2: WIKI DEDICADA & BIBLIOTECA DE TÉCNICAS        -->
+            <!-- ========================================================= -->
+            <div class="spa-view" id="spa-view-wiki" style="display: none;">
+                <!-- Barra Superior de Navegação SPA -->
+                <div class="wiki-header-nav-row">
+                    <button type="button" class="btn-voltar-painel" onclick="PainelAlunoApp.switchView('dashboard')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        <span>Voltar à Visão Geral</span>
+                    </button>
+
+                    <div class="student-profile-pill">
+                        <img id="wiki-header-avatar-img"
+                            src="https://ui-avatars.com/api/?name=Atleta&background=0284c7&color=fff" alt="Avatar">
+                        <span id="wiki-header-student-name">Atleta</span>
+                    </div>
+                </div>
+
+                <!-- Banner de Destaque da Graduação (Black Design) -->
+                <div class="wiki-status-banner">
+                    <div class="wiki-status-info">
+                        <div class="wiki-status-icon">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="wiki-status-title" id="wiki-spa-title">Wiki Marcial • Técnicas Oficiais</h2>
+                            <p class="wiki-status-desc" id="wiki-spa-desc">Currículo técnico e acervo de movimentos da
+                                sua trajetória.</p>
+                        </div>
+                    </div>
+                    <div class="wiki-status-badge-wrap">
+                        <span class="curriculum-count-badge" id="wiki-spa-total-badge">0 técnicas disponíveis</span>
+                    </div>
+                </div>
+
+                <!-- Abas Deslizantes de Faixas (Carrossel Horizontal no mobile) -->
+                <div class="belts-tabs-container" id="wiki-spa-belts-tabs">
+                    <!-- Preenchido dinamicamente pelo JS com carrossel moderno -->
+                </div>
+
+                <!-- Controles: Barra de Pesquisa + Filtros Deslizantes por Categoria -->
+                <div class="wiki-controls-row">
+                    <div class="wiki-search-box">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" id="wiki-spa-search-input"
+                            placeholder="Buscar golpe, soco, chute, cotovelada...">
+                    </div>
+
+                    <div class="curriculum-filter-pills" id="wiki-spa-category-pills">
+                        <button type="button" class="curriculum-pill active" data-category="todos">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                            </svg>
+                            <span>Todos</span>
+                        </button>
+                        <button type="button" class="curriculum-pill" data-category="Soco">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                                <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+                                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                            </svg>
+                            <span>Soco</span>
+                        </button>
+                        <button type="button" class="curriculum-pill" data-category="Chute">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M4 18l4-4 3 3 7-10" />
+                                <circle cx="19" cy="6" r="2" />
+                                <path d="M15 13l2 5" />
+                                <path d="M7 15l-3 4" />
+                            </svg>
+                            <span>Chute</span>
+                        </button>
+                        <button type="button" class="curriculum-pill" data-category="Joelhada">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            </svg>
+                            <span>Joelhada</span>
+                        </button>
+                        <button type="button" class="curriculum-pill" data-category="Cotovelada">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 12l-7 7-7-7" />
+                                <path d="M15 5l-7 7" />
+                                <path d="M8 5h12" />
+                            </svg>
+                            <span>Cotovelada</span>
+                        </button>
+                        <button type="button" class="curriculum-pill" data-category="Movimentação">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="13 17 18 12 13 7" />
+                                <polyline points="6 17 11 12 6 7" />
+                            </svg>
+                            <span>Movimentação</span>
+                        </button>
+                        <button type="button" class="curriculum-pill" data-category="Defesa">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                                <polyline points="9 12 11 14 15 10" />
+                            </svg>
+                            <span>Defesa</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Grade de Golpes e Técnicas da Wiki -->
+                <div class="curriculum-grid" id="wiki-spa-cards-grid">
+                    <!-- Cards renderizados dinamicamente pelo JavaScript -->
+                </div>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- SPA VIEW 3: FATURAS & HISTÓRICO DE PAGAMENTOS (BLACK DESIGN) -->
+            <!-- ========================================================= -->
+            <div class="spa-view" id="spa-view-faturas" style="display: none;">
+                <!-- Barra Superior de Navegação -->
+                <div class="wiki-header-nav-row">
+                    <button type="button" class="btn-voltar-painel" onclick="PainelAlunoApp.switchView('dashboard')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        <span>Voltar à Visão Geral</span>
+                    </button>
+
+                    <div class="student-profile-pill">
+                        <img id="faturas-header-avatar-img"
+                            src="https://ui-avatars.com/api/?name=Atleta&background=ef4444&color=fff" alt="Avatar">
+                        <span id="faturas-header-student-name">Atleta</span>
+                    </div>
+                </div>
+
+                <!-- Banner Resumo Financeiro (Black Glass Design) -->
+                <div class="faturas-overview-banner">
+                    <div class="faturas-overview-header">
+                        <div class="faturas-icon-wrap">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
+                                <line x1="1" y1="10" x2="23" y2="10"/>
+                                <line x1="5" y1="15" x2="9" y2="15"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="faturas-banner-title">Faturas & Histórico Financeiro</h2>
+                            <p class="faturas-banner-sub">Mensalidades, taxas de exames de graduação e comprovantes de quitação (Asaas e Balcão).</p>
+                        </div>
+                    </div>
+
+                    <!-- Métricas / Cards de Resumo -->
+                    <div class="faturas-metrics-grid">
+                        <div class="faturas-metric-card">
+                            <span class="faturas-metric-label">Situação Atual</span>
+                            <strong class="faturas-metric-val" id="faturas-summary-status">
+                                <span class="status-pulse-dot" style="background: #10b981;"></span>
+                                Em dia
+                            </strong>
+                        </div>
+                        <div class="faturas-metric-card">
+                            <span class="faturas-metric-label">Total Quitado</span>
+                            <strong class="faturas-metric-val green" id="faturas-summary-pago">R$ 0,00</strong>
+                        </div>
+                        <div class="faturas-metric-card">
+                            <span class="faturas-metric-label">Pendências</span>
+                            <strong class="faturas-metric-val" id="faturas-summary-pendente">R$ 0,00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros de Tipo e Status (Abas Deslizantes) -->
+                <div class="faturas-filter-row">
+                    <div class="faturas-tabs" id="faturas-filter-tabs">
+                        <button type="button" class="faturas-tab-btn active" data-filter="todos">
+                            <span>Todos</span>
+                            <span class="faturas-tab-count" id="count-faturas-todos">0</span>
+                        </button>
+                        <button type="button" class="faturas-tab-btn" data-filter="mensalidade">
+                            <span>Mensalidades</span>
+                            <span class="faturas-tab-count" id="count-faturas-mensalidades">0</span>
+                        </button>
+                        <button type="button" class="faturas-tab-btn" data-filter="graduacao">
+                            <span>Graduações</span>
+                            <span class="faturas-tab-count" id="count-faturas-graduacoes">0</span>
+                        </button>
+                        <button type="button" class="faturas-tab-btn" data-filter="pago">
+                            <span>Quitados</span>
+                            <span class="faturas-tab-count" id="count-faturas-pagos">0</span>
+                        </button>
+                        <button type="button" class="faturas-tab-btn" data-filter="pendente">
+                            <span>Pendentes</span>
+                            <span class="faturas-tab-count" id="count-faturas-pendentes">0</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lista de Faturas e Pagamentos -->
+                <div class="faturas-cards-list" id="faturas-cards-list">
+                    <!-- Inserido dinamicamente pelo PainelAlunoApp -->
+                </div>
+            </div>
+        </main>
+
+        <!-- ============================================================= -->
+        <!-- ============================================================= -->
+        <!-- 3. COLUNA DIREITA: CARD DO PERFIL DO ATLETA REFORMULADO       -->
+        <!-- ============================================================= -->
+        <aside class="right-panel-dark">
+            <!-- Header Mobile do App (Conforme Design Nativo do App) -->
+            <header class="mobile-top-header" id="mobile-top-header">
+                <div class="mobile-brand-group">
+                    <span class="mobile-brand-tag">
+                        <span class="pulse-dot-green"></span>
+                        <span>PRO COMBATE</span>
+                    </span>
+                    <h1 class="mobile-greeting-title">Olá, <span id="mobile-student-name">Mauro</span>!</h1>
+                </div>
+                <div class="mobile-header-actions">
+                    <button type="button" class="mobile-circle-btn" id="mobile-btn-notices"
+                        title="Avisos e Notificações">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        <span class="mobile-badge-dot"></span>
+                    </button>
+                    <!-- 1. Botão de Ajustes de Avaliação Física -->
+                    <button type="button" class="mobile-circle-btn" id="mobile-btn-avaliacao"
+                        title="Ajustes de Avaliação Física (+ Medir)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path
+                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                        </svg>
+                    </button>
+                    <!-- 2. Botão de Ajustes da Conta -->
+                    <button type="button" class="mobile-circle-btn" id="mobile-btn-account" title="Ajustes da Conta">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0 1.51 1z" />
+                        </svg>
+                    </button>
+                </div>
+            </header>
+
+            <section class="athlete-main-card">
+                <!-- Efeitos de fundo (Glow & Watermark) -->
+                <div class="card-glow-bg"></div>
+                <div class="card-watermark">MT</div>
+
+                <!-- 1. Header do Atleta: Compacto e Expressivo -->
+                <div class="athlete-card-header">
+                    <div class="athlete-header-left">
+                        <!-- Avatar com Borda na cor do Prajied/Faixa -->
+                        <div class="athlete-avatar-frame-wrap" id="btn-open-skins-avatar"
+                            title="Personalizar Avatar do Lutador">
+                            <div class="avatar-ring" id="athlete-avatar-ring">
+                                <div class="avatar-inner">
+                                    <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
+                                </div>
+                            </div>
+                            <span class="degree-badge" id="card-athlete-degree-badge">1º G</span>
+                        </div>
+
+                        <div class="athlete-meta-info">
+                            <div class="athlete-name-row">
+                                <h2 class="athlete-card-name" id="card-athlete-name">Mauro Silva</h2>
+                                <svg class="verified-icon" width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b">
+                                    <path
+                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+                                </svg>
+                            </div>
+
+                            <!-- Badges de Nível / Prajied -->
+                            <div class="athlete-badges-row">
+                                <span class="prajied-chip" id="card-prajied-chip">
+                                    <span class="prajied-dot" id="card-prajied-dot"></span>
+                                    <span id="card-prajied-name">Prajied Amarelo e Branco</span>
+                                </span>
+                                <span class="title-chip" id="card-title-chip">Iniciante Focado</span>
+                            </div>
+
+                            <!-- Situação Financeira do Aluno (Em dia, Em atraso, Pendente) -->
+                            <div class="athlete-plan-row" id="athlete-plan-row">
+                                <span class="plan-status-badge em-dia" id="card-plan-status-badge" style="cursor: pointer;" title="Clique para ver suas faturas e histórico de pagamentos">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                        <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
+                                        <line x1="1" y1="10" x2="23" y2="10"/>
+                                    </svg>
+                                    <span id="card-plan-status-text">Situação: Em dia</span>
+                                </span>
+                            </div>
+
+                            <!-- Banner de Alerta de Mensalidade em Atraso com Ação Direta para Pagamento Asaas -->
+                            <div class="athlete-overdue-alert" id="athlete-overdue-alert" style="display: none;">
+                                <div class="overdue-alert-left">
+                                    <span class="overdue-pulse-dot"></span>
+                                    <div class="overdue-text-group">
+                                        <span class="overdue-title" id="overdue-alert-title">Mensalidade em Atraso</span>
+                                        <span class="overdue-sub" id="overdue-alert-sub">Regularize via PIX Asaas</span>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-pay-asaas-now" id="btn-open-plan-payment" title="Pagar via PIX com Asaas">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                    </svg>
+                                    <span>Pagar Asaas</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ação Rápida de Biometria / Skin -->
+                    <button type="button" class="btn-card-expand" id="btn-select-skin"
+                        title="Personalizar Avatar & Equipamento">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="15 3 21 3 21 9" />
+                            <polyline points="9 21 3 21 3 15" />
+                            <line x1="21" y1="3" x2="14" y2="10" />
+                            <line x1="3" y1="21" x2="10" y2="14" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Showcase do Avatar do Lutador Multicamadas -->
+                <div class="fighter-avatar-showcase" id="fighter-avatar-container"
+                    title="Clique para personalizar seu avatar">
+
+
+                    <div class="avatar-stage" id="avatar-main-stage">
+                        <!-- 1. Camada Base: Corpo do Avatar (Mulher/Homem - Branca/Negra) -->
+                        <img id="avatar-body-img" class="avatar-layer avatar-layer-body"
+                            src="/assets/avatar/homem-branco.png" alt="Avatar Atleta">
+
+                        <!-- 2. Camada Cabelo: PNG com z-index superior -->
+                        <img id="avatar-hair-img" class="avatar-layer avatar-layer-hair cabelo-homem-1"
+                            src="/assets/avatar/cabelo-homem-1.png" data-hair="cabelo-homem-1.png"
+                            alt="Cabelo do Avatar">
+
+                        <!-- 3. Camada Prajied: PNG oficial no braço direito (viewer's left) -->
+                        <div id="prajied-arm-container" class="avatar-layer avatar-layer-prajied prajied-homem"
+                            data-gender="M" style="display: none;" title="Prajied Oficial no Braço Direito">
+                            <img id="avatar-prajied-img" src="/assets/prajied/prajied-1.png" alt="Prajied">
+                            <div class="prajied-arm-tooltip" id="avatar-prajied-tooltip">Prajied</div>
+                        </div>
+                    </div>
+                    <div class="avatar-stage-pedestal"></div>
+                    <div class="avatar-hint-pill">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <circle cx="12" cy="8" r="5" />
+                            <path d="M20 21a8 8 0 1 0-16 0" />
+                        </svg>
+
+
+                        <span>Personalizar Skin</span>
+                    </div>
+                </div>
+
+                <!-- 2. Grid de Métricas Corporais & IMC em Chips Compactos -->
+                <div class="athlete-metrics-section">
+                    <div class="metrics-section-head">
+                        <span class="metrics-head-title">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444"
+                                stroke-width="2.5">
+                                <path
+                                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                            </svg>
+                            <span>Métricas Corporais</span>
+                        </span>
+                        <span class="metrics-head-date" id="measurements-last-check">Última aferição: ontem</span>
+                    </div>
+
+                    <!-- 3 Mini Cards em Grid -->
+                    <div class="metrics-chips-grid">
+                        <!-- Peso -->
+                        <div class="metric-chip">
+                            <span class="chip-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <circle cx="12" cy="12" r="3" />
+                                    <line x1="12" y1="3" x2="12" y2="5" />
+                                </svg>
+                                <span>Peso</span>
+                            </span>
+                            <div class="chip-val-row">
+                                <span class="chip-num" id="ruler-weight-val">72</span>
+                                <span class="chip-unit">kg</span>
+                            </div>
+                            <div class="chip-delta-sub" id="delta-peso-sub">
+                                <span id="delta-peso-arrow">↓</span>
+                                <span id="delta-peso-val">-0.8kg mês</span>
+                            </div>
+                        </div>
+
+                        <!-- Altura -->
+                        <div class="metric-chip">
+                            <span class="chip-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8"
+                                    stroke-width="2">
+                                    <line x1="12" y1="2" x2="12" y2="22" />
+                                    <polyline points="8 6 12 2 16 6" />
+                                    <polyline points="8 18 12 22 16 18" />
+                                </svg>
+                                <span>Altura</span>
+                            </span>
+                            <div class="chip-val-row">
+                                <span class="chip-num" id="ruler-height-val">170</span>
+                                <span class="chip-unit">cm</span>
+                            </div>
+                            <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: 173cm</span>
+                        </div>
+
+                        <!-- IMC -->
+                        <div class="metric-chip">
+                            <span class="chip-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a855f7"
+                                    stroke-width="2">
+                                    <line x1="18" y1="20" x2="18" y2="10" />
+                                    <line x1="12" y1="20" x2="12" y2="4" />
+                                    <line x1="6" y1="20" x2="6" y2="14" />
+                                </svg>
+                                <span>IMC</span>
+                            </span>
+                            <div class="chip-val-row">
+                                <span class="chip-num" id="bmi-number">24.9</span>
+                            </div>
+                            <span class="chip-status-tag" id="bmi-status-pill">Saudável</span>
+                        </div>
+                    </div>
+
+                    <!-- Linha Compacta de Medidas (Tórax, Cintura, Quadril) com Ações -->
+                    <div class="compact-measurements-row">
+                        <div class="meas-items-group">
+                            <span class="meas-label-tag"
+                                style="display: inline-flex; align-items: center; gap: 4px; color: #94a3b8; font-size: 11px; font-weight: 600;">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                                <span>Medidas:</span>
+                            </span>
+                            <div class="meas-inline-item">
+                                <span class="meas-inline-name">Tórax</span>
+                                <strong class="meas-inline-val" id="meas-torax-val">98</strong><span
+                                    class="meas-unit-inline">&nbsp;cm</span>
+                                <span class="meas-delta-inline" id="delta-torax-tag" style="display: none;"><span
+                                        id="arrow-torax"></span><span id="delta-torax-num"></span></span>
+                            </div>
+                            <span class="meas-sep">•</span>
+                            <div class="meas-inline-item">
+                                <span class="meas-inline-name">Cintura</span>
+                                <strong class="meas-inline-val" id="meas-cintura-val">82</strong><span
+                                    class="meas-unit-inline">&nbsp;cm</span>
+                                <span class="meas-delta-inline" id="delta-cintura-tag" style="display: none;"><span
+                                        id="arrow-cintura"></span><span id="delta-cintura-num"></span></span>
+                            </div>
+                            <span class="meas-sep">•</span>
+                            <div class="meas-inline-item">
+                                <span class="meas-inline-name">Quadril</span>
+                                <strong class="meas-inline-val" id="meas-quadril-val">96</strong><span
+                                    class="meas-unit-inline">&nbsp;cm</span>
+                                <span class="meas-delta-inline" id="delta-quadril-tag" style="display: none;"><span
+                                        id="arrow-quadril"></span><span id="delta-quadril-num"></span></span>
+                            </div>
+                        </div>
+
+                        <div class="meas-quick-actions">
+                            <button type="button" class="btn-meas-action" id="btn-modal-medidas"
+                                title="Lançar Nova Medição">
+                                <span>+ Medir</span>
+                            </button>
+                            <button type="button" class="btn-meas-action btn-meas-accent" id="btn-open-evolution"
+                                title="Histórico e Comparativo de Evolução">
+                                <span>Evolução</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Próxima Graduação & Status do Exame (Card em Destaque Compacto) -->
+                <div class="next-rank-card" id="card-next-rank-container">
+                    <div class="next-rank-head">
+                        <div class="next-rank-title-group">
+                            <span class="next-rank-tag">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <circle cx="12" cy="8" r="6" />
+                                    <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                                </svg>
+                                <span>Próxima Graduação</span>
+                            </span>
+                            <h3 class="next-rank-name" id="card-next-rank-title">
+                                <span id="card-next-rank-label">Rumo ao Próximo Grau</span>
+                                <span class="eligibility-pill" id="card-eligibility-badge">100% Elegível</span>
+                            </h3>
+                        </div>
+                        <span class="next-rank-icon-wrap" id="card-next-rank-icon">🥊</span>
+                    </div>
+
+                    <!-- Barra de Progresso Elegante -->
+                    <div class="next-rank-track">
+                        <div class="next-rank-bar" id="card-next-rank-progress-bar" style="width: 100%;"></div>
+                    </div>
+
+                    <!-- Detalhe do Exame de Graduação -->
+                    <div class="next-rank-footer">
+                        <div class="exam-date-info">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f97316"
+                                stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            <span id="card-next-exam-date">Exame: <strong>20/12 às 10:00</strong></span>
+                        </div>
+                        <span class="exam-venue-info" id="card-next-exam-venue">Dojo Central - Kaizen CT</span>
+                    </div>
+                </div>
+
+                <!-- 4. Carrossel Horizontal de Conquistas & Medalhas -->
+                <div class="achievements-section-wrap">
+                    <div class="achievements-head-row">
+                        <div class="achievements-title-group">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
+                                stroke-width="2">
+                                <circle cx="12" cy="8" r="6" />
+                                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                            </svg>
+                            <span class="achievements-title-text">Conquistas</span>
+                            <span class="achievements-counter-chip" id="achievements-badge">1 de 6</span>
+                        </div>
+                        <button type="button" class="btn-see-all-achievements" id="btn-see-all-conquistas"
+                            onclick="PainelAlunoApp.scrollToSection('.engagement-hero-grid')">
+                            <span>Ver todas</span>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Carrossel Deslizável Horizontalmente -->
+                    <div class="achievements-carousel no-scrollbar" id="badges-container">
+                        <!-- Preenchido dinamicamente pelo JS -->
+                    </div>
+                </div>
+
+                <!-- 5. Trajetória de Faixas (Histórico Resumido de Graduações) -->
+                <div class="graduations-timeline-wrap">
+                    <div class="timeline-title-row">
+                        <span>Trajetória de Faixas</span>
+                    </div>
+                    <div class="graduations-timeline" id="graduations-timeline-container">
+                        <!-- Linha do tempo inserida pelo JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- CARD SEMANA ATUAL (Frequência & Régua dos 5 Dias)           -->
+            <!-- ========================================================= -->
+            <section class="semana-atual-card streak-hero-card" id="semana-atual-section">
+                <div class="semana-atual-head">
+                    <div class="semana-head-left">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                        <span class="semana-head-title">SEMANA ATUAL</span>
+                    </div>
+                    <span class="semana-head-meta" id="streak-meta-text">Meta: 3 treinos</span>
+                </div>
+
+                <div class="semana-fogo-box">
+                    <div class="fogo-info-row">
+                        <div class="fogo-icon-badge streak-flame-badge">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+                            </svg>
+                            <span class="streak-flame-count" id="streak-flame-count" style="display: none;">0</span>
+                        </div>
+                        <div class="fogo-text-group">
+                            <h4 class="fogo-title">Frequência</h4>
+                            <p class="fogo-subtitle" id="streak-summary-subtitle">0 de 3 concluídos nesta semana</p>
+                        </div>
+                        <span class="fogo-percent-badge streak-percent-pill" id="streak-percent-text">0%</span>
+                    </div>
+
+                    <!-- Régua dos 7 Dias da Semana -->
+                    <div class="weekly-streak-ruler weekly-streak-pills-row" id="weekly-streak-ruler">
+                        <!-- Preenchido dinamicamente pelo JS -->
+                    </div>
+
+                    <div class="streak-progress-track" style="display: none;">
+                        <div class="streak-progress-bar" id="streak-progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 1: ATUALIZAR MEDIDAS CORPORAIS                              -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-medidas" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Registrar Nova Medição Física</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-medidas">&times;</button>
+            </div>
+            <form id="form-edit-medidas" class="modal-body">
+                <div class="modal-grid-2">
+                    <div class="modal-field">
+                        <label>Data da Medição</label>
+                        <input type="date" id="input-edit-data" required>
+                    </div>
+                    <div class="modal-field">
+                        <label>Peso (kg)</label>
+                        <input type="number" step="0.1" id="input-edit-peso" required placeholder="ex: 72.5">
+                    </div>
+                </div>
+                <div class="modal-grid-3">
+                    <div class="modal-field">
+                        <label>Altura (cm)</label>
+                        <input type="number" step="1" id="input-edit-altura" required placeholder="ex: 170">
+                    </div>
+                    <div class="modal-field">
+                        <label>Tórax (cm)</label>
+                        <input type="number" step="0.5" id="input-edit-torax" placeholder="ex: 98.0">
+                    </div>
+                    <div class="modal-field">
+                        <label>Cintura (cm)</label>
+                        <input type="number" step="0.5" id="input-edit-cintura" placeholder="ex: 82.0">
+                    </div>
+                </div>
+                <div class="modal-grid-3">
+                    <div class="modal-field">
+                        <label>Quadril (cm)</label>
+                        <input type="number" step="0.5" id="input-edit-quadril" placeholder="ex: 96.0">
+                    </div>
+                    <div class="modal-field">
+                        <label>Braço (cm)</label>
+                        <input type="number" step="0.5" id="input-edit-braco" placeholder="ex: 32.0">
+                    </div>
+                    <div class="modal-field">
+                        <label>Coxa (cm)</label>
+                        <input type="number" step="0.5" id="input-edit-coxa" placeholder="ex: 56.0">
+                    </div>
+                </div>
+                <div class="modal-field" style="margin-bottom: 16px;">
+                    <label>Observação / Objetivo</label>
+                    <input type="text" id="input-edit-obs"
+                        placeholder="ex: Reavaliação mensal de Muay Thai / Perda de gordura">
+                </div>
+                <button type="submit" class="btn-modal-save">Salvar Medição & Atualizar Histórico</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 2: PERSONALIZAÇÃO DO AVATAR & SKINS                         -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-skins" style="display: none;">
+        <div class="modal-card modal-large avatar-customizer-modal">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="stat-icon-wrap icon-cyan"
+                        style="width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="8" r="5" />
+                            <path d="M20 21a8 8 0 1 0-16 0" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 18px;">Personalizar Avatar do Atleta</h3>
+                        <span style="font-size: 12px; color: #94a3b8;">Escolha o tom de pele e o estilo de cabelo do seu
+                            lutador</span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-skins">&times;</button>
+            </div>
+            <div class="modal-body avatar-customizer-body">
+                <!-- Coluna Esquerda: Preview em tempo real -->
+                <div class="customizer-preview-col">
+                    <span class="customizer-col-title">Prévia do Avatar</span>
+                    <div class="avatar-modal-stage">
+                        <img id="modal-preview-body" class="avatar-layer avatar-layer-body"
+                            src="/assets/avatar/homem-branco.png" alt="Corpo">
+                        <img id="modal-preview-hair" class="avatar-layer avatar-layer-hair cabelo-homem-1"
+                            src="/assets/avatar/cabelo-homem-1.png" data-hair="cabelo-homem-1.png" alt="Cabelo">
+                        <div id="modal-preview-prajied-wrap" class="avatar-layer avatar-layer-prajied prajied-homem"
+                            data-gender="M" style="display: none;">
+                            <img id="modal-preview-prajied" src="/assets/prajied/prajied-1.png" alt="Prajied">
+                        </div>
+                    </div>
+                    <div class="preview-prajied-info" id="modal-prajied-info">
+                        <span class="preview-prajied-label">Prajied Atual:</span>
+                        <strong id="modal-prajied-nome">Branco (Iniciante)</strong>
+                    </div>
+                    <div class="preview-equipment-info" id="modal-equipment-info"
+                        style="margin-top: 8px; font-size: 11.5px; color: #94a3b8; text-align: center; background: rgba(15, 23, 42, 0.6); padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                        <span id="modal-preview-glove-label">Luva: Tradicionais</span> • <span
+                            id="modal-preview-title-label">Título: Iniciante Focado</span>
+                    </div>
+                </div>
+
+                <!-- Coluna Direita: Opções de Customização -->
+                <div class="customizer-options-col">
+                    <!-- Opção 1: Tom de Pele -->
+                    <div class="customizer-section">
+                        <label class="customizer-label">1. Tom de Pele (<span
+                                id="modal-gender-label">Modelo</span>)</label>
+                        <div class="skin-tones-grid" id="skin-tones-options">
+                            <!-- Preenchido via JS conforme gênero F ou M -->
+                        </div>
+                    </div>
+
+                    <!-- Opção 2: Estilo de Cabelo (Skins PNG) -->
+                    <div class="customizer-section">
+                        <label class="customizer-label">2. Estilo de Cabelo (Skin)</label>
+                        <div class="hairs-grid" id="hair-styles-options">
+                            <!-- Preenchido via JS conforme gênero F ou M -->
+                        </div>
+                    </div>
+
+                    <!-- Opção 3: Luvas & Equipamento (Desbloqueáveis por Treinos) -->
+                    <div class="customizer-section">
+                        <label class="customizer-label">3. Luvas de Treino & Combate</label>
+                        <div class="gloves-options-grid" id="gloves-options-grid">
+                            <!-- Preenchido via JS conforme check-ins do aluno -->
+                        </div>
+                    </div>
+
+                    <!-- Opção 4: Título de Honra do Atleta -->
+                    <div class="customizer-section">
+                        <label class="customizer-label">4. Título do Lutador</label>
+                        <div class="titles-options-grid" id="titles-options-grid">
+                            <!-- Preenchido via JS conforme check-ins do aluno -->
+                        </div>
+                    </div>
+
+                    <div class="customizer-actions-row">
+                        <button type="button" class="btn-cancel-customizer" data-close="modal-skins">Cancelar</button>
+                        <button type="button" class="btn-save-customizer" id="btn-save-avatar">Salvar Equipamento &
+                            Avatar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 3: AVISOS E CAMPANHAS DA ACADEMIA                           -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-avisos" style="display: none;">
+        <div class="modal-card modal-large">
+            <div class="modal-header">
+                <h3>Mural de Avisos & Campanhas</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-avisos">&times;</button>
+            </div>
+            <div class="modal-body" id="avisos-full-list">
+                <!-- Carregado dinamicamente -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 4: HISTÓRICO & COMPARATIVO DE EVOLUÇÃO FÍSICA               -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-evolucao" style="display: none;">
+        <div class="modal-card modal-extra-large modal-evolucao-card">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="stat-icon-wrap icon-cyan"
+                        style="width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                            <polyline points="17 6 23 6 23 12" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px;">Histórico & Evolução</h3>
+                        <span style="font-size: 11.5px; color: #94a3b8;">Acompanhamento de medidas e composição corporal</span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-evolucao">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 1. GRÁFICO INTERATIVO DE EVOLUÇÃO DAS MEDIDAS -->
+                <div class="evolution-chart-box" id="evolution-chart-box">
+                    <div class="evolution-chart-header">
+                        <div class="chart-header-left">
+                            <span class="chart-tag-pill">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2.5">
+                                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                    <polyline points="17 6 23 6 23 12" />
+                                </svg>
+                                <span>Curva de Evolução</span>
+                            </span>
+                            <h4 class="chart-main-title" id="evolution-chart-title">Progresso de Peso Corporal</h4>
+                            <span class="chart-stat-badge" id="evolution-chart-stat-badge">Acompanhamento temporal</span>
+                        </div>
+
+                        <!-- Filtros / Pílulas de Métrica -->
+                        <div class="evolution-metric-pills" id="evolution-metric-pills">
+                            <button type="button" class="metric-pill active" data-metric="peso">Peso (kg)</button>
+                            <button type="button" class="metric-pill" data-metric="cintura">Cintura (cm)</button>
+                            <button type="button" class="metric-pill" data-metric="torax">Tórax (cm)</button>
+                            <button type="button" class="metric-pill" data-metric="quadril">Quadril (cm)</button>
+                            <button type="button" class="metric-pill" data-metric="imc">IMC</button>
+                        </div>
+                    </div>
+
+                    <!-- Palco do Gráfico SVG -->
+                    <div class="evolution-chart-canvas-wrap" id="evolution-chart-canvas-wrap">
+                        <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 24px;">Carregando gráfico de evolução...</div>
+                    </div>
+                </div>
+
+                <!-- 2. Cards de Resumo Geral da Evolução (Início vs Atual) -->
+                <div class="evolution-summary-grid" id="evolution-summary-cards">
+                    <!-- Preenchido via JavaScript -->
+                </div>
+
+                <!-- Barra de Ações: Nova Aferição -->
+                <div class="evolution-actions-bar" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 10px 0;">
+                    <h4 style="color: #ffffff; font-size: 13.5px; margin: 0; font-family: var(--font-heading);">
+                        Histórico Cronológico (<span id="total-evaluations-count">0</span>)
+                    </h4>
+                    <button type="button" class="btn-new-eval" id="btn-add-eval-from-modal">
+                        + Nova Avaliação
+                    </button>
+                </div>
+
+                <!-- Tabela Responsiva de Histórico com Deltas -->
+                <div class="evolution-table-wrap">
+                    <table class="evolution-table" id="evolution-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Peso</th>
+                                <th>IMC</th>
+                                <th>Tórax</th>
+                                <th>Cintura</th>
+                                <th>Quadril</th>
+                                <th>Braço</th>
+                                <th>Coxa</th>
+                                <th>Observações</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evolution-table-body">
+                            <!-- Preenchido dinamicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 5: AJUSTES DA CONTA DO ATLETA                               -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-conta" style="display: none;">
+        <div class="modal-card" style="max-width: 480px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="stat-icon-wrap icon-amber"
+                        style="width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; color: #f8fafc;">Ajustes da Conta</h3>
+                        <span style="font-size: 11.5px; color: #94a3b8;">Informações de cadastro e segurança</span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-conta">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 18px 20px;">
+                <!-- Card Perfil Resumo -->
+                <div
+                    style="display: flex; align-items: center; gap: 14px; background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); padding: 14px; border-radius: 16px; margin-bottom: 16px;">
+                    <img id="modal-conta-avatar-img" src="/assets/avatar/homem-branco.png"
+                        style="width: 52px; height: 52px; border-radius: 14px; object-fit: cover; border: 2px solid #f97316;">
+                    <div style="flex: 1; min-width: 0;">
+                        <h4 id="modal-conta-nome"
+                            style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            Mauro Silva</h4>
+                        <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                            <span class="prajied-chip" id="modal-conta-prajied"
+                                style="font-size: 10px; padding: 2px 8px;">Prajied Atual</span>
+                            <span
+                                style="font-size: 10px; background: rgba(255,255,255,0.06); color: #cbd5e1; padding: 2px 8px; border-radius: 6px;">Matrícula:
+                                <strong id="modal-conta-matricula">#--</strong></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detalhes da Conta -->
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                    <div
+                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: #94a3b8;">E-mail</span>
+                        <strong id="modal-conta-email" style="font-size: 12.5px; color: #f8fafc;">--</strong>
+                    </div>
+                    <div
+                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: #94a3b8;">Telefone / WhatsApp</span>
+                        <strong id="modal-conta-telefone" style="font-size: 12.5px; color: #f8fafc;">--</strong>
+                    </div>
+                    <div
+                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: #94a3b8;">Plano Ativo</span>
+                        <strong id="modal-conta-plano" style="font-size: 12.5px; color: #f59e0b;">--</strong>
+                    </div>
+                    <div
+                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; color: #94a3b8;">Status da Assinatura</span>
+                        <span id="modal-conta-status"
+                            style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10b981;">Ativa</span>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação da Conta -->
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="button" id="btn-conta-logout" class="btn-modal-save"
+                        style="background: #dc2626; color: #ffffff; border-color: #ef4444; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                        <span>Sair da Conta (Logout)</span>
+                    </button>
+                    <button type="button" class="btn-modal-save" data-close="modal-conta"
+                        style="background: transparent; color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); width: 100%;">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 5: VISUALIZADOR DE TÉCNICA & PASSO A PASSO (ALUNO)          -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-visualizar-tecnica" style="display: none;">
+        <div class="modal-card modal-large tecnica-viewer-modal">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="stat-icon-wrap icon-cyan"
+                        style="width: 38px; height: 38px; border-radius: 12px; flex-shrink: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-tecnica-nome"
+                            style="margin: 0; font-size: 18px; color: var(--text-dark-primary);">Nome do Golpe</h3>
+                        <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;"
+                            id="modal-tecnica-tags">
+                            <!-- Tags dinâmicas de Modalidade, Categoria e Dificuldade -->
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-visualizar-tecnica">&times;</button>
+            </div>
+
+            <div class="modal-body tecnica-viewer-body">
+                <p id="modal-tecnica-desc"
+                    style="font-size: 13.5px; color: var(--text-dark-secondary); margin-bottom: 16px; line-height: 1.5;">
+                </p>
+
+                <!-- Palco Central do Passo -->
+                <div class="tecnica-stage-card">
+                    <div class="tecnica-stage-header">
+                        <span class="tecnica-step-badge" id="modal-passo-indicator">Passo 1 de 3</span>
+                        <h4 class="tecnica-step-title" id="modal-passo-titulo">Posicionamento Inicial</h4>
+                    </div>
+
+                    <!-- Imagem Ilustrativa com Zoom/Preview -->
+                    <div class="tecnica-step-image-wrap" id="modal-passo-img-wrap">
+                        <img id="modal-passo-img" src="" alt="Foto ilustrativa da etapa técnica">
+                    </div>
+
+                    <!-- Descrição biomecânica da execução -->
+                    <div class="tecnica-step-desc-box">
+                        <div class="tecnica-desc-label">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="16" x2="12" y2="12" />
+                                <line x1="12" y1="8" x2="12.01" y2="8" />
+                            </svg>
+                            Instrução Técnica de Execução:
+                        </div>
+                        <p id="modal-passo-descricao" class="tecnica-desc-text"></p>
+                    </div>
+                </div>
+
+                <!-- Barra de Navegação entre os Passos -->
+                <div class="tecnica-nav-bar">
+                    <button type="button" class="btn-tecnica-nav" id="btn-tecnica-anterior">
+                        ← Passo Anterior
+                    </button>
+                    <div class="tecnica-dots-container" id="modal-tecnica-dots">
+                        <!-- Dots clicáveis gerados pelo JS -->
+                    </div>
+                    <button type="button" class="btn-tecnica-nav btn-tecnica-primary" id="btn-tecnica-proximo">
+                        Próximo Passo →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 6: INSCRIÇÃO & PAGAMENTO DO EXAME DE GRADUAÇÃO (ASAAS)      -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-exame-aluno" style="display: none;">
+        <div class="modal-card modal-medium" style="max-width: 580px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="stat-icon-wrap icon-amber"
+                        style="width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="8" r="6" />
+                            <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-exame-titulo"
+                            style="margin: 0; font-size: 18px; color: var(--text-dark-primary);">Exame de Graduação
+                            Oficial</h3>
+                        <p id="modal-exame-subtitulo"
+                            style="margin: 2px 0 0 0; font-size: 12.5px; color: var(--text-dark-secondary);">Convocação
+                            & Inscrição</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-exame-aluno">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 20px 24px;">
+                <!-- Card de Informações do Exame -->
+                <div
+                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <span id="modal-exame-modalidade-badge"
+                            style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; background: rgba(14, 165, 233, 0.12); color: #0284c7;">Modalidade</span>
+                        <div id="modal-exame-status-badge"></div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+                        <span style="font-size: 13px; color: var(--text-dark-secondary);">Graduação Atual: <strong
+                                id="modal-exame-grad-atual" style="color: var(--text-dark-primary);">--</strong></span>
+                        <span style="color: #94a3b8; font-weight: 700;">➜</span>
+                        <span style="font-size: 13px; color: var(--text-dark-secondary);">Pretendida: <strong
+                                id="modal-exame-grad-pretendida" style="color: #d97706;">--</strong></span>
+                    </div>
+
+                    <div
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; font-size: 13px; color: var(--text-dark-secondary); margin-bottom: 12px;">
+                        <div>📅 <strong>Data:</strong> <span id="modal-exame-data">--</span></div>
+                        <div>⏰ <strong>Horário:</strong> <span id="modal-exame-horario">--</span></div>
+                        <div>📍 <strong>Local:</strong> <span id="modal-exame-local">--</span></div>
+                        <div>💰 <strong>Taxa:</strong> <strong id="modal-exame-valor" style="color: #16a34a;">R$
+                                0,00</strong></div>
+                    </div>
+
+                    <div id="modal-exame-orientacoes-box"
+                        style="font-size: 12.5px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 10px; line-height: 1.4;">
+                        <strong>Orientações:</strong> <span id="modal-exame-descricao">--</span>
+                    </div>
+                </div>
+
+                <!-- Box de Pagamento Asaas / Confirmação -->
+                <div id="modal-exame-cobranca-container">
+                    <!-- Dinâmico via PainelAlunoApp: renderiza opções de aceite, Pix QR Code ou confirmação -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL DE PAGAMENTO DE MENSALIDADE (GATEWAY OFICIAL ASAAS)         -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-pagamento-mensalidade" style="display: none;">
+        <div class="modal-card modal-medium" style="max-width: 520px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="stat-icon-wrap"
+                        style="width: 40px; height: 40px; border-radius: 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #ef4444; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-pagamento-titulo" style="margin: 0; font-size: 17px; font-weight: 800; color: #ffffff;">Pagamento da Mensalidade</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">Gateway Oficial Asaas • PIX Instantâneo</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-pagamento-mensalidade">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 16px 20px;">
+                <div id="modal-pagamento-conteudo">
+                    <div style="text-align: center; padding: 30px; color: #94a3b8;">
+                        <div class="spinner"></div> Carregando dados da cobrança Asaas...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL DE COMPROVANTE DE PAGAMENTO (FATURAS E GRADUAÇÕES)          -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-comprovante-fatura" style="display: none;">
+        <div class="modal-card modal-medium" style="max-width: 480px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="stat-icon-wrap"
+                        style="width: 40px; height: 40px; border-radius: 12px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: #10b981; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-comprovante-titulo" style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff;">Comprovante de Pagamento</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">Registro Oficial de Liquidação</p>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-comprovante-fatura">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 20px;">
+                <div id="modal-comprovante-conteudo">
+                    <!-- Preenchido dinamicamente -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR FIXA MOBILE (4 TABS DO APP)           -->
+    <!-- ================================================================= -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
+        <button type="button" class="mobile-nav-item active" data-tab="inicio" id="mob-nav-inicio">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+            <span>Início</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-tab="treinos" id="mob-nav-treinos">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12" />
+            </svg>
+            <span>Treinos</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-tab="faturas" id="mob-nav-faturas">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
+                <line x1="1" y1="10" x2="23" y2="10"/>
+                <line x1="5" y1="15" x2="9" y2="15"/>
+            </svg>
+            <span>Faturas</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-tab="evolucao" id="mob-nav-evolucao">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                <polyline points="17 6 23 6 23 12" />
+            </svg>
+            <span>Evolução</span>
+        </button>
+
+    </nav>
+
+    <!-- Script Principal do Painel -->
+    <script src="/js/painel-aluno.js?v=3.0"></script>
+</body>
+
+</html>

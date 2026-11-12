@@ -1,0 +1,2565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIZEN CT PRO • Sistema de Gestão de Alunos</title>
+    <meta name="description"
+        content="Sistema profissional de gestão de alunos para academias de artes marciais, controle de graduações, menores de idade, faturas e check-in facial.">
+
+    <!-- CSS Design Tokens & Components -->
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/animations.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/components.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Backdrop Mobile -->
+        <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+        <!-- Sidebar de Navegação -->
+        <aside class="sidebar" id="app-sidebar">
+            <div class="brand">
+                <div class="brand-icon">🥋</div>
+                <div class="brand-text">
+                    <h1>KAIZEN PRO</h1>
+                    <span>Gestão de Alunos</span>
+                </div>
+                <button class="mobile-sidebar-close" id="btn-sidebar-close" aria-label="Fechar menu">
+                    <svg viewBox="0 0 24 24">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-item active" data-view="dashboard" id="nav-dashboard">
+                    <svg viewBox="0 0 24 24">
+                        <rect width="7" height="9" x="3" y="3" rx="1" />
+                        <rect width="7" height="5" x="14" y="3" rx="1" />
+                        <rect width="7" height="9" x="14" y="12" rx="1" />
+                        <rect width="7" height="5" x="3" y="16" rx="1" />
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+                <a class="nav-item" data-view="alunos" id="nav-alunos">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <span>Alunos</span>
+                    <span class="nav-badge" id="total-alunos-count">-</span>
+                </a>
+                <a class="nav-item" data-view="checkins" id="nav-checkins">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M9 11l3 3L22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                    <span>Presenças & Check-in</span>
+                </a>
+                <a class="nav-item" data-view="graduacoes" id="nav-graduacoes">
+                    <svg viewBox="0 0 24 24">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <span>Graduações & Faixas</span>
+                </a>
+                <a class="nav-item" data-view="exames" id="nav-exames">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="6" />
+                        <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                    </svg>
+                    <span>Exames de Graduação</span>
+                    <span class="nav-badge" id="total-exames-count" style="display: none; background: #10b981;">0</span>
+                </a>
+                <a class="nav-item" data-view="financeiro" id="nav-financeiro">
+                    <svg viewBox="0 0 24 24">
+                        <line x1="12" x2="12" y1="2" y2="22" />
+                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    <span>Planos & Mensalidades</span>
+                </a>
+                <a class="nav-item" data-view="wiki" id="nav-wiki">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        <line x1="9" y1="7" x2="15" y2="7" />
+                        <line x1="9" y1="11" x2="15" y2="11" />
+                    </svg>
+                    <span>Wiki de Golpes</span>
+                    <span class="nav-badge" id="total-golpes-count" style="display: none;">0</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer" style="flex-direction: column; align-items: stretch; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="user-avatar">AD</div>
+                    <div class="user-info" style="flex: 1; min-width: 0;">
+                        <div class="user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            Mestre Carlos</div>
+                        <div class="user-role">Administrador Geral</div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="btn-logout"
+                    style="width: 100%; justify-content: center; gap: 8px; padding: 9px 12px; font-size: 12px; font-weight: 500; border-color: rgba(239, 68, 68, 0.25); color: #fca5a5; transition: all 0.2s ease;"
+                    title="Encerrar sessão no sistema">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                    <span>Sair do Sistema</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Área Principal de Trabalho -->
+        <main class="main-wrapper">
+            <!-- Topbar Sticky -->
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="mobile-menu-toggle" id="btn-sidebar-toggle" aria-label="Abrir menu de navegação">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+                    <div class="page-title">
+                        <h2 id="page-title-text">Visão Geral do Centro de Treinamento</h2>
+                        <p id="page-desc-text">Métricas, frequência diária e indicadores de performance</p>
+                    </div>
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="btn btn-secondary" id="btn-topbar-checkin">
+                        <svg viewBox="0 0 24 24">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span>⚡ Check-in Rápido</span>
+                    </button>
+                    <button class="btn btn-primary" id="btn-novo-aluno">
+                        <svg viewBox="0 0 24 24">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        <span>Novo Aluno</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="page-container">
+                <!-- ========================================== -->
+                <!-- SEÇÃO 1: DASHBOARD                         -->
+                <!-- ========================================== -->
+                <section class="view-section active" id="view-dashboard">
+                    <!-- Cards de KPIs -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Total de Alunos</span>
+                                <div class="stat-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-total-alunos">-</div>
+                            <div class="stat-meta">
+                                <span class="positive">●</span> Alunos na base cadastral
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Alunos Ativos</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-alunos-ativos">-</div>
+                            <div class="stat-meta">
+                                <span class="positive">Treinando regularmente</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Presenças Hoje</span>
+                                <div class="stat-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <polyline points="12 6 12 12 16 14" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-checkins-hoje">-</div>
+                            <div class="stat-meta">
+                                Check-ins validados no tatame
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Menores de 18 Anos</span>
+                                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="8" r="5" />
+                                        <path d="M20 21a8 8 0 1 0-16 0" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-menores">-</div>
+                            <div class="stat-meta">
+                                Com responsável legal vinculado
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Inadimplentes</span>
+                                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                    <svg viewBox="0 0 24 24">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="8" x2="12" y2="12" />
+                                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-inadimplentes">-</div>
+                            <div class="stat-meta">
+                                <span class="warning">Mensalidades pendentes</span>
+                            </div>
+                        </div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Receita Mensal Paga</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <svg viewBox="0 0 24 24">
+                                        <line x1="12" x2="12" y1="2" y2="22" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="stat-receita" style="font-size: 22px;">R$ 0,00</div>
+                            <div class="stat-meta">
+                                Arrecadado na competência
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos e Rankings -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 28px;">
+                        <div class="table-card" style="padding: 24px;">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3 style="font-family: var(--font-heading); font-size: 16px;">Frequência de Treinos
+                                    (Últimos 7 Dias)</h3>
+                                <span style="font-size: 12px; color: var(--text-muted);">Check-ins diários</span>
+                            </div>
+                            <div id="dashboard-frequencia-bars"
+                                style="display: flex; align-items: flex-end; gap: 16px; min-height: 160px; padding-top: 10px;">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+
+                        <div class="table-card" style="padding: 24px;">
+                            <h3 style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 16px;">Top
+                                Assíduos (Últimos 30 Dias)</h3>
+                            <div id="dashboard-top-assiduos">
+                                <div class="spinner"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Distribuição por Modalidade -->
+                    <div class="table-card" style="padding: 24px;">
+                        <h3 style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 16px;">Distribuição
+                            de Alunos por Modalidade</h3>
+                        <div id="dashboard-modalidades-list"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- SEÇÃO 2: GESTÃO DE ALUNOS (CRUD)           -->
+                <!-- ========================================== -->
+                <section class="view-section" id="view-alunos">
+                    <!-- Barra de Filtros e Busca -->
+                    <div class="action-bar">
+                        <div class="search-box">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="m21 21-4.3-4.3" />
+                            </svg>
+                            <input type="text" id="search-aluno" class="search-input"
+                                placeholder="Buscar por nome, CPF, e-mail ou WhatsApp...">
+                        </div>
+
+                        <div class="filter-group">
+                            <select id="filter-status" class="select-filter">
+                                <option value="todos">Todos os Status</option>
+                                <option value="ativo">Ativo</option>
+                                <option value="inativo">Inativo</option>
+                                <option value="trancado">Trancado</option>
+                                <option value="bloqueado">Bloqueado</option>
+                                <option value="experimental">Experimental</option>
+                            </select>
+
+                            <select id="filter-modalidade" class="select-filter">
+                                <option value="todas">Todas as Modalidades</option>
+                            </select>
+
+                            <select id="filter-menor" class="select-filter">
+                                <option value="todos">Faixa Etária (Todas)</option>
+                                <option value="sim">Menores de 18 anos</option>
+                                <option value="nao">Adultos (18+)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tabela de Alunos -->
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Aluno / Identidade</th>
+                                        <th>Modalidade & Graduação</th>
+                                        <th>Contatos / Responsável</th>
+                                        <th>Plano / Financeiro</th>
+                                        <th>Presenças</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alunos-table-body">
+                                    <!-- Preenchido via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- SEÇÃO 3: CONTROLE DE PRESENÇAS / CHECK-IN  -->
+                <!-- ========================================== -->
+                <section class="view-section" id="view-checkins">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="font-family: var(--font-heading); font-size: 18px;">Histórico de Presenças Recentes
+                        </h3>
+                        <button class="btn btn-primary" onclick="CheckinsModule.openCheckinModal()">
+                            <svg viewBox="0 0 24 24">
+                                <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            <span>Lançar Presença Manual</span>
+                        </button>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Aluno</th>
+                                        <th>Modalidade</th>
+                                        <th>Turma</th>
+                                        <th>Data e Horário</th>
+                                        <th>Status da Validação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="checkins-table-body">
+                                    <!-- Preenchido via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- SEÇÃO 4: GRADUAÇÕES & CATÁLOGO             -->
+                <!-- ========================================== -->
+                <section class="view-section" id="view-graduacoes">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 14px;">
+                        <div>
+                            <h3 style="font-family: var(--font-heading); font-size: 20px; color: #ffffff;">Catálogo de
+                                Modalidades e Graduações</h3>
+                            <p style="font-size: 13px; color: var(--text-muted);">Cadastre modalidades de artes
+                                marciais, faixas, graus e critérios de exame de graduação</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-nova-modalidade">
+                            <svg viewBox="0 0 24 24">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span>+ Nova Modalidade</span>
+                        </button>
+                    </div>
+
+                    <div id="graduacoes-catalog-grid">
+                        <div class="spinner"></div>
+                    </div>
+                </section>
+
+                <!-- ========================================== -->
+                <!-- SEÇÃO 5: PLANOS & MENSALIDADES (FINANCEIRO) -->
+                <!-- ========================================== -->
+                <section class="view-section" id="view-financeiro">
+                    <!-- Navegação por Abas -->
+                    <div class="financeiro-tabs-nav">
+                        <button class="financeiro-tab-btn active" data-tab="planos">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path
+                                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                            <span>Planos Comerciais</span>
+                        </button>
+                        <button class="financeiro-tab-btn" data-tab="faturas">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect width="20" height="14" x="2" y="5" rx="2" />
+                                <line x1="2" x2="22" y1="10" y2="10" />
+                            </svg>
+                            <span>Mensalidades & Faturas</span>
+                        </button>
+                    </div>
+
+                    <!-- PAINEL 1: PLANOS COMERCIAIS (CRUD) -->
+                    <div id="financeiro-pane-planos">
+                        <!-- Topo da aba: Ação e KPIs de Planos -->
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-main);">
+                                    Planos de Treino Cadastrados</h3>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Defina valores,
+                                    periodicidade, limites semanais e modalidades inclusas para matrícula</p>
+                            </div>
+                            <button class="btn btn-primary" id="btn-novo-plano">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                <span>+ Novo Plano</span>
+                            </button>
+                        </div>
+
+                        <!-- Mini KPIs de Planos -->
+                        <div class="stats-grid"
+                            style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path
+                                            d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Planos Ativos</div>
+                                    <div class="stat-value" id="kpi-planos-total">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Alunos com Matrícula</div>
+                                    <div class="stat-value" id="kpi-planos-alunos">0</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" x2="12" y1="2" y2="22" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Ticket Médio dos Planos</div>
+                                    <div class="stat-value" id="kpi-planos-ticket">R$ 0,00</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Grid de Planos Comerciais -->
+                        <div class="planos-grid" id="planos-grid">
+                            <!-- Preenchido via PlanosModule -->
+                        </div>
+                    </div>
+
+                    <!-- PAINEL 2: MENSALIDADES & FATURAS -->
+                    <div id="financeiro-pane-faturas" style="display: none;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-main);">
+                                    Mensalidades & Cobranças</h3>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Acompanhe o
+                                    faturamento, pagamentos recebidos e pendências financeiras</p>
+                            </div>
+                            <button class="btn btn-primary" id="btn-nova-fatura">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                <span>+ Lançar Fatura Avulsa</span>
+                            </button>
+                        </div>
+
+                        <!-- KPIs Financeiros da Competência -->
+                        <div class="stats-grid"
+                            style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 24px;">
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" x2="12" y1="2" y2="22" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Total Previsto</div>
+                                    <div class="stat-value" id="kpi-faturas-previsto">R$ 0,00</div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Total Recebido</div>
+                                    <div class="stat-value" id="kpi-faturas-recebido" style="color: #10b981;">R$ 0,00
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.15); color: #ef4444;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" x2="12" y1="8" y2="12" />
+                                        <line x1="12" x2="12.01" y1="16" y2="16" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Em Atraso / Pendente</div>
+                                    <div class="stat-value" id="kpi-faturas-atrasado" style="color: #ef4444;">R$ 0,00
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon" style="background: rgba(168, 85, 247, 0.15); color: #a855f7;">
+                                    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                                        <polyline points="22 4 12 14.01 9 11.01" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info">
+                                    <div class="stat-label">Taxa de Adimplência</div>
+                                    <div class="stat-value" id="kpi-faturas-taxa" style="color: #a855f7;">100%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Barra de Filtros e Busca de Faturas (Padrão do Sistema) -->
+                        <div class="action-bar filters-bar">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="m21 21-4.3-4.3" />
+                                </svg>
+                                <input type="text" id="filtro-fatura-busca" class="search-input"
+                                    placeholder="Buscar por aluno, plano ou competência (ex: 2026-10)...">
+                            </div>
+
+                            <div class="filter-group">
+                                <select id="filtro-fatura-status" class="select-filter">
+                                    <option value="todos">Todos os Status</option>
+                                    <option value="pendente">Pendente</option>
+                                    <option value="pago">Pago / Quitado</option>
+                                    <option value="atrasado">Em Atraso</option>
+                                </select>
+
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <span
+                                        style="font-size: 12px; color: var(--text-muted); font-weight: 600; white-space: nowrap;">Mês:</span>
+                                    <input type="month" id="filtro-fatura-mes" class="select-filter"
+                                        style="cursor: pointer;">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabela de Faturas -->
+                        <div class="table-card">
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Aluno</th>
+                                            <th>Plano Contratado</th>
+                                            <th>Competência</th>
+                                            <th>Vencimento</th>
+                                            <th>Valor</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="financeiro-table-body">
+                                        <!-- Preenchido via PlanosModule -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ======================================================== -->
+                <!-- SEÇÃO 6: WIKI DE GOLPES & MOVIMENTOS TÉCNICOS            -->
+                <!-- ======================================================== -->
+                <section class="view-section" id="view-wiki">
+                    <!-- Topo: Filtros, Busca e Ações -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0;">Biblioteca de Golpes & Movimentos</h2>
+                            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">Caderno técnico interativo com passo a passo ilustrado, fotos e descrições detalhadas de execução</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-novo-golpe" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span>+ Novo Golpe / Movimento</span>
+                        </button>
+                    </div>
+
+                    <!-- Barra de Filtros e Busca Rápida -->
+                    <div class="card" style="padding: 16px 20px; margin-bottom: 24px;">
+                        <div style="display: flex; gap: 14px; flex-wrap: wrap; align-items: center;">
+                            <div style="flex: 1; min-width: 240px; position: relative;">
+                                <input type="text" id="wiki-search-input" class="form-input" placeholder="Buscar por nome do golpe, técnica ou categoria..." style="padding-left: 38px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                            </div>
+                            <div style="min-width: 180px;">
+                                <select id="wiki-filter-modalidade" class="form-select">
+                                    <option value="">Todas as Modalidades</option>
+                                </select>
+                            </div>
+                            <div style="min-width: 160px;">
+                                <select id="wiki-filter-categoria" class="form-select">
+                                    <option value="">Todas as Categorias</option>
+                                    <option value="Movimentação">Movimentação</option>
+                                    <option value="Soco">Soco</option>
+                                    <option value="Chute">Chute</option>
+                                    <option value="Joelhada">Joelhada</option>
+                                    <option value="Cotovelada">Cotovelada</option>
+                                    <option value="Defesa / Bloqueio">Defesa / Bloqueio</option>
+                                    <option value="Esgrima / Clinch">Esgrima / Clinch</option>
+                                    <option value="Queda / Projeção">Queda / Projeção</option>
+                                    <option value="Solo / Finalização">Solo / Finalização</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-secondary" id="btn-wiki-limpar-filtros">Limpar</button>
+                        </div>
+                    </div>
+
+                    <!-- Grid de Cards de Golpes da Wiki -->
+                    <div id="wiki-golpes-grid" class="wiki-grid">
+                        <!-- Carregado via WikiModule -->
+                    </div>
+                </section>
+
+                <!-- ======================================================== -->
+                <!-- SEÇÃO 7: EXAMES DE GRADUAÇÃO & GATEWAY ASAAS             -->
+                <!-- ======================================================== -->
+                <section class="view-section" id="view-exames">
+                    <!-- Topo: Título e Ações -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0;">Exames de Graduação & Convocação</h2>
+                            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">Configuração de eventos marciais, convocação de atletas aptos e controle de pagamentos via Gateway Asaas</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button type="button" class="btn btn-secondary" id="btn-recarregar-exames" title="Recarregar dados">
+                                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10" />
+                                    <polyline points="1 20 1 14 7 14" />
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                </svg>
+                                <span>Atualizar</span>
+                            </button>
+                            <button class="btn btn-primary" id="btn-novo-evento-exame" style="display: inline-flex; align-items: center; gap: 8px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                <span>+ Novo Evento de Exame</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Indicadores Rápidos (KPIs) -->
+                    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px;">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Exames em Aberto</div>
+                            <div class="kpi-value" id="kpi-exames-abertos">0</div>
+                            <div class="kpi-subtext" style="color: #38bdf8;">Com inscrições abertas</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total Convocados</div>
+                            <div class="kpi-value" id="kpi-exames-convidados">0</div>
+                            <div class="kpi-subtext" style="color: #f59e0b;">Convites emitidos</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Inscrições Confirmadas</div>
+                            <div class="kpi-value" id="kpi-exames-confirmados" style="color: #10b981;">0</div>
+                            <div class="kpi-subtext" style="color: #10b981;">Taxas pagas / quitadas</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total Arrecadado</div>
+                            <div class="kpi-value" id="kpi-exames-arrecadado" style="color: #10b981;">R$ 0,00</div>
+                            <div class="kpi-subtext">Via Asaas (Pix / Fatura)</div>
+                        </div>
+                    </div>
+
+                    <!-- Eventos Cadastrados (Grade de Seleção) -->
+                    <div style="margin-bottom: 24px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Eventos de Exame de Graduação</h3>
+                            <div style="font-size: 12px; color: var(--text-muted);">Clique em um exame para gerenciar atletas aptos e convites</div>
+                        </div>
+                        <div id="eventos-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+                            <!-- Carregado via ExamesModule.renderEventosCards -->
+                        </div>
+                    </div>
+
+                    <!-- Painel de Detalhes do Evento Selecionado -->
+                    <div class="card" id="painel-evento-detalhes" style="display: none; padding: 20px; margin-bottom: 30px; border-color: rgba(14, 165, 233, 0.3);">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 18px;">
+                            <div>
+                                <span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; font-size: 11px; margin-bottom: 6px; display: inline-block;">Exame em Destaque</span>
+                                <h3 id="detalhe-evento-titulo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin: 0 0 6px 0;">Título do Evento</h3>
+                                <p id="detalhe-evento-desc" style="font-size: 12.5px; color: var(--text-muted); margin: 0; max-width: 600px; line-height: 1.4;"></p>
+                            </div>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12.5px;">
+                                <div style="display: flex; gap: 12px;">
+                                    <span style="color: var(--text-muted);">📅 <strong id="detalhe-evento-data" style="color: var(--text-primary);">--</strong></span>
+                                    <span style="color: var(--text-muted);">📍 <strong id="detalhe-evento-local" style="color: var(--text-primary);">--</strong></span>
+                                </div>
+                                <span id="detalhe-evento-taxa" style="font-weight: 800; color: #10b981; font-size: 14px;">Taxa Asaas: R$ 0,00</span>
+                            </div>
+                        </div>
+
+                        <!-- Abas: Alunos Aptos vs Convites Emitidos -->
+                        <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 18px;">
+                            <button type="button" class="btn btn-secondary active" id="tab-btn-aptos" style="display: inline-flex; align-items: center; gap: 8px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="9" cy="7" r="4" />
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                </svg>
+                                <span>Alunos Aptos para Convite</span>
+                                <span class="badge" id="badge-aptos-count" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0 aptos</span>
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="tab-btn-convites" style="display: inline-flex; align-items: center; gap: 8px;">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                </svg>
+                                <span>Convites & Inscrições Asaas</span>
+                                <span class="badge" id="badge-convites-count" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0</span>
+                            </button>
+                        </div>
+
+                        <!-- Painel Aba 1: Alunos Aptos -->
+                        <div id="painel-tab-aptos">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px;">
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <label style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Filtrar Modalidade:</label>
+                                    <select id="filtro-aptos-modalidade" class="form-select" style="min-width: 180px; padding: 6px 12px; font-size: 12.5px;">
+                                        <option value="">Todas as Modalidades</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-primary" id="btn-enviar-convites-lote" disabled style="display: inline-flex; align-items: center; gap: 8px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13" />
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                                    </svg>
+                                    <span>Enviar Convite de Exame (0 selecionados)</span>
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="data-table" id="tabela-alunos-aptos">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px; text-align: center;">
+                                                <input type="checkbox" id="check-todos-aptos" title="Selecionar todos os alunos aptos">
+                                            </th>
+                                            <th>Aluno</th>
+                                            <th>Modalidade</th>
+                                            <th>Evolução de Faixa</th>
+                                            <th>Aptidão Técnica</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-alunos-aptos-corpo">
+                                        <!-- Carregado via ExamesModule.carregarAlunosAptos -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Painel Aba 2: Convites Emitidos -->
+                        <div id="painel-tab-convites" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="data-table" id="tabela-convites">
+                                    <thead>
+                                        <tr>
+                                            <th>Aluno Convocado</th>
+                                            <th>Graduação Pretendida</th>
+                                            <th>Taxa</th>
+                                            <th>Data Convite</th>
+                                            <th>Status</th>
+                                            <th>Gateway Asaas</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-convites-corpo">
+                                        <!-- Carregado via ExamesModule.renderListaConvites -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO / EDIÇÃO DE ALUNO          -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-aluno">
+        <div class="modal-box modal-large">
+            <div class="modal-header">
+                <h3 id="modal-aluno-title">Novo Aluno</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-aluno')">&times;</button>
+            </div>
+            <form id="form-aluno">
+                <div class="modal-body">
+                    <input type="hidden" id="aluno-id">
+
+                    <!-- Seção 1: Dados Pessoais -->
+                    <div class="form-section-title">1. Dados Pessoais & Contato</div>
+                    <div class="form-grid">
+                        <div class="form-group form-col-full">
+                            <label>Nome Completo <span class="required">*</span></label>
+                            <input type="text" id="aluno-nome" class="form-input"
+                                placeholder="Ex: Gabriel Henrique de Souza" required>
+                        </div>
+                        <div class="form-group">
+                            <label>CPF</label>
+                            <input type="text" id="aluno-cpf" class="form-input" placeholder="000.000.000-00">
+                        </div>
+                        <div class="form-group">
+                            <label>Data de Nascimento <span class="required">*</span></label>
+                            <input type="date" id="aluno-nascimento" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Gênero</label>
+                            <select id="aluno-genero" class="form-select">
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="Outro">Outro</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp / Telefone <span class="required">*</span></label>
+                            <input type="text" id="aluno-whatsapp" class="form-input" placeholder="(11) 98888-7777"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" id="aluno-email" class="form-input" placeholder="aluno@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Status Cadastral</label>
+                            <select id="aluno-status" class="form-select">
+                                <option value="ativo">Ativo</option>
+                                <option value="inativo">Inativo</option>
+                                <option value="trancado">Trancado</option>
+                                <option value="bloqueado">Bloqueado</option>
+                                <option value="experimental">Experimental</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-col-full">
+                            <label
+                                style="display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px;">Foto
+                                de Perfil do Aluno</label>
+                            <div class="photo-upload-wrapper"
+                                style="display: flex; align-items: center; gap: 18px; padding: 14px; background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border-color); border-radius: var(--radius-md);">
+                                <div id="aluno-foto-preview-box"
+                                    style="width: 80px; height: 80px; border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.05); border: 2px solid var(--border-color); overflow: hidden; display: flex; align-items: center; justify-content: center; flex-shrink: 0; position: relative;">
+                                    <img id="aluno-foto-preview"
+                                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                                        alt="Pré-visualização da foto do aluno"
+                                        style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                    <div id="aluno-foto-placeholder"
+                                        style="display: flex; flex-direction: column; align-items: center; color: var(--text-muted);">
+                                        <svg viewBox="0 0 24 24" width="28" height="28" fill="none"
+                                            stroke="currentColor" stroke-width="1.5">
+                                            <path
+                                                d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                            <circle cx="12" cy="13" r="4" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;">
+                                        <button type="button" class="btn btn-secondary btn-sm" id="btn-upload-foto">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                                <polyline points="17 8 12 3 7 8" />
+                                                <line x1="12" y1="3" x2="12" y2="15" />
+                                            </svg>
+                                            Carregar Imagem
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="btn-remove-foto"
+                                            style="display: none; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
+                                            Remover
+                                        </button>
+                                    </div>
+                                    <span style="font-size: 11px; color: var(--text-muted);">Suporta JPG, PNG ou WEBP
+                                        até 5MB. A imagem será salva no servidor e exibida no dossiê.</span>
+                                    <input type="file" id="aluno-foto-input" accept="image/jpeg,image/png,image/webp"
+                                        style="display: none;">
+                                    <input type="hidden" id="aluno-foto" value="">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Seção 2: Responsável Legal (Obrigatório se < 18 anos) -->
+                    <div class="form-section-title">2. Responsável Legal (Obrigatório para Menores de 18 Anos)</div>
+                    <div id="minor-alert-box" class="minor-alert-box" style="display: none;">
+                        <span>⚠️ Aluno menor de 18 anos detectado. O preenchimento do responsável legal e telefone é
+                            obrigatório por lei.</span>
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nome do Responsável</label>
+                            <input type="text" id="aluno-resp-nome" class="form-input responsavel-required"
+                                placeholder="Nome do pai, mãe ou tutor">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone do Responsável</label>
+                            <input type="text" id="aluno-resp-fone" class="form-input responsavel-required"
+                                placeholder="(11) 97777-6666">
+                        </div>
+                        <div class="form-group form-col-full">
+                            <label>CPF do Responsável</label>
+                            <input type="text" id="aluno-resp-cpf" class="form-input" placeholder="000.000.000-00">
+                        </div>
+                    </div>
+
+                    <!-- Seção 3: Ficha Médica e Emergência -->
+                    <div class="form-section-title">3. Ficha Médica & Emergência</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Contato de Emergência (Nome e Parentesco)</label>
+                            <input type="text" id="aluno-emergencia-nome" class="form-input"
+                                placeholder="Ex: Maria (Mãe)">
+                        </div>
+                        <div class="form-group">
+                            <label>Telefone de Emergência</label>
+                            <input type="text" id="aluno-emergencia-fone" class="form-input"
+                                placeholder="(11) 96666-5555">
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo Sanguíneo</label>
+                            <select id="aluno-tipo-sanguineo" class="form-select">
+                                <option value="">Não informado</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-col-full">
+                            <label>Observações Médicas, Alergias ou Lesões Prévias</label>
+                            <textarea id="aluno-obs-medicas" class="form-textarea"
+                                placeholder="Descreva eventuais cirurgias, limitações articulares, problemas respiratórios..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Seção 4: Matrícula e Graduação Inicial (Apenas no Cadastro) -->
+                    <div id="matricula-initial-section">
+                        <div class="form-section-title">4. Matrícula & Graduação Inicial</div>
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label>Modalidade Principal</label>
+                                <select id="aluno-modalidade-id" class="form-select">
+                                    <option value="">Selecione uma modalidade</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Graduação Inicial</label>
+                                <select id="aluno-graduacao-id" class="form-select" disabled>
+                                    <option value="">Selecione primeiro a modalidade</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Plano de Matrícula</label>
+                                <select id="aluno-plano-id" class="form-select">
+                                    <option value="">Sem plano inicial</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Dia de Vencimento da Mensalidade</label>
+                                <select id="aluno-vencimento" class="form-select">
+                                    <option value="5">Dia 05</option>
+                                    <option value="10" selected>Dia 10</option>
+                                    <option value="15">Dia 15</option>
+                                    <option value="20">Dia 20</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-aluno')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-aluno">Salvar Aluno</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: DOSSIÊ 360° DO ALUNO                -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-dossie">
+        <div class="modal-box modal-large">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <img id="dossie-avatar"
+                        src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+                        alt="Avatar do aluno"
+                        style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light);">
+                    <div>
+                        <h3 id="dossie-nome" style="font-size: 20px;">Dossiê do Aluno</h3>
+                        <div id="dossie-meta"
+                            style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                        </div>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-dossie')">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding-top: 14px;">
+                <!-- Abas do Dossiê -->
+                <div class="dossier-tabs">
+                    <button class="dossier-tab-btn active" data-tab="geral">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                            <circle cx="12" cy="7" r="4" />
+                        </svg>
+                        Dados & Saúde
+                    </button>
+                    <button class="dossier-tab-btn" data-tab="graduacoes">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polygon
+                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        Graduações
+                    </button>
+                    <button class="dossier-tab-btn" data-tab="financeiro">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="12" x2="12" y1="2" y2="22" />
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                        </svg>
+                        Matrícula & Faturas
+                    </button>
+                    <button class="dossier-tab-btn" data-tab="presencas">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Presenças & Frequência
+                    </button>
+                    <button class="dossier-tab-btn" data-tab="desempenho" id="tab-btn-desempenho">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 20V10M12 20V4M6 20v-6" />
+                        </svg>
+                        Desempenho & Sparring
+                    </button>
+                </div>
+
+                <!-- Conteúdo das Abas -->
+                <div id="dossie-body-content">
+                    <div class="dossier-tab-content active" id="dossier-tab-geral"></div>
+                    <div class="dossier-tab-content" id="dossier-tab-graduacoes"></div>
+                    <div class="dossier-tab-content" id="dossier-tab-financeiro"></div>
+                    <div class="dossier-tab-content" id="dossier-tab-presencas"></div>
+                    <div class="dossier-tab-content" id="dossier-tab-desempenho"></div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="UI.closeModal('modal-dossie')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: PROMOÇÃO / LANÇAR GRADUAÇÃO         -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-promocao">
+        <div class="modal-box" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    Promover / Lançar Nova Graduação
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-promocao')">&times;</button>
+            </div>
+            <form id="form-promocao">
+                <div class="modal-body">
+                    <input type="hidden" id="promo-aluno-id">
+
+                    <div
+                        style="background: rgba(30, 41, 59, 0.6); padding: 12px 16px; border-radius: var(--radius-md); margin-bottom: 16px;">
+                        <span style="font-size: 12px; color: var(--text-muted);">Aluno selecionado:</span>
+                        <div id="promo-aluno-nome-display" style="font-weight: 700; font-size: 16px; color: #ffffff;">-
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Modalidade <span class="required">*</span></label>
+                        <select id="promo-modalidade-id" class="form-select" required>
+                            <option value="">Selecione a modalidade</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Nova Faixa / Graduação <span class="required">*</span></label>
+                        <select id="promo-nivel-id" class="form-select" required>
+                            <option value="">Selecione primeiro a modalidade</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Professor / Mestre Avaliador</label>
+                        <select id="promo-professor-id" class="form-select">
+                            <option value="">Selecione o avaliador</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Data da Promoção <span class="required">*</span></label>
+                        <input type="date" id="promo-data" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observações / Mérito Técnico</label>
+                        <textarea id="promo-obs" class="form-textarea"
+                            placeholder="Ex: Exame de graduação 2026/2, aprovado com destaque em luta de solo e transições."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-promocao')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Registrar Graduação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: AVALIAÇÃO DE GRADUAÇÃO (NOTAS & APTIDÃO) -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-avaliacao-graduacao">
+        <div class="modal-box modal-large" style="max-width: 680px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                        Avaliação Técnica de Graduação
+                    </h3>
+                    <div id="avaliacao-modal-subtitle" style="font-size: 13px; color: var(--text-muted); margin-top: 4px;">-</div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-avaliacao-graduacao')">&times;</button>
+            </div>
+
+            <form id="form-avaliacao-graduacao">
+                <input type="hidden" id="avaliacao-aluno-id">
+                <input type="hidden" id="avaliacao-modalidade-id">
+                <input type="hidden" id="avaliacao-graduacao-nivel-id">
+
+                <div class="modal-body" style="padding-top: 10px;">
+                    <!-- Banner de Status & Score ao Vivo -->
+                    <div id="avaliacao-score-banner" style="background: rgba(30, 41, 59, 0.7); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 18px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div id="avaliacao-belt-preview"></div>
+                            <div>
+                                <div id="avaliacao-faixa-nome" style="font-weight: 700; font-size: 14px; color: #ffffff;">-</div>
+                                <div id="avaliacao-exigencia-minima" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                                    Exigência mínima: <strong style="color: #38bdf8;">70%</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="text-align: right;">
+                            <div style="display: flex; align-items: baseline; gap: 6px; justify-content: flex-end;">
+                                <span id="avaliacao-live-pct" style="font-size: 24px; font-weight: 800; color: #ffffff; font-family: var(--font-heading);">0%</span>
+                                <span id="avaliacao-live-pts" style="font-size: 12px; color: var(--text-muted);">(0 / 25 pts)</span>
+                            </div>
+                            <div id="avaliacao-live-status-badge" style="margin-top: 4px;">
+                                <span class="badge-status pendente" style="font-size: 11px;">Aguardando Avaliação</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista dinâmica de Especificações / Requisitos para dar 5 notas -->
+                    <div style="margin-bottom: 16px;">
+                        <label style="font-weight: 700; font-size: 13px; color: var(--text-main); display: block; margin-bottom: 8px;">
+                            Pontuação dos Requisitos da Graduação (1 a 5 pontos por item)
+                        </label>
+                        <div id="avaliacao-itens-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                            <!-- Inserido dinamicamente via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Observações do Professor -->
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label>Observações Técnicas / Parecer do Professor</label>
+                        <textarea id="avaliacao-observacoes" class="form-textarea" rows="2" placeholder="Ex: Excelente precisão e postura marcial. Ajustar respiração no clinch."></textarea>
+                    </div>
+
+                    <!-- Box de Promoção Imediata se Apto -->
+                    <div id="avaliacao-promocao-box" style="display: none; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 14px; margin-top: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 13px; color: #10b981;">🎉 Aluno Apto para a Próxima Fase!</div>
+                                <div id="avaliacao-proxima-faixa-texto" style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+                                    A próxima graduação configurada é: <strong>-</strong>
+                                </div>
+                            </div>
+                            <button type="button" id="btn-aprovar-promocao" class="btn btn-success" style="padding: 8px 16px; font-weight: 700;">
+                                🎓 Aprovar Graduação & Promover
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-avaliacao-graduacao')">Fechar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-avaliacao">
+                        💾 Salvar Avaliação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: AVALIAÇÃO DE DESEMPENHO             -->
+    <!-- (CLINCH-SPARRING & CONDICIONAMENTO)        -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-avaliacao-desempenho">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0ea5e9" stroke-width="2">
+                            <path d="M18 20V10M12 20V4M6 20v-6" />
+                        </svg>
+                        Avaliar Desempenho do Aluno
+                    </h3>
+                    <div id="desempenho-modal-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Quesitos de Clinch-Sparring e Condicionamento</div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-avaliacao-desempenho')">&times;</button>
+            </div>
+            <form id="form-avaliacao-desempenho">
+                <div class="modal-body">
+                    <input type="hidden" id="desempenho-aluno-id">
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Data da Avaliação</label>
+                        <input type="date" id="desempenho-data" class="form-control" required style="background: rgba(0,0,0,0.3); color: #fff;">
+                    </div>
+
+                    <!-- Quesito 1: Clinch & Sparring (seg-cyan) -->
+                    <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label class="form-label" style="color: #38bdf8; font-weight: 700; margin: 0; font-size: 13px;">🥊 Clinch & Sparring (seg-cyan)</label>
+                            <span id="label-nota-clinch" style="font-size: 14px; font-weight: 800; color: #38bdf8;">8.0 / 10</span>
+                        </div>
+                        <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">Avalie postura, domínio na esgrima, joelhadas no clinch, defesas e desenvoltura geral no sparring.</p>
+                        <input type="range" id="desempenho-nota-clinch" min="0" max="10" step="0.5" value="8.0" style="width: 100%; accent-color: #0ea5e9; cursor: pointer;">
+                    </div>
+
+                    <!-- Quesito 2: Condicionamento Físico (seg-amber) -->
+                    <div style="background: rgba(217, 119, 6, 0.08); border: 1px solid rgba(217, 119, 6, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label class="form-label" style="color: #f59e0b; font-weight: 700; margin: 0; font-size: 13px;">⚡ Condicionamento Físico (seg-amber)</label>
+                            <span id="label-nota-cond" style="font-size: 14px; font-weight: 800; color: #f59e0b;">7.5 / 10</span>
+                        </div>
+                        <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">Avalie capacidade aeróbica, fôlego nos rounds, explosão muscular, recuperação e intensidade.</p>
+                        <input type="range" id="desempenho-nota-cond" min="0" max="10" step="0.5" value="7.5" style="width: 100%; accent-color: #d97706; cursor: pointer;">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Observações Técnicas do Professor</label>
+                        <textarea id="desempenho-obs" class="form-control" rows="3" placeholder="Ex: Bom domínio de clinch na curta distância; manter guarda fechada nas saídas de sparring." style="background: rgba(0,0,0,0.3); color: #fff;"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-avaliacao-desempenho')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-desempenho">
+                        💾 Salvar Avaliação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CHECK-IN RÁPIDO / CHAMADA           -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-checkin">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#10b981" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Registro de Presença / Check-in
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-checkin')">&times;</button>
+            </div>
+            <form id="form-quick-checkin">
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Aluno <span class="required">*</span></label>
+                        <select id="checkin-aluno-id" class="form-select" required>
+                            <option value="">Selecione o aluno</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Modalidade do Treino <span class="required">*</span></label>
+                        <select id="checkin-modalidade-id" class="form-select" required>
+                            <option value="">Selecione a modalidade</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Turma / Horário</label>
+                        <select id="checkin-turma-id" class="form-select">
+                            <option value="">Treino Livre / Sem Turma Fixa</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Método de Registro</label>
+                        <select id="checkin-metodo" class="form-select">
+                            <option value="manual_professor">Manual (Recepção / Professor)</option>
+                            <option value="reconhecimento_facial">Reconhecimento Facial (Totem)</option>
+                            <option value="app_aluno">App do Aluno (QR Code)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-checkin')">Cancelar</button>
+                    <button type="submit" class="btn btn-success">Confirmar Presença</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO / EDIÇÃO DE MODALIDADE     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-modalidade">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="modal-modalidade-title">Nova Modalidade de Luta</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-modalidade')">&times;</button>
+            </div>
+            <form id="form-modalidade">
+                <div class="modal-body">
+                    <input type="hidden" id="modalidade-id">
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Nome da Modalidade <span class="required">*</span></label>
+                        <input type="text" id="modalidade-nome" class="form-input"
+                            placeholder="Ex: Jiu-Jitsu Brasileiro, Muay Thai, Boxe..." required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Sistema de Graduação</label>
+                        <select id="modalidade-sistema" class="form-select">
+                            <option value="Faixas e Graus">Faixas e Graus (Ex: Jiu-Jitsu, Karatê, Judô)</option>
+                            <option value="Prajied / Kruang">Prajied / Kruang (Muay Thai)</option>
+                            <option value="Luvas Técnicas">Luvas Técnicas / Níveis (Boxe, Kickboxing)</option>
+                            <option value="Sem Graduação">Sem Graduação (Wrestling, No-Gi)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Descrição e Filosofia</label>
+                        <textarea id="modalidade-descricao" class="form-textarea"
+                            placeholder="Breve resumo da arte marcial, regras e foco do treinamento..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-modalidade')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Modalidade</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO / EDIÇÃO DE FAIXA / NÍVEL  -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-nivel">
+        <div class="modal-box" style="max-width: 540px;">
+            <div class="modal-header">
+                <h3 id="modal-nivel-title">Adicionar Nova Faixa / Nível</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-nivel')">&times;</button>
+            </div>
+            <form id="form-nivel">
+                <div class="modal-body">
+                    <input type="hidden" id="nivel-modalidade-id">
+                    <input type="hidden" id="nivel-id">
+
+                    <div
+                        style="background: rgba(30, 41, 59, 0.6); padding: 10px 14px; border-radius: var(--radius-md); margin-bottom: 16px; font-size: 13px;">
+                        <span style="color: var(--text-muted);">Modalidade:</span>
+                        <strong id="nivel-modalidade-nome" style="color: var(--primary-light);">-</strong>
+                    </div>
+
+                    <!-- Preview Visual da Faixa em tempo real -->
+                    <div
+                        style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">Prévia da
+                            Faixa:</span>
+                        <div id="faixa-live-preview" class="belt-pill"
+                            style="width: 70px; height: 18px; border: 1px solid rgba(255,255,255,0.4); border-radius: 3px; position: relative;">
+                            <div class="belt-pill-tip" style="width: 18px; height: 100%; margin-left: auto;"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Nome da Faixa / Graduação <span class="required">*</span></label>
+                        <input type="text" id="nivel-nome" class="form-input"
+                            placeholder="Ex: Faixa Azul, Prajied Verde, Luva Prata..." required>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Cor Primária (Faixa)</label>
+                            <input type="color" id="nivel-cor-primaria" class="form-input" value="#2563EB"
+                                style="height: 42px; padding: 2px 4px; cursor: pointer;">
+                        </div>
+                        <div class="form-group">
+                            <label>Cor Secundária (Ponta/Grau)</label>
+                            <input type="color" id="nivel-cor-secundaria" class="form-input" value="#111827"
+                                style="height: 42px; padding: 2px 4px; cursor: pointer;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Ícone de Prajied (Destaque do Avatar no Muay Thai)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <select id="nivel-prajied-icone" class="form-select" style="flex: 1;">
+                                <option value="">Sem Prajied específico (Padrão da Faixa)</option>
+                                <option value="/assets/prajied/prajied-1.png">Prajied 1 - Branco / Prata</option>
+                                <option value="/assets/prajied/prajied-2.png">Prajied 2 - Amarelo</option>
+                                <option value="/assets/prajied/prajied-3.png">Prajied 3 - Amarelo e Branco</option>
+                                <option value="/assets/prajied/prajied-4.png">Prajied 4 - Verde</option>
+                                <option value="/assets/prajied/prajied-5.png">Prajied 5 - Verde e Branco</option>
+                                <option value="/assets/prajied/prajied-6.png">Prajied 6 - Azul</option>
+                                <option value="/assets/prajied/prajied-7.png">Prajied 7 - Azul e Branco</option>
+                                <option value="/assets/prajied/prajied-8.png">Prajied 8 - Marrom</option>
+                                <option value="/assets/prajied/prajied-9.png">Prajied 9 - Marrom e Branco</option>
+                                <option value="/assets/prajied/prajied-10.png">Prajied 10 - Vermelho</option>
+                                <option value="/assets/prajied/prajied-11.png">Prajied 11 - Vermelho e Branco</option>
+                                <option value="/assets/prajied/prajied-12.png">Prajied 12 - Preto</option>
+                            </select>
+                            <div id="prajied-select-preview-wrap" style="width: 46px; height: 40px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid var(--border-color);">
+                                <img id="prajied-select-preview-img" src="" alt="Prajied" style="max-width: 38px; max-height: 34px; display: none;">
+                                <span id="prajied-select-preview-empty" style="font-size: 11px; color: var(--text-muted);">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-grid-3" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Graus Máximos</label>
+                            <input type="number" id="nivel-graus" class="form-input" min="0" max="10" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Ordem na Evolução</label>
+                            <input type="number" id="nivel-ordem" class="form-input" min="1" max="50" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Treinos Mínimos</label>
+                            <input type="number" id="nivel-aulas" class="form-input" min="0" placeholder="Ex: 60">
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Tempo Mínimo de Permanência (Meses)</label>
+                            <input type="number" id="nivel-meses" class="form-input" min="0"
+                                placeholder="Ex: 12 ou 24 meses">
+                        </div>
+                        <div class="form-group">
+                            <label>Porcentagem Mínima para Passar (%) <span class="required">*</span></label>
+                            <input type="number" id="nivel-porcentagem-minima" class="form-input" min="10" max="100" step="1" value="70" required
+                                placeholder="Ex: 70%">
+                        </div>
+                    </div>
+
+                    <!-- Lista de Especificações Técnicas / Requisitos da Faixa -->
+                    <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-weight: 700; font-size: 13px; color: var(--text-main); margin: 0;">
+                                Especificações Técnicas da Faixa / Nível
+                            </label>
+                            <span id="nivel-requisitos-count" class="badge-status ativo" style="font-size: 11px;">0 requisitos</span>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px 0;">
+                            Cadastre a lista de golpes, posturas e fundamentos (ex: <em>Base e postura; Jab e Direto</em>). O sistema contará os itens e cada um terá 5 notas para o professor pontuar.
+                        </p>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <input type="text" id="input-novo-requisito" class="form-input" placeholder="Nova especificação (ex: Fuga de quadril, Jab e Direto)..." style="flex: 1;">
+                            <button type="button" id="btn-add-requisito" class="btn btn-secondary" style="white-space: nowrap;">
+                                + Adicionar
+                            </button>
+                        </div>
+                        <div id="nivel-requisitos-badges" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto; padding: 4px 0;">
+                            <!-- Itens de especificação renderizados dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Golpes & Movimentos Técnicos desta Faixa (Wiki) -->
+                    <div style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="font-weight: 700; font-size: 13px; color: var(--text-main); margin: 0;">
+                                Golpes & Movimentos desta Faixa (Wiki de Técnicas)
+                            </label>
+                            <span id="nivel-golpes-count" class="badge-status ativo" style="font-size: 11px;">0 golpes vinculados</span>
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px 0;">
+                            Vincule os movimentos e golpes cadastrados na Wiki que pertencem à grade desta graduação. Eles serão exibidos no painel do aluno quando ele estiver nesta faixa.
+                        </p>
+                        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                            <select id="select-nivel-adicionar-golpe" class="form-select" style="flex: 1;">
+                                <option value="">Selecione um golpe da Wiki para vincular...</option>
+                            </select>
+                            <button type="button" id="btn-add-nivel-golpe" class="btn btn-secondary" style="white-space: nowrap;">
+                                + Vincular Golpe
+                            </button>
+                        </div>
+                        <div id="nivel-golpes-chips-container" style="display: flex; flex-wrap: wrap; gap: 6px; max-height: 140px; overflow-y: auto; padding: 4px 0;">
+                            <!-- Golpes vinculados renderizados dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-nivel')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Graduação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CONTROLE DE ACESSO & LOGIN (RBAC)   -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-auth">
+        <div class="modal-box"
+            style="max-width: 480px; border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div
+                        style="width: 38px; height: 38px; border-radius: 10px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: center;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2">
+                            <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: var(--text-main);">Acesso ao
+                            Sistema</h3>
+                        <p style="margin: 0; font-size: 12px; color: var(--text-muted);">Entre com suas credenciais para
+                            gerenciar a academia</p>
+                    </div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-auth')"
+                    aria-label="Fechar modal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px 24px;">
+                <div id="auth-modal-alert" class="minor-alert-box"
+                    style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 16px;">
+                </div>
+
+                <form id="form-login-manual">
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label
+                            style="display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 6px;">E-mail
+                            Corporativo</label>
+                        <div style="position: relative;">
+                            <input type="email" id="login-email" class="form-input" placeholder="seu.email@ctpro.com.br"
+                                required style="width: 100%; padding-left: 38px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2"
+                                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
+                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                                <polyline points="22,6 12,13 2,6" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label
+                                style="font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted);">Senha
+                                de Acesso</label>
+                            <span style="font-size: 11px; color: var(--text-muted);">Padrão: 123456</span>
+                        </div>
+                        <div style="position: relative;">
+                            <input type="password" id="login-senha" class="form-input" placeholder="••••••••" required
+                                style="width: 100%; padding-left: 38px; padding-right: 40px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                stroke-width="2"
+                                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none;">
+                                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                            <button type="button" id="btn-toggle-senha"
+                                style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; padding: 4px;"
+                                title="Mostrar / ocultar senha">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div
+                        style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;">
+                        <label
+                            style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted); cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="login-remember" style="accent-color: var(--primary);">
+                            <span>Lembrar meu e-mail</span>
+                        </label>
+                        <span style="font-size: 12px; color: #38bdf8; display: flex; align-items: center; gap: 4px;">
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                            JWT Seguro
+                        </span>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btn-submit-login"
+                        style="width: 100%; justify-content: center; gap: 8px; padding: 12px; font-size: 14px; font-weight: 600;">
+                        <span>Acessar Plataforma</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                    </button>
+
+                    <div style="text-align: center; margin-top: 14px;">
+                        <span style="font-size: 13px; color: var(--text-muted);">Novo por aqui?</span>
+                        <a href="/cadastro" style="font-size: 13px; color: var(--primary-light); font-weight: 700; text-decoration: none; margin-left: 6px;">
+                            Faça seu Auto-Cadastro de Atleta &rarr;
+                        </a>
+                    </div>
+                </form>
+
+                <div
+                    style="margin-top: 20px; padding: 12px; background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 8px;">
+                    <div
+                        style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px;">
+                        Acesso Rápido — Equipe (Demo):</div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-quick-login="carlos.mestre@ctpro.com.br" title="Preencher credenciais de Admin">
+                            👑 Admin
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-quick-login="atendimento@ctpro.com.br" title="Preencher credenciais de Recepção">
+                            🖥️ Recepção
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-quick-login="rafael.jiu@ctpro.com.br" title="Preencher credenciais de Professor">
+                            🥋 Professor
+                        </button>
+                    </div>
+                    <div
+                        style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; border-top: 1px solid var(--border-color); padding-top: 8px;">
+                        Acesso Rápido — Portal do Aluno (Mobile-First):</div>
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-quick-login="lucas.silveira@email.com" title="Aluno Homem (Jiu-Jitsu Faixa Azul & Muay Thai Prajied Laranja)">
+                            🥋 Lucas (BJJ + Muay Thai)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-quick-login="mariana.freitas@email.com" title="Aluna Mulher (Muay Thai Prajied Azul)">
+                            🥊 Mariana (Muay Thai)
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-quick-login="beatriz.rocha@email.com" title="Aluna Mulher (Jiu-Jitsu Faixa Roxa)">
+                            🥋 Beatriz (Jiu-Jitsu)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container Flutuante para Toasts -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO / EDIÇÃO DE PLANO COMERCIAL -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-plano">
+        <div class="modal-box modal-large">
+            <div class="modal-header">
+                <h3 id="modal-plano-title">Novo Plano Comercial</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-plano')">&times;</button>
+            </div>
+            <form id="form-plano">
+                <div class="modal-body">
+                    <input type="hidden" id="plano-id">
+
+                    <div class="form-section-title" style="margin-top: 0;">1. Informações Básicas & Valores</div>
+                    <div class="form-grid">
+                        <div class="form-group form-col-full">
+                            <label>Nome do Plano Comercial <span class="required">*</span></label>
+                            <input type="text" id="plano-nome" class="form-input"
+                                placeholder="Ex: Jiu-Jitsu 3x Semana, Combo Lutas VIP, Muay Thai Livre" required>
+                        </div>
+                        <div class="form-group form-col-full">
+                            <label>Descrição / Benefícios do Plano</label>
+                            <textarea id="plano-descricao" class="form-textarea"
+                                placeholder="Descreva os direitos e vantagens inclusos neste plano..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor Mensal (R$) <span class="required">*</span></label>
+                            <input type="number" id="plano-valor" class="form-input" step="0.01" min="1"
+                                placeholder="Ex: 169.90" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Periodicidade de Cobrança</label>
+                            <select id="plano-periodicidade" class="form-select">
+                                <option value="1">Mensal (1 mês)</option>
+                                <option value="3">Trimestral (3 meses)</option>
+                                <option value="6">Semestral (6 meses)</option>
+                                <option value="12">Anual (12 meses)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Limite Semanal de Treinos</label>
+                            <select id="plano-checkins" class="form-select">
+                                <option value="">Livre / Ilimitado</option>
+                                <option value="1">1x por semana</option>
+                                <option value="2">2x por semana</option>
+                                <option value="3">3x por semana</option>
+                                <option value="4">4x por semana</option>
+                                <option value="5">5x por semana</option>
+                                <option value="6">6x por semana</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Tolerância de Inadimplência (Dias)</label>
+                            <input type="number" id="plano-tolerancia" class="form-input" min="0" max="60" value="5"
+                                title="Dias após o vencimento antes de restringir o check-in">
+                        </div>
+                        <div class="form-group">
+                            <label>Status do Plano</label>
+                            <select id="plano-ativo" class="form-select">
+                                <option value="1">Ativo (Disponível para matrículas)</option>
+                                <option value="0">Inativo (Pausado)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-section-title">2. Modalidades Inclusas no Plano</div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
+                        Selecione as modalidades que o aluno matriculado neste plano poderá treinar:
+                    </p>
+                    <div id="plano-modalidades-checklist" class="modalidades-checklist">
+                        <!-- Preenchido via PlanosModule -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-plano')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-plano">Salvar Plano</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: BAIXA DE FATURA / REGISTRAR PAGTO    -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-fatura-baixa">
+        <div class="modal-box" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#10b981" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    Registrar Pagamento de Mensalidade
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-fatura-baixa')">&times;</button>
+            </div>
+            <form id="form-fatura-baixa">
+                <div class="modal-body">
+                    <div
+                        style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-main);" id="baixa-aluno-nome">
+                            Nome do Aluno</div>
+                        <div
+                            style="font-size: 12px; color: var(--text-muted); margin-top: 4px; display: flex; justify-content: space-between;">
+                            <span>Competência: <strong id="baixa-competencia"
+                                    style="color: #38bdf8;">2026-10</strong></span>
+                            <span>Valor Original: <strong id="baixa-valor-original" style="color: #fff;">R$
+                                    0,00</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Forma / Método de Pagamento <span class="required">*</span></label>
+                        <select id="baixa-metodo" class="form-select" required>
+                            <option value="pix">PIX (Instantâneo)</option>
+                            <option value="cartao_credito">Cartão de Crédito</option>
+                            <option value="cartao_debito">Cartão de Débito</option>
+                            <option value="dinheiro">Dinheiro em Espécie</option>
+                            <option value="boleto">Boleto Bancário</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Valor Efetivamente Recebido (R$) <span class="required">*</span></label>
+                        <input type="number" id="baixa-valor-pago" class="form-input" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observações do Recebimento (Opcional)</label>
+                        <input type="text" id="baixa-obs" class="form-input"
+                            placeholder="Ex: Pago com desconto autorizado ou comprovante PIX #1234">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-fatura-baixa')">Cancelar</button>
+                    <button type="submit" class="btn btn-success" id="btn-confirmar-baixa">Confirmar
+                        Recebimento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: EMISSÃO DE FATURA AVULSA / EXTRA     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-nova-fatura">
+        <div class="modal-box" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Lançar Fatura Avulsa de Mensalidade
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-nova-fatura')">&times;</button>
+            </div>
+            <form id="form-nova-fatura">
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Aluno Matriculado <span class="required">*</span></label>
+                        <select id="fatura-aluno-id" class="form-select" required>
+                            <option value="">Carregando alunos...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Competência (Ano-Mês) <span class="required">*</span></label>
+                            <input type="month" id="fatura-competencia" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Valor da Fatura (R$) <span class="required">*</span></label>
+                            <input type="number" id="fatura-valor" class="form-input" step="0.01" min="1"
+                                placeholder="159.90" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Data de Vencimento <span class="required">*</span></label>
+                        <input type="date" id="fatura-vencimento" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Observações / Motivo</label>
+                        <input type="text" id="fatura-obs" class="form-input"
+                            placeholder="Ex: Mensalidade avulsa, taxa de graduação, kimono ou reposição">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-nova-fatura')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-nova-fatura">Emitir Fatura</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: TRANCAR MATRÍCULA (FREEZE/PAUSE)     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-trancar-matricula">
+        <div class="modal-box" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f59e0b" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <rect width="4" height="8" x="9" y="8" rx="1" />
+                        <rect width="4" height="8" x="15" y="8" rx="1" />
+                    </svg>
+                    Trancar Matrícula do Aluno
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-trancar-matricula')">&times;</button>
+            </div>
+            <form id="form-trancar-matricula">
+                <div class="modal-body">
+                    <input type="hidden" id="trancar-matricula-id">
+                    <div
+                        style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #fde68a;">
+                        Ao trancar a matrícula, o acesso aos treinos e check-in será bloqueado temporariamente, e o
+                        aluno terá status <strong>Trancado</strong>.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Motivo do Trancamento <span class="required">*</span></label>
+                        <select id="trancar-motivo-select" class="form-select" required>
+                            <option value="">Selecione o motivo...</option>
+                            <option value="Lesão / Atestado Médico">Lesão / Atestado Médico</option>
+                            <option value="Viagem a Trabalho / Férias">Viagem a Trabalho / Férias</option>
+                            <option value="Motivo Financeiro Temporário">Motivo Financeiro Temporário</option>
+                            <option value="Estudos / Horário Temporário">Estudos / Horário Temporário</option>
+                            <option value="Outro">Outro Motivo</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="trancar-motivo-custom-group"
+                        style="display: none; margin-bottom: 14px;">
+                        <label>Detalhes do Motivo</label>
+                        <input type="text" id="trancar-motivo-custom" class="form-input"
+                            placeholder="Especifique o motivo do trancamento...">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Data Prevista de Retorno (Opcional)</label>
+                        <input type="date" id="trancar-data-retorno" class="form-input">
+                        <span
+                            style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: block;">Previsão
+                            para destrancamento automático ou acompanhamento da recepção.</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" id="trancar-cancelar-faturas" checked
+                                style="accent-color: var(--primary);">
+                            <span>Cancelar faturas pendentes vincendas durante o período trancado</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-trancar-matricula')">Voltar</button>
+                    <button type="submit" class="btn btn-warning" id="btn-submit-trancar">Confirmar Trancamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: UPGRADE OU DOWNGRADE DE PLANO        -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-trocar-plano">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2">
+                        <polyline points="16 3 21 3 21 8" />
+                        <line x1="4" y1="20" x2="21" y2="3" />
+                        <polyline points="21 16 21 21 16 21" />
+                        <line x1="15" y1="15" x2="21" y2="21" />
+                        <line x1="4" y1="4" x2="9" y2="9" />
+                    </svg>
+                    Alteração de Plano (Upgrade / Downgrade)
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-trocar-plano')">&times;</button>
+            </div>
+            <form id="form-trocar-plano">
+                <div class="modal-body">
+                    <input type="hidden" id="troca-matricula-id">
+                    <input type="hidden" id="troca-aluno-id">
+
+                    <!-- Card de Comparação -->
+                    <div
+                        style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span
+                                    style="font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Plano
+                                    Atual:</span>
+                                <div id="troca-plano-atual-nome"
+                                    style="font-size: 15px; font-weight: 700; color: var(--text-main);">Plano Atual
+                                </div>
+                                <div id="troca-plano-atual-valor" style="font-size: 12px; color: #38bdf8;">R$ 0,00 / mês
+                                </div>
+                            </div>
+                            <div id="troca-badge-tipo"
+                                style="display: none; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Novo Plano Comercial <span class="required">*</span></label>
+                        <select id="troca-novo-plano-id" class="form-select" required>
+                            <option value="">Selecione o novo plano...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Novo Valor Acordado (R$) <span class="required">*</span></label>
+                            <input type="number" id="troca-novo-valor" class="form-input" step="0.01" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Dia de Vencimento</label>
+                            <select id="troca-novo-vencimento" class="form-select">
+                                <option value="5">Dia 05</option>
+                                <option value="10">Dia 10</option>
+                                <option value="15">Dia 15</option>
+                                <option value="20">Dia 20</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Motivo da Migração (Opcional)</label>
+                        <input type="text" id="troca-motivo" class="form-input"
+                            placeholder="Ex: Aluno aumentou frequência semanal, promoção de plano, etc.">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-trocar-plano')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-troca-plano">Confirmar
+                        Migração</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CANCELAMENTO FORMAL DE MATRÍCULA     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-cancelar-matricula">
+        <div class="modal-box" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="15" y1="9" x2="9" y2="15" />
+                        <line x1="9" y1="9" x2="15" y2="15" />
+                    </svg>
+                    Rescisão / Cancelamento de Contrato
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-cancelar-matricula')">&times;</button>
+            </div>
+            <form id="form-cancelar-matricula">
+                <div class="modal-body">
+                    <input type="hidden" id="cancelar-matricula-id">
+                    <div
+                        style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: #fca5a5;">
+                        Esta ação encerrará o contrato do aluno na academia, inativará o cadastro e interromperá a
+                        cobrança de novas mensalidades.
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Motivo do Cancelamento (Churn) <span class="required">*</span></label>
+                        <select id="cancelar-motivo-select" class="form-select" required>
+                            <option value="">Selecione a justificativa...</option>
+                            <option value="Mudança de Endereço / Cidade">Mudança de Endereço / Cidade</option>
+                            <option value="Motivo Financeiro">Motivo Financeiro</option>
+                            <option value="Incompatibilidade de Horários">Incompatibilidade de Horários</option>
+                            <option value="Problemas de Saúde / Lesão">Problemas de Saúde / Lesão</option>
+                            <option value="Insatisfação com os Treinos">Insatisfação com os Treinos</option>
+                            <option value="Desistência Geral">Desistência Geral</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Observações Adicionais</label>
+                        <textarea id="cancelar-motivo-obs" class="form-textarea"
+                            placeholder="Descreva observações sobre a saída do aluno..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                            <input type="checkbox" id="cancelar-faturas-pendentes" checked
+                                style="accent-color: var(--primary);">
+                            <span>Cancelar faturas pendentes vincendas em aberto</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-cancelar-matricula')">Voltar</button>
+                    <button type="submit" class="btn btn-danger" id="btn-submit-cancelar">Confirmar
+                        Cancelamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: DESTRANCAR / REATIVAR MATRÍCULA     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-destrancar-matricula">
+        <div class="modal-box" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#10b981" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Reativar / Destrancar Matrícula
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-destrancar-matricula')">&times;</button>
+            </div>
+            <form id="form-destrancar-matricula">
+                <div class="modal-body">
+                    <input type="hidden" id="destrancar-matricula-id">
+                    <div
+                        style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 14px; margin-bottom: 14px; font-size: 13px; color: #a7f3d0; line-height: 1.5;">
+                        <strong style="color: #34d399; display: block; margin-bottom: 4px;">Liberar retorno do
+                            aluno:</strong>
+                        Ao reativar, o status do aluno passará imediatamente para <strong>Ativo</strong>, autorizando o
+                        check-in na recepção/catraca e restabelecendo o fluxo contratual.
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+                        Deseja confirmar a reativação desta matrícula agora?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-destrancar-matricula')">Voltar</button>
+                    <button type="submit" class="btn btn-success" id="btn-submit-destrancar">Confirmar
+                        Reativação</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: NOVA MATRÍCULA NO DOSSIÊ DO ALUNO   -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-nova-matricula-aluno">
+        <div class="modal-box" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#10b981" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <line x1="19" y1="8" x2="19" y2="14" />
+                        <line x1="22" y1="11" x2="16" y2="11" />
+                    </svg>
+                    Nova Matrícula / Contratar Plano
+                </h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-nova-matricula-aluno')">&times;</button>
+            </div>
+            <form id="form-nova-matricula-aluno">
+                <div class="modal-body">
+                    <input type="hidden" id="nova-mat-aluno-id">
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Plano Comercial <span class="required">*</span></label>
+                        <select id="nova-mat-plano-id" class="form-select" required>
+                            <option value="">Selecione um plano...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Valor Mensal Acordado (R$) <span class="required">*</span></label>
+                            <input type="number" id="nova-mat-valor" class="form-input" step="0.01" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Dia de Vencimento</label>
+                            <select id="nova-mat-vencimento" class="form-select">
+                                <option value="5">Dia 05</option>
+                                <option value="10" selected>Dia 10</option>
+                                <option value="15">Dia 15</option>
+                                <option value="20">Dia 20</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Motivo de Desconto / Observação (Opcional)</label>
+                        <input type="text" id="nova-mat-desconto" class="form-input"
+                            placeholder="Ex: Desconto Familiar, Bolsa Atleta">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary"
+                        onclick="UI.closeModal('modal-nova-matricula-aluno')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-nova-mat">Efetivar Matrícula</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRAR / EDITAR GOLPE NA WIKI     -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-golpe">
+        <div class="modal-box" style="max-width: 760px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 id="modal-golpe-title">Cadastrar Novo Golpe / Movimento</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-golpe')">&times;</button>
+            </div>
+            <form id="form-golpe" style="display: flex; flex-direction: column; overflow: hidden; flex: 1;">
+                <div class="modal-body" style="overflow-y: auto; padding: 20px 24px; flex: 1;">
+                    <input type="hidden" id="golpe-id">
+
+                    <!-- Dados Gerais do Golpe -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group">
+                            <label>Nome do Golpe ou Movimento <span class="required">*</span></label>
+                            <input type="text" id="golpe-nome" class="form-input" placeholder="Ex: Teep (Chute Frontal), Jab Direto, Cruzado..." required>
+                        </div>
+                        <div class="form-group">
+                            <label>Modalidade</label>
+                            <select id="golpe-modalidade" class="form-select">
+                                <option value="">Sem modalidade específica</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+                        <div class="form-group">
+                            <label>Categoria do Movimento</label>
+                            <select id="golpe-categoria" class="form-select">
+                                <option value="Movimentação">Movimentação</option>
+                                <option value="Chute">Chute</option>
+                                <option value="Soco">Soco</option>
+                                <option value="Joelhada">Joelhada</option>
+                                <option value="Cotovelada">Cotovelada</option>
+                                <option value="Defesa / Bloqueio">Defesa / Bloqueio</option>
+                                <option value="Esgrima / Clinch">Esgrima / Clinch</option>
+                                <option value="Queda / Projeção">Queda / Projeção</option>
+                                <option value="Solo / Finalização">Solo / Finalização</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Nível de Dificuldade</label>
+                            <select id="golpe-nivel" class="form-select">
+                                <option value="iniciante">Iniciante</option>
+                                <option value="intermediario">Intermediário</option>
+                                <option value="avancado">Avançado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Upload de Capa: Imagem ou GIF Animado -->
+                    <div class="form-group" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
+                        <label style="font-weight: 700; font-size: 13px; color: var(--text-primary); margin-bottom: 4px; display: block;">
+                            Foto de Capa ou GIF Ilustrativo da Técnica (Opcional)
+                        </label>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 0 0 10px 0;">
+                            Envie uma imagem estática (JPG, PNG, WEBP) ou um <strong>GIF animado</strong> com o movimento completo em loop para servir de capa.
+                        </p>
+                        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                            <div id="golpe-capa-preview-box" class="passo-img-uploader" style="width: 150px; height: 95px; border-radius: var(--radius-md);" title="Clique para selecionar Imagem ou GIF">
+                                <div class="passo-img-uploader-placeholder">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                                    <span>Imagem / GIF</span>
+                                </div>
+                            </div>
+                            <input type="file" id="golpe-capa-file" accept="image/jpeg,image/png,image/webp,image/gif" style="display: none;">
+                            <input type="hidden" id="golpe-imagem-capa" value="">
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display: flex; gap: 8px;">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-upload-capa-trigger" style="display: inline-flex; align-items: center; gap: 5px;">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                        <span>Selecionar Imagem ou GIF</span>
+                                    </button>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-remover-capa" style="display: none; color: #ef4444;">
+                                        Remover Capa
+                                    </button>
+                                </div>
+                                <span id="golpe-capa-status-text" style="font-size: 11.5px; color: var(--text-muted);">Formatos suportados: JPG, PNG, WEBP e GIF (máx. 15MB)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label>Descrição Geral / Objetivo do Golpe</label>
+                        <textarea id="golpe-descricao" class="form-textarea" rows="2" placeholder="Explique brevemente a função técnica e tática do golpe..."></textarea>
+                    </div>
+
+                    <!-- Seção dos Passos Técnicos de Execução -->
+                    <div style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <h4 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Passos Necessários para Executar o Golpe</h4>
+                                <p style="font-size: 12.5px; color: var(--text-muted); margin: 2px 0 0 0;">Defina quantos passos são necessários e descreva cada etapa com sua foto correspondente</p>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <div style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary);">
+                                    <span>Qtd. de passos:</span>
+                                    <input type="number" id="input-qtd-passos-rapido" class="form-input" min="1" max="15" value="3" style="width: 60px; padding: 4px 8px; text-align: center;">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-aplicar-qtd-passos" title="Ajustar quantidade de passos">Ajustar</button>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-adicionar-passo" style="display: inline-flex; align-items: center; gap: 4px;">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    <span>+ Adicionar Passo</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lista Dinâmica de Passos -->
+                        <div id="passos-container" style="display: flex; flex-direction: column; gap: 16px;">
+                            <!-- Inserido dinamicamente pelo WikiModule -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding: 16px 24px; border-top: 1px solid var(--border-color); background: var(--bg-surface);">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-golpe')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-golpe">Salvar Golpe na Wiki</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: VISUALIZAR GOLPE PASSO A PASSO      -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-visualizar-golpe">
+        <div class="modal-box" style="max-width: 680px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <div>
+                    <h3 id="vis-golpe-nome" style="margin: 0; font-size: 18px; font-weight: 800;">Nome do Golpe</h3>
+                    <div id="vis-golpe-badges" style="display: flex; gap: 8px; margin-top: 6px;"></div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-visualizar-golpe')">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 20px 24px;">
+                <p id="vis-golpe-desc" style="font-size: 13.5px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5;"></p>
+
+                <!-- Carrossel / Visualizador do Passo Atual -->
+                <div class="vis-passo-card">
+                    <div class="vis-passo-top">
+                        <span class="vis-passo-counter" id="vis-passo-indicator">Passo 1 de 3</span>
+                        <h4 class="vis-passo-title" id="vis-passo-titulo">Título do Passo</h4>
+                    </div>
+
+                    <div class="vis-passo-img-wrap" id="vis-passo-img-wrap">
+                        <img id="vis-passo-img" src="" alt="Foto do Passo">
+                    </div>
+
+                    <div class="vis-passo-desc-wrap">
+                        <p id="vis-passo-descricao"></p>
+                    </div>
+                </div>
+
+                <!-- Controles de Navegação Entre Passos -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" id="btn-vis-passo-anterior" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                        <span>Passo Anterior</span>
+                    </button>
+                    <div id="vis-dots-container" style="display: flex; gap: 6px;"></div>
+                    <button type="button" class="btn btn-primary" id="btn-vis-passo-proximo" style="display: inline-flex; align-items: center; gap: 6px;">
+                        <span>Próximo Passo</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 14px 24px; border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-visualizar-golpe')">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: EVENTO DE EXAME DE GRADUAÇÃO        -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-evento-exame">
+        <div class="modal-box" style="max-width: 620px;">
+            <div class="modal-header">
+                <h3 id="modal-evento-titulo-header">Iniciar Novo Evento de Exame de Graduação</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-evento-exame')">&times;</button>
+            </div>
+            <form id="form-evento-exame">
+                <div class="modal-body">
+                    <input type="hidden" id="evento-modal-id">
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Título do Evento <span class="required">*</span></label>
+                        <input type="text" id="evento-titulo" class="form-input" placeholder="Ex: Exame Geral de Inverno 2026 - Prajied & Faixas" required>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Modalidade Marcial</label>
+                            <select id="evento-modalidade" class="form-select">
+                                <option value="">Geral (Todas as Modalidades)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Status do Exame</label>
+                            <select id="evento-status" class="form-select">
+                                <option value="aberto">🟢 Inscrições Abertas</option>
+                                <option value="rascunho">⚪ Rascunho Interno</option>
+                                <option value="em_andamento">🟡 Em Andamento</option>
+                                <option value="concluido">🏁 Concluído</option>
+                                <option value="cancelado">🔴 Cancelado</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Data do Evento <span class="required">*</span></label>
+                            <input type="date" id="evento-data" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Horário de Início</label>
+                            <input type="time" id="evento-horario" class="form-input" value="09:00" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Data Limite para Inscrição</label>
+                            <input type="date" id="evento-data-limite" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Taxa de Inscrição / Exame (R$) <span class="required">*</span></label>
+                            <input type="number" id="evento-taxa" class="form-input" step="0.01" min="0" placeholder="150.00" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Local / Tatame</label>
+                        <input type="text" id="evento-local" class="form-input" placeholder="Ex: Dojo Central - Kaizen CT" value="Dojo Central - Kaizen CT">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Orientações e Requisitos aos Atletas</label>
+                        <textarea id="evento-descricao" class="form-textarea" rows="3" placeholder="Instruções sobre vestimenta oficial, pesagem pontual, tempo de aquecimento e regras do tatame..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-evento-exame')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-evento-exame">Salvar Evento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Scripts da Aplicação (Vanilla JS) -->
+    <script src="/js/api.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/auth.js"></script>
+    <script src="/js/aluno-detalhes.js"></script>
+    <script src="/js/alunos.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <script src="/js/checkins.js"></script>
+    <script src="/js/graduacoes.js"></script>
+    <script src="/js/planos.js"></script>
+    <script src="/js/wiki.js"></script>
+    <script src="/js/exames.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

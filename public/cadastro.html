@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIZEN CT PRO • Acesso e Cadastro de Alunos</title>
+    <meta name="description"
+        content="Portal de acesso e cadastro de atletas KAIZEN CT PRO. Crie sua conta, faça login ou recupere sua senha com facilidade e segurança.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-main: #090d16;
+            --bg-card: rgba(15, 23, 42, 0.78);
+            --bg-card-border: rgba(255, 255, 255, 0.08);
+            --bg-input: rgba(10, 15, 29, 0.7);
+            --bg-input-focus: rgba(15, 23, 42, 0.95);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --border-focus: #0284c7;
+
+            --primary: #0284c7;
+            --primary-light: #38bdf8;
+            --primary-hover: #0369a1;
+            --primary-glow: rgba(56, 189, 248, 0.28);
+
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.25);
+
+            --success: #10b981;
+            --success-glow: rgba(16, 185, 129, 0.3);
+            --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
+            --warning-border: rgba(245, 158, 11, 0.35);
+            --error: #ef4444;
+
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --radius-full: 9999px;
+
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+            --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 16px;
+            position: relative;
+            overflow-x: hidden;
+            background-image:
+                radial-gradient(circle at 10% 10%, rgba(2, 132, 199, 0.12) 0%, transparent 45%),
+                radial-gradient(circle at 90% 90%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, var(--bg-main) 100%);
+        }
+
+        /* Linhas sutis decorativas de tatame no fundo */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-size: 40px 40px;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Container Principal */
+        .auth-shell {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 580px;
+            margin: 0 auto;
+        }
+
+        /* Cabeçalho da Marca */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .brand-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(2, 132, 199, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: var(--radius-full);
+            color: var(--primary-light);
+            font-family: var(--font-heading);
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            box-shadow: 0 0 16px var(--primary-glow);
+        }
+
+        .brand-title {
+            font-family: var(--font-heading);
+            font-size: 28px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            line-height: 1.15;
+        }
+
+        .brand-title span {
+            background: linear-gradient(135deg, #ffffff 40%, var(--primary-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .brand-sub {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        /* Card de Autenticação */
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--bg-card-border);
+            border-radius: var(--radius-lg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 32px 28px;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+            position: relative;
+        }
+
+        @media (max-width: 480px) {
+            .auth-card {
+                padding: 24px 18px;
+                border-radius: 16px;
+            }
+
+            .brand-title {
+                font-size: 24px;
+            }
+        }
+
+        /* Switcher de Abas (Segmented Control) */
+        .auth-nav-pills {
+            display: flex;
+            background: rgba(10, 15, 29, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-full);
+            padding: 4px;
+            margin-bottom: 26px;
+            position: relative;
+            gap: 4px;
+        }
+
+        .nav-pill-btn {
+            flex: 1;
+            padding: 10px 16px;
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-full);
+            color: var(--text-secondary);
+            font-family: var(--font-heading);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .nav-pill-btn:hover {
+            color: #ffffff;
+        }
+
+        .nav-pill-btn.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #ffffff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        /* Seção da Foto de Perfil */
+        .profile-photo-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 26px;
+            padding-bottom: 22px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            position: relative;
+        }
+
+        .avatar-preview-wrap {
+            position: relative;
+            width: 108px;
+            height: 108px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.9);
+            border: 3px solid rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 24px rgba(56, 189, 248, 0.2);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            transition: var(--transition);
+        }
+
+        .avatar-preview-wrap.has-photo {
+            border-color: var(--success);
+            box-shadow: 0 0 24px var(--success-glow);
+        }
+
+        .avatar-preview-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .avatar-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .avatar-placeholder svg {
+            width: 44px;
+            height: 44px;
+            stroke: var(--text-muted);
+        }
+
+        /* Botões de Ação da Foto */
+        .photo-actions-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-photo-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 8px 14px;
+            border-radius: var(--radius-full);
+            font-family: var(--font-heading);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            border: 1px solid var(--border-color);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--text-primary);
+        }
+
+        .btn-photo-action:hover {
+            background: rgba(255, 255, 255, 0.09);
+            border-color: var(--primary-light);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
+        .btn-photo-action.primary {
+            background: rgba(2, 132, 199, 0.18);
+            border-color: rgba(56, 189, 248, 0.45);
+            color: var(--primary-light);
+        }
+
+        .btn-photo-action.primary:hover {
+            background: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 14px var(--primary-glow);
+        }
+
+        .photo-tips {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            text-align: center;
+        }
+
+        .photo-tips span {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Formulários e Grupos */
+        .auth-view {
+            display: none;
+            animation: fadeIn 0.25s ease forwards;
+        }
+
+        .auth-view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width: 520px) {
+            .form-grid-2 {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            letter-spacing: 0.2px;
+        }
+
+        .form-label .required {
+            color: var(--primary-light);
+        }
+
+        .input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .form-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 12px 14px;
+            color: #ffffff;
+            font-family: var(--font-body);
+            font-size: 14px;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .form-input::placeholder {
+            color: rgba(148, 163, 184, 0.4);
+        }
+
+        .form-input:focus {
+            background: var(--bg-input-focus);
+            border-color: var(--border-focus);
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+        }
+
+        .input-icon-btn {
+            position: absolute;
+            right: 12px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .input-icon-btn:hover {
+            color: var(--primary-light);
+        }
+
+        /* Gênero Segmented */
+        .gender-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .gender-btn {
+            flex: 1;
+            padding: 10px 8px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: var(--transition);
+        }
+
+        .gender-btn:hover {
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .gender-btn.selected {
+            background: rgba(2, 132, 199, 0.18);
+            border-color: var(--primary-light);
+            color: var(--primary-light);
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+        }
+
+        /* Card Suave de Menor de Idade */
+        .minor-guardian-box {
+            display: none;
+            background: var(--warning-bg);
+            border: 1px solid var(--warning-border);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-bottom: 16px;
+            animation: fadeIn 0.25s ease forwards;
+        }
+
+        .minor-guardian-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--warning);
+            margin-bottom: 12px;
+        }
+
+        /* Checkbox Moderno */
+        .terms-wrap {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 18px 0 20px 0;
+            cursor: pointer;
+        }
+
+        .terms-wrap input[type="checkbox"] {
+            margin-top: 3px;
+            width: 17px;
+            height: 17px;
+            accent-color: var(--primary);
+            cursor: pointer;
+        }
+
+        .terms-text {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.45;
+        }
+
+        .terms-text a {
+            color: var(--primary-light);
+            text-decoration: none;
+        }
+
+        .terms-text a:hover {
+            text-decoration: underline;
+        }
+
+        /* Botão Primário Submissão */
+        .btn-submit {
+            width: 100%;
+            padding: 13px 20px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            border: none;
+            border-radius: var(--radius-md);
+            color: #ffffff;
+            font-family: var(--font-heading);
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 6px 18px var(--primary-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-submit:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
+            filter: brightness(1.05);
+        }
+
+        .btn-submit:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Links Auxiliares de Navegação */
+        .auth-footer-links {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .auth-footer-links a {
+            color: var(--primary-light);
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .auth-footer-links a:hover {
+            text-decoration: underline;
+            color: #ffffff;
+        }
+
+        /* Código de 6 dígitos */
+        .digits-container {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 22px 0;
+        }
+
+        .digit-input {
+            width: 48px;
+            height: 56px;
+            text-align: center;
+            font-family: var(--font-heading);
+            font-size: 24px;
+            font-weight: 800;
+            background: var(--bg-input);
+            border: 2px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: #ffffff;
+            outline: none;
+            transition: var(--transition);
+        }
+
+        .digit-input:focus {
+            border-color: var(--primary-light);
+            box-shadow: 0 0 14px var(--primary-glow);
+            background: var(--bg-input-focus);
+        }
+
+        /* Banner de Sucesso pós verificação */
+        .state-banner {
+            text-align: center;
+            padding: 20px 10px;
+        }
+
+        .state-icon-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .state-icon-circle.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 2px solid var(--success);
+            color: var(--success);
+            box-shadow: 0 0 20px var(--success-glow);
+        }
+
+        .state-icon-circle.key {
+            background: rgba(2, 132, 199, 0.15);
+            border: 2px solid var(--primary-light);
+            color: var(--primary-light);
+            box-shadow: 0 0 20px var(--primary-glow);
+        }
+
+        /* Notificação Toast */
+        #auth-toast {
+            position: fixed;
+            top: 24px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--border-color);
+            padding: 12px 22px;
+            border-radius: var(--radius-full);
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(12px);
+            z-index: 9999;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 90%;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        #auth-toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        #auth-toast.success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        #auth-toast.error {
+            border-color: var(--error);
+            color: #f87171;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Toast de Notificação -->
+    <div id="auth-toast"></div>
+
+    <div class="auth-shell">
+        <!-- Cabeçalho -->
+        <header class="brand-header">
+            <div class="brand-badge">🥋 Artes Marciais • CT PRO</div>
+            <h1 class="brand-title">KAIZEN <span>PORTAL</span></h1>
+            <p class="brand-sub" id="header-sub-text">Acesso exclusivo para atletas e alunos</p>
+        </header>
+
+        <!-- Card de Ação -->
+        <main class="auth-card">
+            <!-- Abas Rápidas: Cadastro | Login -->
+            <div class="auth-nav-pills" id="nav-pills-bar">
+                <button type="button" class="nav-pill-btn active" id="tab-btn-cadastro" data-target="view-cadastro">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <line x1="19" y1="8" x2="19" y2="14" />
+                        <line x1="22" y1="11" x2="16" y2="11" />
+                    </svg>
+                    Criar Conta
+                </button>
+                <button type="button" class="nav-pill-btn" id="tab-btn-login" data-target="view-login">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                        <polyline points="10 17 15 12 10 7" />
+                        <line x1="15" y1="12" x2="3" y2="12" />
+                    </svg>
+                    Já Tenho Conta
+                </button>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- 1. TELA DE CADASTRO: TUDO EM UMA ÚNICA TELA               -->
+            <!-- ========================================================= -->
+            <section class="auth-view active" id="view-cadastro">
+                <form id="form-cadastro" novalidate>
+                    <!-- Foto de Perfil / Câmera Integrada -->
+                    <div class="profile-photo-section">
+                        <div class="avatar-preview-wrap" id="avatar-wrap">
+                            <img id="avatar-img" class="avatar-preview-img" alt="Foto de perfil">
+                            <div class="avatar-placeholder" id="avatar-placeholder">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Botões Rápidos de Foto -->
+                        <div class="photo-actions-row">
+                            <label for="input-camera-selfie" class="btn-photo-action primary" id="btn-label-camera">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                    <circle cx="12" cy="13" r="4" />
+                                </svg>
+                                <span id="label-camera-text">Tirar Foto na Câmera</span>
+                            </label>
+
+                            <label for="input-gallery-file" class="btn-photo-action" id="btn-label-gallery">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                                <span>Galeria</span>
+                            </label>
+                        </div>
+
+                        <!-- Inputs nativos invisíveis (acessados via label) -->
+                        <input type="file" id="input-camera-selfie" accept="image/*" capture="user" style="display: none;">
+                        <input type="file" id="input-gallery-file" accept="image/*" style="display: none;">
+                        <input type="hidden" id="cad-foto-url">
+
+                        <p class="photo-tips">Foto de frente, em local claro e sem boné</p>
+                    </div>
+
+                    <!-- Dados Pessoais: Nome & Sobrenome -->
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="cad-nome">Nome <span class="required">*</span></label>
+                            <input type="text" id="cad-nome" class="form-input" placeholder="Ex: Carlos" required autocomplete="given-name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cad-sobrenome">Sobrenome <span class="required">*</span></label>
+                            <input type="text" id="cad-sobrenome" class="form-input" placeholder="Ex: Silva" required autocomplete="family-name">
+                        </div>
+                    </div>
+
+                    <!-- CPF & Data de Nascimento -->
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="cad-cpf">CPF <span class="required">*</span></label>
+                            <input type="tel" id="cad-cpf" class="form-input" placeholder="000.000.000-00" maxlength="14" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cad-nasc">Data de Nascimento <span class="required">*</span></label>
+                            <input type="date" id="cad-nasc" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <!-- Caixa de Menor de Idade (revelada automaticamente se < 18 anos) -->
+                    <div class="minor-guardian-box" id="minor-box">
+                        <div class="minor-guardian-header">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="12" y1="8" x2="12" y2="12" />
+                                <line x1="12" y1="16" x2="12.01" y2="16" />
+                            </svg>
+                            <span id="minor-tag-text">Atleta Menor de Idade — Dados do Responsável Legal</span>
+                        </div>
+                        <div class="form-grid-2">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" for="cad-resp-nome">Nome do Responsável <span class="required">*</span></label>
+                                <input type="text" id="cad-resp-nome" class="form-input" placeholder="Ex: Maria Silva">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" for="cad-resp-tel">Telefone / WhatsApp <span class="required">*</span></label>
+                                <input type="tel" id="cad-resp-tel" class="form-input" placeholder="(00) 00000-0000" maxlength="15">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- WhatsApp & Gênero -->
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="cad-whatsapp">WhatsApp <span class="required">*</span></label>
+                            <input type="tel" id="cad-whatsapp" class="form-input" placeholder="(00) 00000-0000" maxlength="15" required autocomplete="tel">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Gênero</label>
+                            <div class="gender-selector">
+                                <button type="button" class="gender-btn selected" data-value="Masculino">Masculino</button>
+                                <button type="button" class="gender-btn" data-value="Feminino">Feminino</button>
+                                <button type="button" class="gender-btn" data-value="Outro">Outro</button>
+                            </div>
+                            <input type="hidden" id="cad-genero" value="Masculino">
+                        </div>
+                    </div>
+
+                    <!-- Dados de Acesso: E-mail -->
+                    <div class="form-group">
+                        <label class="form-label" for="cad-email">E-mail para Acesso <span class="required">*</span></label>
+                        <input type="email" id="cad-email" class="form-input" placeholder="seu.email@exemplo.com" required autocomplete="email">
+                    </div>
+
+                    <!-- Senha & Confirmação -->
+                    <div class="form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label" for="cad-senha">Senha <span class="required">*</span></label>
+                            <div class="input-wrap">
+                                <input type="password" id="cad-senha" class="form-input" placeholder="Mínimo 6 caracteres" required autocomplete="new-password">
+                                <button type="button" class="input-icon-btn btn-toggle-pw" data-target="cad-senha" aria-label="Ver senha">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="cad-senha-conf">Confirmar Senha <span class="required">*</span></label>
+                            <div class="input-wrap">
+                                <input type="password" id="cad-senha-conf" class="form-input" placeholder="Repita a senha" required autocomplete="new-password">
+                                <button type="button" class="input-icon-btn btn-toggle-pw" data-target="cad-senha-conf" aria-label="Ver senha">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Termos de Adesão -->
+                    <label class="terms-wrap">
+                        <input type="checkbox" id="cad-termos" required checked>
+                        <span class="terms-text">
+                            Declaro aptidão física para práticas de artes marciais e autorizo o uso da minha foto de perfil para identificação de acesso no centro de treinamento.
+                        </span>
+                    </label>
+
+                    <!-- Botão Criar Conta -->
+                    <button type="submit" class="btn-submit" id="btn-submit-cad">
+                        <span>Concluir Meu Cadastro</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                    </button>
+                </form>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- 2. TELA DE LOGIN                                         -->
+            <!-- ========================================================= -->
+            <section class="auth-view" id="view-login">
+                <form id="form-login" novalidate>
+                    <div class="form-group">
+                        <label class="form-label" for="login-email">Seu E-mail <span class="required">*</span></label>
+                        <input type="email" id="login-email" class="form-input" placeholder="seu.email@exemplo.com" required autocomplete="email">
+                    </div>
+
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label class="form-label" for="login-senha" style="margin-bottom: 0;">Sua Senha <span class="required">*</span></label>
+                            <a href="#reset" id="link-goto-reset" style="font-size: 12px; color: var(--primary-light); text-decoration: none;">Esqueci minha senha</a>
+                        </div>
+                        <div class="input-wrap">
+                            <input type="password" id="login-senha" class="form-input" placeholder="Digite sua senha" required autocomplete="current-password">
+                            <button type="button" class="input-icon-btn btn-toggle-pw" data-target="login-senha" aria-label="Ver senha">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-submit" id="btn-submit-login" style="margin-top: 8px;">
+                        <span>Entrar no Sistema</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                            <polyline points="10 17 15 12 10 7" />
+                            <line x1="15" y1="12" x2="3" y2="12" />
+                        </svg>
+                    </button>
+
+                    <div class="auth-footer-links">
+                        Não tem uma conta ainda? <a href="#cadastro" id="link-goto-cadastro">Cadastre-se agora</a>
+                    </div>
+                </form>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- 3. TELA DE RESET DE SENHA (ESQUECI A SENHA)              -->
+            <!-- ========================================================= -->
+            <section class="auth-view" id="view-reset">
+                <!-- Etapa 1: Solicitar Código -->
+                <div id="reset-step-1">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <div class="state-icon-circle key">
+                            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="8" cy="15" r="4" />
+                                <line x1="10.85" y1="12.15" x2="19" y2="4" />
+                                <line x1="18" y1="5" x2="20" y2="7" />
+                                <line x1="15" y1="8" x2="17" y2="10" />
+                            </svg>
+                        </div>
+                        <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Recuperar Acesso</h2>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            Informe o e-mail cadastrado para receber o código de redefinição de senha.
+                        </p>
+                    </div>
+
+                    <form id="form-reset-request" novalidate>
+                        <div class="form-group">
+                            <label class="form-label" for="reset-email">Seu E-mail Cadastrado <span class="required">*</span></label>
+                            <input type="email" id="reset-email" class="form-input" placeholder="seu.email@exemplo.com" required>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="btn-submit-reset-req">
+                            <span>Enviar Código de Recuperação</span>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13" />
+                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Etapa 2: Digitar Código e Nova Senha -->
+                <div id="reset-step-2" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 18px;">
+                        <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Nova Senha</h2>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                            Digite o código de 6 dígitos enviado para <strong id="reset-email-display" style="color: #ffffff;">seu e-mail</strong> e sua nova senha.
+                        </p>
+                    </div>
+
+                    <form id="form-reset-apply" novalidate>
+                        <div class="form-group">
+                            <label class="form-label">Código de 6 dígitos</label>
+                            <div class="digits-container" id="reset-digits-container">
+                                <input type="tel" maxlength="1" class="digit-input" data-idx="0" inputmode="numeric">
+                                <input type="tel" maxlength="1" class="digit-input" data-idx="1" inputmode="numeric">
+                                <input type="tel" maxlength="1" class="digit-input" data-idx="2" inputmode="numeric">
+                                <input type="tel" maxlength="1" class="digit-input" data-idx="3" inputmode="numeric">
+                                <input type="tel" maxlength="1" class="digit-input" data-idx="4" inputmode="numeric">
+                                <input type="tel" maxlength="1" class="digit-input" data-idx="5" inputmode="numeric">
+                            </div>
+                        </div>
+
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="reset-new-pw">Nova Senha <span class="required">*</span></label>
+                                <div class="input-wrap">
+                                    <input type="password" id="reset-new-pw" class="form-input" placeholder="Mínimo 6 dígitos" required>
+                                    <button type="button" class="input-icon-btn btn-toggle-pw" data-target="reset-new-pw">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="reset-conf-pw">Confirmar Nova Senha <span class="required">*</span></label>
+                                <div class="input-wrap">
+                                    <input type="password" id="reset-conf-pw" class="form-input" placeholder="Repita a senha" required>
+                                    <button type="button" class="input-icon-btn btn-toggle-pw" data-target="reset-conf-pw">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8z" />
+                                            <circle cx="12" cy="12" r="3" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit" id="btn-submit-new-pw">
+                            <span>Salvar Nova Senha</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="auth-footer-links">
+                    <a href="#login" id="link-back-to-login">← Voltar para o Login</a>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- 4. TELA DE VERIFICAÇÃO DE E-MAIL (APÓS CADASTRO)         -->
+            <!-- ========================================================= -->
+            <section class="auth-view" id="view-verify">
+                <div style="text-align: center;">
+                    <div class="state-icon-circle key" style="border-color: var(--primary-light);">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                    </div>
+                    <h2 style="font-family: var(--font-heading); font-size: 21px; font-weight: 700;">Confirme seu E-mail</h2>
+                    <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.45;">
+                        Enviamos um código de 6 dígitos para <strong id="verify-email-display" style="color: #ffffff;">seu e-mail</strong>. Digite-o para ativar seu acesso:
+                    </p>
+
+                    <div class="digits-container" id="verify-digits-container">
+                        <input type="tel" maxlength="1" class="digit-input" data-idx="0" inputmode="numeric">
+                        <input type="tel" maxlength="1" class="digit-input" data-idx="1" inputmode="numeric">
+                        <input type="tel" maxlength="1" class="digit-input" data-idx="2" inputmode="numeric">
+                        <input type="tel" maxlength="1" class="digit-input" data-idx="3" inputmode="numeric">
+                        <input type="tel" maxlength="1" class="digit-input" data-idx="4" inputmode="numeric">
+                        <input type="tel" maxlength="1" class="digit-input" data-idx="5" inputmode="numeric">
+                    </div>
+
+                    <button type="button" class="btn-submit" id="btn-confirm-code">
+                        <span>Validar e Entrar</span>
+                    </button>
+
+                    <div class="auth-footer-links" style="margin-top: 18px;">
+                        Não recebeu o código? <a href="#" id="btn-resend-code">Reenviar Código</a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- 5. TELA DE SUCESSO                                       -->
+            <!-- ========================================================= -->
+            <section class="auth-view" id="view-success">
+                <div class="state-banner">
+                    <div class="state-icon-circle success">
+                        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                    </div>
+                    <h2 style="font-family: var(--font-heading); font-size: 22px; font-weight: 800; color: #ffffff;">Conta Ativada com Sucesso!</h2>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin: 8px auto 24px auto; max-width: 380px;">
+                        Seu cadastro foi concluído e seu acesso ao KAIZEN PRO está liberado.
+                    </p>
+                    <a href="/painel" class="btn-submit" style="text-decoration: none; max-width: 280px; margin: 0 auto;">
+                        <span>Acessar Meu Painel</span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M5 12h14" />
+                            <polyline points="12 5 19 12 12 19" />
+                        </svg>
+                    </a>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Script de Gestão de Autenticação -->
+    <script src="/js/cadastro.js"></script>
+</body>
+
+</html>

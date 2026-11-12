@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KAIZEN PRO • Wiki & Currículo de Técnicas</title>
+    <meta name="description"
+        content="Biblioteca e Wiki de Técnicas Marciais KAIZEN CT PRO: acompanhe os golpes da sua faixa atual e das graduações anteriores com fotos e instruções passo a passo.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=2.9">
+    <style>
+        /* =========================================================================
+           WIKI MARCIAL - DESIGN BLACK (MODERNO, INTUITIVO & ULTRA-RESPONSIVO)
+           ========================================================================= */
+        body {
+            background-color: #080C14 !important;
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            font-family: var(--font-body, 'Plus Jakarta Sans', sans-serif);
+            min-height: 100vh;
+        }
+
+        .wiki-page-shell {
+            display: flex;
+            min-height: 100vh;
+            background-color: #080C14;
+        }
+
+        .wiki-main-container {
+            flex: 1;
+            padding: 24px 32px 80px 32px;
+            overflow-y: auto;
+            max-width: 1440px;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        /* Top Bar de Navegação */
+        .wiki-top-nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .btn-voltar-painel {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(22, 31, 46, 0.85);
+            backdrop-filter: blur(10px);
+            color: #f1f5f9;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 9999px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 700;
+            text-decoration: none;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            transition: var(--transition, all 0.2s ease);
+        }
+
+        .btn-voltar-painel:hover {
+            transform: translateX(-2px);
+            background: rgba(30, 41, 59, 0.95);
+            border-color: #ef4444;
+            color: #ffffff;
+        }
+
+        .btn-voltar-painel svg {
+            color: #94a3b8;
+            transition: color 0.2s ease;
+        }
+
+        .btn-voltar-painel:hover svg {
+            color: #ef4444;
+        }
+
+        .student-profile-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(22, 31, 46, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 5px 12px 5px 6px;
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f1f5f9;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .student-profile-pill img {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid #ef4444;
+        }
+
+        /* Banner de Destaque da Graduação (Black Glass com Acentos Vermelho & Ouro) */
+        .wiki-status-banner {
+            background: linear-gradient(135deg, #121826 0%, #0E131F 100%);
+            border-radius: 20px;
+            padding: 16px 20px;
+            margin-bottom: 14px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .wiki-status-banner::after {
+            content: '';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 120px;
+            height: 120px;
+            background: radial-gradient(circle, rgba(239, 68, 68, 0.18) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .wiki-status-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .wiki-status-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.35));
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25);
+            flex-shrink: 0;
+        }
+
+        .wiki-status-title {
+            font-family: var(--font-heading, 'Outfit', sans-serif);
+            font-size: 18px;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 0 0 2px 0;
+            letter-spacing: -0.2px;
+        }
+
+        .wiki-status-desc {
+            font-size: 12.5px;
+            color: #94a3b8;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .curriculum-count-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 5px 12px;
+            border-radius: 9999px;
+            background: rgba(14, 165, 233, 0.12);
+            color: #38bdf8;
+            border: 1px solid rgba(14, 165, 233, 0.3);
+            white-space: nowrap;
+        }
+
+        /* Abas Deslizantes de Faixas (Carrossel Horizontal Slim no Mobile) */
+        .belts-tabs-container {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .belts-tabs-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .belt-tab-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 9999px;
+            background: #141824;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition, all 0.2s ease);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .belt-tab-btn:hover {
+            background: #1e2536;
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .belt-tab-btn.active {
+            color: #ffffff;
+            border-color: #ef4444;
+            background: #ef4444;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+        }
+
+        .belt-tab-btn.belt-tab-current {
+            border-color: rgba(245, 158, 11, 0.45);
+            background: rgba(245, 158, 11, 0.1);
+            color: #fbbf24;
+        }
+
+        .belt-tab-btn.belt-tab-current:hover {
+            background: rgba(245, 158, 11, 0.2);
+            color: #ffffff;
+        }
+
+        .belt-tab-btn.belt-tab-current.active {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #080C14;
+            font-weight: 800;
+            box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
+        }
+
+        .belt-badge-pill {
+            padding: 2px 7px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+        }
+
+        .belt-badge-current {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .belt-tab-btn.active .belt-badge-current {
+            background: rgba(0, 0, 0, 0.3);
+            color: #080C14;
+            border-color: transparent;
+        }
+
+        .belt-badge-past {
+            background: rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+        }
+
+        .belt-tab-btn.active .belt-badge-past {
+            background: rgba(0, 0, 0, 0.25);
+            color: #ffffff;
+        }
+
+        /* Linha de Busca + Filtros por Categoria */
+        .wiki-controls-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .wiki-search-box {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+            max-width: 360px;
+        }
+
+        .wiki-search-box input {
+            width: 100%;
+            padding: 9px 16px 9px 38px;
+            background: #141824;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            font-family: var(--font-body, 'Plus Jakarta Sans', sans-serif);
+            font-size: 12.5px;
+            color: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+            transition: var(--transition, all 0.2s ease);
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .wiki-search-box input:focus {
+            border-color: #ef4444;
+            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+        }
+
+        .wiki-search-box svg {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #64748b;
+            pointer-events: none;
+        }
+
+        /* Filtros Deslizantes por Categoria */
+        .curriculum-filter-pills {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            align-items: center;
+            padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .curriculum-filter-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .curriculum-pill {
+            background: #141824;
+            color: #94a3b8;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 7px 14px;
+            border-radius: 9999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition, all 0.2s ease);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .curriculum-pill:hover {
+            background: #1e2536;
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .curriculum-pill.active {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            border-color: #ef4444;
+            box-shadow: 0 3px 12px rgba(239, 68, 68, 0.35);
+        }
+
+        .curriculum-pill svg {
+            opacity: 0.85;
+            transition: opacity 0.2s ease;
+        }
+
+        .curriculum-pill.active svg {
+            opacity: 1;
+        }
+
+        /* Grade de Técnicas / Vídeos */
+        .curriculum-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .curriculum-strike-card {
+            background: #121826;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 18px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition, all 0.22s ease);
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        .curriculum-strike-card:hover {
+            transform: translateY(-4px);
+            border-color: #ef4444;
+            box-shadow: 0 14px 32px rgba(239, 68, 68, 0.2);
+        }
+
+        .curriculum-card-media {
+            position: relative;
+            width: 100%;
+            height: 175px;
+            background: #0d121c;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .curriculum-card-media img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .curriculum-strike-card:hover .curriculum-card-media img {
+            transform: scale(1.05);
+        }
+
+        .curriculum-media-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #475569;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .curriculum-media-placeholder svg {
+            width: 32px;
+            height: 32px;
+            opacity: 0.5;
+        }
+
+        .curriculum-play-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.9;
+            transition: var(--transition, all 0.2s ease);
+        }
+
+        .curriculum-strike-card:hover .curriculum-play-overlay {
+            background: rgba(0, 0, 0, 0.15);
+            opacity: 1;
+        }
+
+        .curriculum-play-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.9);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .curriculum-strike-card:hover .curriculum-play-btn {
+            transform: scale(1.1);
+        }
+
+        .card-belt-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 2;
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 10.5px;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(8px);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-belt-badge-current {
+            background: rgba(245, 158, 11, 0.95);
+            color: #080C14;
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+        }
+
+        .card-belt-badge-past {
+            background: rgba(18, 24, 38, 0.9);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .curriculum-badge-steps {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            z-index: 2;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #ffffff;
+            font-size: 10.5px;
+            font-weight: 700;
+            backdrop-filter: blur(4px);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .curriculum-card-body {
+            padding: 14px 16px 16px 16px;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .curriculum-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .curriculum-tag-category {
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #ef4444;
+        }
+
+        .curriculum-tag-difficulty {
+            font-size: 10.5px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .curriculum-tag-diff-iniciante {
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+        }
+
+        .curriculum-tag-diff-intermediario {
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+        }
+
+        .curriculum-tag-diff-avancado {
+            background: rgba(239, 68, 68, 0.15);
+            color: #f87171;
+        }
+
+        .curriculum-card-title {
+            font-family: var(--font-heading, 'Outfit', sans-serif);
+            font-size: 15px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 6px 0;
+            line-height: 1.3;
+        }
+
+        .curriculum-card-desc {
+            font-size: 12px;
+            color: #94a3b8;
+            margin: 0 0 12px 0;
+            line-height: 1.45;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            flex: 1;
+        }
+
+        .curriculum-card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            margin-top: auto;
+        }
+
+        .curriculum-btn-view {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #ef4444;
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+
+        .curriculum-btn-view:hover {
+            color: #f87171;
+        }
+
+        /* Empty State Black Design */
+        .curriculum-empty-box {
+            grid-column: 1 / -1;
+            padding: 36px 20px;
+            text-align: center;
+            background: #121826;
+            border: 1px dashed rgba(255, 255, 255, 0.12);
+            border-radius: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+
+        .curriculum-empty-icon {
+            color: #ef4444;
+            display: flex;
+            justify-content: center;
+            margin-bottom: 12px;
+        }
+
+        .curriculum-empty-title {
+            font-family: var(--font-heading, 'Outfit', sans-serif);
+            font-size: 16px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0 0 6px 0;
+        }
+
+        .curriculum-empty-desc {
+            font-size: 12.5px;
+            color: #94a3b8;
+            max-width: 440px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .btn-empty-reset {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #ffffff;
+            border: none;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35);
+            transition: filter 0.2s ease;
+        }
+
+        .btn-empty-reset:hover {
+            filter: brightness(1.1);
+        }
+
+        /* =========================================================================
+           RESPONSIVIDADE MOBILE ULTRA-COMPACTA (@media max-width: 768px)
+           Filtros ocupam apenas ~135px, liberando os vídeos para o primeiro plano!
+           ========================================================================= */
+        @media (max-width: 768px) {
+            .wiki-main-container {
+                padding: 14px 12px 90px 12px !important;
+            }
+
+            .wiki-top-nav-bar {
+                margin-bottom: 10px !important;
+                gap: 8px !important;
+            }
+
+            .btn-voltar-painel {
+                padding: 6px 12px !important;
+                font-size: 11.5px !important;
+            }
+
+            .student-profile-pill {
+                padding: 4px 10px 4px 5px !important;
+                font-size: 11.5px !important;
+            }
+
+            /* Banner compacto de 1 linha */
+            .wiki-status-banner {
+                padding: 10px 12px !important;
+                margin-bottom: 8px !important;
+                border-radius: 14px !important;
+                gap: 6px !important;
+            }
+
+            .wiki-status-icon {
+                width: 34px !important;
+                height: 34px !important;
+                border-radius: 10px !important;
+            }
+
+            .wiki-status-icon svg {
+                width: 17px !important;
+                height: 17px !important;
+            }
+
+            .wiki-status-title {
+                font-size: 14px !important;
+                margin: 0 !important;
+            }
+
+            .wiki-status-desc {
+                display: none !important; /* Oculta parágrafo longo para poupar altura */
+            }
+
+            .curriculum-count-badge {
+                font-size: 10.5px !important;
+                padding: 3px 8px !important;
+            }
+
+            /* Carrossel de Faixas: altura de apenas 34px, swipe suave sem quebra vertical */
+            .belts-tabs-container {
+                margin-bottom: 8px !important;
+                padding-bottom: 4px !important;
+                gap: 6px !important;
+            }
+
+            .belt-tab-btn {
+                padding: 6px 12px !important;
+                font-size: 11px !important;
+                height: 32px !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Controles: busca e categorias em linha enxuta */
+            .wiki-controls-row {
+                margin-bottom: 10px !important;
+                gap: 6px !important;
+            }
+
+            .wiki-search-box {
+                max-width: 100% !important;
+                min-width: 100% !important;
+            }
+
+            .wiki-search-box input {
+                padding: 8px 14px 8px 34px !important;
+                font-size: 11.5px !important;
+                height: 34px !important;
+            }
+
+            .curriculum-filter-pills {
+                width: 100% !important;
+                gap: 5px !important;
+                padding-bottom: 2px !important;
+            }
+
+            .curriculum-pill {
+                padding: 5px 10px !important;
+                font-size: 10.5px !important;
+                height: 30px !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Cards de Técnicas / Vídeos: Em destaque imediato no viewport */
+            .curriculum-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+
+            .curriculum-card-media {
+                height: 165px !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wiki-page-shell">
+
+        <!-- ============================================================= -->
+        <!-- 1. BARRA LATERAL NAVEGAÇÃO (DOCK VERTICAL)                    -->
+        <!-- ============================================================= -->
+        <aside class="sidebar-dock">
+            <div class="dock-top">
+                <a href="/painel" class="dock-logo" title="KAIZEN CT PRO">
+                    <div class="logo-circle">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+                            <path d="M12 8v8"/>
+                            <path d="M8 12h8"/>
+                        </svg>
+                    </div>
+                </a>
+
+                <nav class="dock-nav">
+                    <a href="/painel" class="dock-btn" title="Voltar ao Painel Geral">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7" rx="2" />
+                            <rect x="14" y="3" width="7" height="7" rx="2" />
+                            <rect x="14" y="14" width="7" height="7" rx="2" />
+                            <rect x="3" y="14" width="7" height="7" rx="2" />
+                        </svg>
+                    </a>
+                    <a href="/wiki-aluno.html" class="dock-btn active" title="Wiki & Técnicas da Faixa">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                        </svg>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="dock-bottom">
+                <button type="button" class="dock-btn btn-logout" id="btn-logout" title="Sair do Portal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                        <polyline points="16 17 21 12 16 7" />
+                        <line x1="21" y1="12" x2="9" y2="12" />
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- ============================================================= -->
+        <!-- 2. CONTEÚDO PRINCIPAL DA WIKI                                 -->
+        <!-- ============================================================= -->
+        <main class="wiki-main-container">
+            <!-- Barra Superior de Navegação -->
+            <div class="wiki-top-nav-bar">
+                <a href="/painel" class="btn-voltar-painel" id="link-voltar-painel">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                    <span>Voltar à Visão Geral</span>
+                </a>
+
+                <div class="student-profile-pill">
+                    <img id="header-avatar-img" src="https://ui-avatars.com/api/?name=Atleta&background=0284c7&color=fff" alt="Avatar">
+                    <span id="header-student-name">Atleta</span>
+                </div>
+            </div>
+
+            <!-- Banner Explicativo com Informações da Faixa Atual e Modalidade -->
+            <div class="wiki-status-banner">
+                <div class="wiki-status-info">
+                    <div class="wiki-status-icon" id="wiki-belt-icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="wiki-status-title" id="wiki-page-title">Wiki Marcial • Técnicas Oficiais</h1>
+                        <p class="wiki-status-desc" id="wiki-page-desc">Consulte os movimentos requeridos da sua graduação atual e os fundamentos das faixas anteriores.</p>
+                    </div>
+                </div>
+                <div>
+                    <span class="curriculum-count-badge" id="wiki-total-techniques-badge">0 técnicas disponíveis</span>
+                </div>
+            </div>
+
+            <!-- Abas Deslizantes de Faixas (Carrossel Horizontal Slim no Mobile) -->
+            <div class="belts-tabs-container" id="belts-selector-tabs">
+                <!-- Preenchido dinamicamente pelo JS -->
+            </div>
+
+            <!-- Controles: Barra de Pesquisa + Filtros por Categoria com Ícones Modernos -->
+            <div class="wiki-controls-row">
+                <div class="wiki-search-box">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="wiki-search-input" placeholder="Buscar por golpe, soco, chute, rotação...">
+                </div>
+
+                <div class="curriculum-filter-pills" id="wiki-category-pills">
+                    <button type="button" class="curriculum-pill active" data-category="todos">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                            <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                            <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                            <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                        </svg>
+                        <span>Todos</span>
+                    </button>
+                    <button type="button" class="curriculum-pill" data-category="Soco">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"></path>
+                            <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"></path>
+                            <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"></path>
+                            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"></path>
+                        </svg>
+                        <span>Soco</span>
+                    </button>
+                    <button type="button" class="curriculum-pill" data-category="Chute">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 18l4-4 3 3 7-10"></path>
+                            <circle cx="19" cy="6" r="2"></circle>
+                            <path d="M15 13l2 5"></path>
+                            <path d="M7 15l-3 4"></path>
+                        </svg>
+                        <span>Chute</span>
+                    </button>
+                    <button type="button" class="curriculum-pill" data-category="Joelhada">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                        <span>Joelhada</span>
+                    </button>
+                    <button type="button" class="curriculum-pill" data-category="Cotovelada">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 12l-7 7-7-7"></path>
+                            <path d="M15 5l-7 7"></path>
+                            <path d="M8 5h12"></path>
+                        </svg>
+                        <span>Cotovelada</span>
+                    </button>
+                    <button type="button" class="curriculum-pill" data-category="Movimentação">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="13 17 18 12 13 7"></polyline>
+                            <polyline points="6 17 11 12 6 7"></polyline>
+                        </svg>
+                        <span>Movimentação</span>
+                    </button>
+                    <button type="button" class="curriculum-pill" data-category="Defesa">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <polyline points="9 12 11 14 15 10"></polyline>
+                        </svg>
+                        <span>Defesa</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Grade de Golpes e Técnicas -->
+            <div class="curriculum-grid" id="wiki-cards-grid">
+                <!-- Cards renderizados dinamicamente pelo JavaScript -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Barra de Navegação Inferior Mobile -->
+    <nav class="mobile-bottom-nav">
+        <a href="/painel" class="mobile-nav-item" id="mob-nav-inicio">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span>Início</span>
+        </a>
+        <a href="/wiki-aluno.html" class="mobile-nav-item active" id="mob-nav-treinos">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12M2 12h4M18 12h4" />
+            </svg>
+            <span>Treinos</span>
+        </a>
+        <a href="/painel#evolucao" class="mobile-nav-item" id="mob-nav-evolucao">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                <polyline points="17 6 23 6 23 12" />
+            </svg>
+            <span>Evolução</span>
+        </a>
+        <a href="/painel#perfil" class="mobile-nav-item" id="mob-nav-perfil">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
+    <!-- ================================================================= -->
+    <!-- MODAL: VISUALIZADOR DE TÉCNICA & PASSO A PASSO                    -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-visualizar-tecnica" style="display: none;">
+        <div class="modal-card modal-large tecnica-viewer-modal">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="stat-icon-wrap icon-cyan" style="width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3);">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 id="modal-tecnica-nome" style="margin: 0; font-size: 17px; color: #ffffff;">Nome do Golpe</h3>
+                        <div style="display: flex; gap: 6px; align-items: center; margin-top: 4px;" id="modal-tecnica-tags">
+                            <!-- Tags dinâmicas -->
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-visualizar-tecnica">&times;</button>
+            </div>
+
+            <div class="modal-body" style="padding: 16px 20px;">
+                <p id="modal-tecnica-desc" style="font-size: 13px; color: #94a3b8; margin-bottom: 14px; line-height: 1.5;"></p>
+
+                <!-- Palco Central do Passo -->
+                <div class="tecnica-stage-card">
+                    <div class="tecnica-stage-header">
+                        <span class="tecnica-step-badge" id="modal-passo-indicator">Passo 1 de 3</span>
+                        <h4 class="tecnica-step-title" id="modal-passo-titulo">Posicionamento Inicial</h4>
+                    </div>
+
+                    <!-- Imagem Ilustrativa com Zoom/Preview -->
+                    <div class="tecnica-step-image-wrap" id="modal-passo-img-wrap">
+                        <img id="modal-passo-img" src="" alt="Foto ilustrativa da etapa técnica">
+                    </div>
+
+                    <!-- Descrição biomecânica da execução -->
+                    <div class="tecnica-step-desc-box">
+                        <div class="tecnica-desc-label">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            Instrução Técnica de Execução:
+                        </div>
+                        <p id="modal-passo-descricao" class="tecnica-desc-text"></p>
+                    </div>
+                </div>
+
+                <!-- Barra de Navegação entre os Passos -->
+                <div class="tecnica-nav-bar">
+                    <button type="button" class="btn-tecnica-nav" id="btn-tecnica-anterior">
+                        ← Passo Anterior
+                    </button>
+                    <div class="tecnica-dots-container" id="modal-tecnica-dots">
+                        <!-- Dots clicáveis gerados pelo JS -->
+                    </div>
+                    <button type="button" class="btn-tecnica-nav btn-tecnica-primary" id="btn-tecnica-proximo">
+                        Próximo Passo →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script da Página Dedicada da Wiki -->
+    <script src="/js/wiki-aluno.js?v=2.0"></script>
+</body>
+
+</html>
