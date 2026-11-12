@@ -172,28 +172,43 @@ const ExamesModule = {
             };
 
             return `
-                <div class="card evento-exame-card ${isSelected ? 'card-selected' : ''}" 
-                     style="padding: 16px; border: 2px solid ${isSelected ? 'var(--primary-color)' : 'var(--border-color)'}; cursor: pointer; transition: all 0.2s ease;"
+                <div class="evento-exame-card ${isSelected ? 'card-selected' : ''}" 
                      onclick="ExamesModule.selecionarEvento(${e.id})">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                        <div style="font-size: 11px; font-weight: 700; color: var(--primary-color); text-transform: uppercase;">
+                    <div class="evento-card-top">
+                        <span class="badge-modality">
                             ${UI.escapeHtml(e.modalidade_nome || 'Todas as Modalidades')}
+                        </span>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            ${isSelected ? '<span class="badge-selected-pill">✓ Ativo</span>' : ''}
+                            ${statusBadges[e.status] || ''}
                         </div>
-                        ${statusBadges[e.status] || ''}
                     </div>
-                    <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0 0 6px 0;">
+
+                    <h4 class="evento-card-title">
                         ${UI.escapeHtml(e.titulo)}
-                    </h3>
-                    <div style="display: flex; gap: 14px; font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-                        <span>📅 ${dataFmt}</span>
-                        <span>⏰ ${e.horario_inicio ? e.horario_inicio.substring(0, 5) : '09:00'}</span>
-                        <span style="font-weight: 700; color: #10b981;">R$ ${taxaFmt}</span>
+                    </h4>
+
+                    <div class="evento-chips-row">
+                        <span class="evento-chip">
+                            📅 <strong>${dataFmt}</strong> às ${e.horario_inicio ? e.horario_inicio.substring(0, 5) : '09:00'}
+                        </span>
+                        <span class="evento-chip taxa">
+                            💰 Taxa: R$ ${taxaFmt}
+                        </span>
                     </div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; font-size: 12px;">
-                        <span>Convites: <strong>${totalConv}</strong></span>
-                        <span>Confirmados: <strong style="color: #10b981;">${totalPagos} pagos</strong></span>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); ExamesModule.abrirModalEditarEvento(${e.id})">
-                            Editar
+
+                    <div class="evento-card-footer">
+                        <div style="display: flex; gap: 12px; align-items: center; font-size: 11.5px;">
+                            <span style="color: var(--text-muted);">
+                                ✉️ Convocados: <strong style="color: #ffffff;">${totalConv}</strong>
+                            </span>
+                            <span style="color: var(--text-muted);">
+                                ✅ Confirmados: <strong style="color: #10b981;">${totalPagos}</strong>
+                            </span>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px;"
+                                onclick="event.stopPropagation(); ExamesModule.abrirModalEditarEvento(${e.id})">
+                            ✏️ Editar
                         </button>
                     </div>
                 </div>
@@ -222,8 +237,8 @@ const ExamesModule = {
 
             if (tituloEl) tituloEl.textContent = evento.titulo;
             if (dataEl) dataEl.textContent = `${this.formatarData(evento.data_evento)} às ${evento.horario_inicio ? evento.horario_inicio.substring(0, 5) : '09:00'}`;
-            if (taxaEl) taxaEl.textContent = `Taxa Asaas: R$ ${parseFloat(evento.taxa_inscricao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-            if (localEl) localEl.textContent = evento.local_evento || 'Dojo Central - Kaizen CT';
+            if (taxaEl) taxaEl.textContent = `R$ ${parseFloat(evento.taxa_inscricao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            if (localEl) localEl.textContent = evento.local_evento || 'Tatame Principal - CT Kaizen';
             if (descEl) descEl.textContent = evento.descricao || 'Sem orientações complementares cadastradas.';
 
             this.renderListaConvites(evento.convites || []);
@@ -298,16 +313,21 @@ const ExamesModule = {
                             </span>
                         </td>
                         <td>
-                            <div style="display: flex; align-items: center; gap: 6px; font-size: 12.5px;">
-                                <span style="font-weight: 600; color: ${al.atual_cor_primaria || '#fff'};">${UI.escapeHtml(al.graduacao_atual_nome)}</span>
-                                <span style="color: var(--text-muted);">➜</span>
-                                <span style="font-weight: 700; color: ${al.pretendida_cor_primaria || '#f59e0b'};">${UI.escapeHtml(al.graduacao_pretendida_nome)}</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                ${UI.renderBeltBadge(al.graduacao_atual_nome, al.atual_cor_primaria, null)}
+                                <span style="color: var(--text-muted); font-size: 13px;">➜</span>
+                                ${UI.renderBeltBadge(al.graduacao_pretendida_nome, al.pretendida_cor_primaria, null)}
                             </div>
                         </td>
                         <td>
-                            <div style="display: flex; flex-direction: column; gap: 2px;">
-                                <span style="font-weight: 800; color: #10b981; font-size: 12.5px;">${al.percentual_avaliacao}% Apto</span>
-                                <span style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(al.apto_motivo || 'Avaliação técnica')}</span>
+                            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 110px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+                                    <strong style="color: #10b981;">${al.percentual_avaliacao}%</strong>
+                                    <span style="font-size: 10.5px; color: var(--text-muted);">Aptidão</span>
+                                </div>
+                                <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;">
+                                    <div style="width: ${Math.min(100, Math.max(0, al.percentual_avaliacao))}%; height: 100%; background: #10b981; border-radius: 999px;"></div>
+                                </div>
                             </div>
                         </td>
                         <td>
@@ -483,9 +503,7 @@ const ExamesModule = {
                         </div>
                     </td>
                     <td>
-                        <span style="font-weight: 700; color: ${c.pretendida_cor_primaria || '#f59e0b'}; font-size: 12.5px;">
-                            ${UI.escapeHtml(c.graduacao_pretendida_nome)}
-                        </span>
+                        ${UI.renderBeltBadge(c.graduacao_pretendida_nome, c.pretendida_cor_primaria, null)}
                     </td>
                     <td>
                         <span style="font-weight: 700; color: var(--text-primary);">R$ ${valorFmt}</span>

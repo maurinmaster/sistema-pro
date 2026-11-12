@@ -741,61 +741,106 @@
                         </div>
                     </div>
 
-                    <!-- Indicadores Rápidos (KPIs) -->
-                    <div class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px;">
-                        <div class="kpi-card">
-                            <div class="kpi-label">Exames em Aberto</div>
-                            <div class="kpi-value" id="kpi-exames-abertos">0</div>
-                            <div class="kpi-subtext" style="color: #38bdf8;">Com inscrições abertas</div>
+                    <!-- Indicadores Rápidos (KPIs Padronizados) -->
+                    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 24px;">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Exames em Aberto</span>
+                                <div class="stat-icon" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
+                                    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-exames-abertos">0</div>
+                            <div class="stat-meta">
+                                <span class="positive">Com inscrições abertas</span>
+                            </div>
                         </div>
-                        <div class="kpi-card">
-                            <div class="kpi-label">Total Convocados</div>
-                            <div class="kpi-value" id="kpi-exames-convidados">0</div>
-                            <div class="kpi-subtext" style="color: #f59e0b;">Convites emitidos</div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Total Convocados</span>
+                                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+                                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-exames-convidados">0</div>
+                            <div class="stat-meta">
+                                <span style="color: #f59e0b;">Convites emitidos</span>
+                            </div>
                         </div>
-                        <div class="kpi-card">
-                            <div class="kpi-label">Inscrições Confirmadas</div>
-                            <div class="kpi-value" id="kpi-exames-confirmados" style="color: #10b981;">0</div>
-                            <div class="kpi-subtext" style="color: #10b981;">Taxas pagas / quitadas</div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Inscrições Confirmadas</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-exames-confirmados" style="color: #10b981;">0</div>
+                            <div class="stat-meta">
+                                <span class="positive">Taxas pagas / quitadas</span>
+                            </div>
                         </div>
-                        <div class="kpi-card">
-                            <div class="kpi-label">Total Arrecadado</div>
-                            <div class="kpi-value" id="kpi-exames-arrecadado" style="color: #10b981;">R$ 0,00</div>
-                            <div class="kpi-subtext">Via Asaas (Pix / Fatura)</div>
+
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Total Arrecadado</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                                    <svg viewBox="0 0 24 24"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-exames-arrecadado" style="color: #10b981;">R$ 0,00</div>
+                            <div class="stat-meta">
+                                <span>Via Gateway Asaas (Pix / Boleto)</span>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Eventos Cadastrados (Grade de Seleção) -->
                     <div style="margin-bottom: 24px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin: 0;">Eventos de Exame de Graduação</h3>
-                            <div style="font-size: 12px; color: var(--text-muted);">Clique em um exame para gerenciar atletas aptos e convites</div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                            <div>
+                                <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Eventos de Exame de Graduação</h3>
+                                <p style="font-size: 12px; color: var(--text-muted); margin: 3px 0 0 0;">Selecione um evento para visualizar atletas elegíveis e acompanhar convocações</p>
+                            </div>
                         </div>
-                        <div id="eventos-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px;">
+                        <div id="eventos-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
                             <!-- Carregado via ExamesModule.renderEventosCards -->
                         </div>
                     </div>
 
                     <!-- Painel de Detalhes do Evento Selecionado -->
-                    <div class="card" id="painel-evento-detalhes" style="display: none; padding: 20px; margin-bottom: 30px; border-color: rgba(14, 165, 233, 0.3);">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 18px;">
-                            <div>
-                                <span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; font-size: 11px; margin-bottom: 6px; display: inline-block;">Exame em Destaque</span>
-                                <h3 id="detalhe-evento-titulo" style="font-size: 18px; font-weight: 800; color: var(--text-primary); margin: 0 0 6px 0;">Título do Evento</h3>
-                                <p id="detalhe-evento-desc" style="font-size: 12.5px; color: var(--text-muted); margin: 0; max-width: 600px; line-height: 1.4;"></p>
-                            </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12.5px;">
-                                <div style="display: flex; gap: 12px;">
-                                    <span style="color: var(--text-muted);">📅 <strong id="detalhe-evento-data" style="color: var(--text-primary);">--</strong></span>
-                                    <span style="color: var(--text-muted);">📍 <strong id="detalhe-evento-local" style="color: var(--text-primary);">--</strong></span>
+                    <div class="exame-hub-banner" id="painel-evento-detalhes" style="display: none;">
+                        <div class="exame-hub-header">
+                            <div style="flex: 1; min-width: 280px;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                    <span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; font-size: 11px; font-weight: 700;">
+                                        🥋 Exame Selecionado
+                                    </span>
                                 </div>
-                                <span id="detalhe-evento-taxa" style="font-weight: 800; color: #10b981; font-size: 14px;">Taxa Asaas: R$ 0,00</span>
+                                <h3 id="detalhe-evento-titulo" style="font-size: 20px; font-weight: 800; color: #ffffff; margin: 0 0 8px 0; letter-spacing: -0.3px;">Título do Evento</h3>
+                                <p id="detalhe-evento-desc" style="font-size: 13px; color: var(--text-muted); margin: 0; max-width: 640px; line-height: 1.5;"></p>
+                            </div>
+
+                            <div class="exame-hub-info-cards">
+                                <div class="exame-hub-mini-card">
+                                    <span class="exame-hub-mini-label">Data & Horário</span>
+                                    <span class="exame-hub-mini-value" id="detalhe-evento-data">--</span>
+                                </div>
+                                <div class="exame-hub-mini-card">
+                                    <span class="exame-hub-mini-label">Local do Exame</span>
+                                    <span class="exame-hub-mini-value" id="detalhe-evento-local">--</span>
+                                </div>
+                                <div class="exame-hub-mini-card" style="border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.05);">
+                                    <span class="exame-hub-mini-label" style="color: #34d399;">Taxa Asaas</span>
+                                    <span class="exame-hub-mini-value taxa" id="detalhe-evento-taxa">R$ 0,00</span>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Abas: Alunos Aptos vs Convites Emitidos -->
-                        <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 18px;">
-                            <button type="button" class="btn btn-secondary active" id="tab-btn-aptos" style="display: inline-flex; align-items: center; gap: 8px;">
+                        <div style="display: flex; gap: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-secondary active" id="tab-btn-aptos" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                                     <circle cx="9" cy="7" r="4" />
@@ -805,7 +850,7 @@
                                 <span>Alunos Aptos para Convite</span>
                                 <span class="badge" id="badge-aptos-count" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0 aptos</span>
                             </button>
-                            <button type="button" class="btn btn-secondary" id="tab-btn-convites" style="display: inline-flex; align-items: center; gap: 8px;">
+                            <button type="button" class="btn btn-secondary" id="tab-btn-convites" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
                                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                     <rect x="2" y="4" width="20" height="16" rx="2" />
                                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
@@ -817,14 +862,14 @@
 
                         <!-- Painel Aba 1: Alunos Aptos -->
                         <div id="painel-tab-aptos">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px;">
-                                <div style="display: flex; gap: 10px; align-items: center;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                                     <label style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Filtrar Modalidade:</label>
                                     <select id="filtro-aptos-modalidade" class="form-select" style="min-width: 180px; padding: 6px 12px; font-size: 12.5px;">
                                         <option value="">Todas as Modalidades</option>
                                     </select>
                                 </div>
-                                <button type="button" class="btn btn-primary" id="btn-enviar-convites-lote" disabled style="display: inline-flex; align-items: center; gap: 8px;">
+                                <button type="button" class="btn btn-primary" id="btn-enviar-convites-lote" disabled style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                                         <line x1="22" y1="2" x2="11" y2="13" />
                                         <polygon points="22 2 15 22 11 13 2 9 22 2" />
