@@ -10,7 +10,8 @@ const AlunosModule = {
         await Promise.all([
             this.loadModalidades(),
             this.loadPlanos(),
-            this.loadAlunos()
+            this.loadAlunos(),
+            this.atualizarContadorLixeira()
         ]);
     },
 
@@ -41,6 +42,28 @@ const AlunosModule = {
         const menorFilter = document.getElementById('filter-menor');
         if (menorFilter) {
             menorFilter.addEventListener('change', () => this.loadAlunos());
+        }
+
+        // Botão de abrir Lixeira
+        const btnAbrirLixeira = document.getElementById('btn-abrir-lixeira');
+        if (btnAbrirLixeira) {
+            btnAbrirLixeira.addEventListener('click', () => this.abrirModalLixeira());
+        }
+
+        // Busca dentro da Lixeira com debounce
+        const searchLixeira = document.getElementById('search-lixeira');
+        if (searchLixeira) {
+            let timeoutLixeira = null;
+            searchLixeira.addEventListener('input', () => {
+                clearTimeout(timeoutLixeira);
+                timeoutLixeira = setTimeout(() => this.carregarLixeira(), 300);
+            });
+        }
+
+        // Botão Esvaziar Lixeira
+        const btnEsvaziarLixeira = document.getElementById('btn-esvaziar-lixeira');
+        if (btnEsvaziarLixeira) {
+            btnEsvaziarLixeira.addEventListener('click', () => this.esvaziarLixeira());
         }
 
         // Botão Novo Aluno
@@ -357,7 +380,7 @@ const AlunosModule = {
                                     </button>
                                 ` : ''}
                                 ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
-                                    <button class="btn-icon" style="color: #ef4444;" title="Excluir Aluno Permanentemente" onclick="AlunosModule.deleteAluno(${safeId}, '${encodedNome}')">
+                                    <button class="btn-icon" style="color: #ef4444;" title="Mover Aluno para a Lixeira" onclick="AlunosModule.deleteAluno(${safeId}, '${encodedNome}')">
                                         <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     </button>
                                 ` : ''}
@@ -645,34 +668,237 @@ const AlunosModule = {
     },
 
     // ==========================================
-    // EXCLUSÃO PERMANENTE DO ALUNO
+    // SOFT DELETE: MOVER ALUNO PARA A LIXEIRA
     // ==========================================
     async deleteAluno(alunoId, alunoNome) {
         if (window.AuthModule && !AuthModule.can('delete_alunos')) {
-            UI.showToast('Apenas Administradores podem excluir alunos.', 'warning');
+            UI.showToast('Você não tem permissão para remover cadastros.', 'warning');
             return;
         }
 
         const nome = decodeURIComponent(alunoNome);
-        const confirmMsg = `ATENÇÃO: Deseja realmente EXCLUIR permanentemente o aluno "${nome}" e todos os seus registros (faturas, graduações, histórico)?\n\nEsta ação é definitiva e removerá o aluno do banco de dados.`;
+        const confirmMsg = `Deseja mover o cadastro de "${nome}" para a Lixeira?\n\nO aluno deixará de aparecer na lista principal, mas você poderá restaurá-lo ou apagá-lo definitivamente a qualquer momento na Lixeira.`;
         if (!confirm(confirmMsg)) {
             return;
         }
 
         try {
             const res = await API.delete(`/alunos/${alunoId}`);
-            if (!res.success) throw new Error(res.error || 'Erro ao excluir aluno.');
+            if (!res.success) throw new Error(res.error || 'Erro ao mover aluno para a lixeira.');
 
-            UI.showToast(`Aluno "${nome}" foi excluído permanentemente com sucesso.`, 'success');
+            UI.showToast(`Aluno "${nome}" movido para a lixeira com sucesso.`, 'success');
             await this.loadAlunos();
+            await this.atualizarContadorLixeira();
             if (window.DashboardModule) DashboardModule.loadDashboard();
         } catch (err) {
-            UI.showToast('Erro ao excluir aluno: ' + err.message, 'error');
+            UI.showToast('Erro ao remover aluno: ' + err.message, 'error');
         }
     },
 
     inativarAluno(alunoId, alunoNome) {
         return this.deleteAluno(alunoId, alunoNome);
+    },
+
+    // ==========================================
+    // GESTÃO DA LIXEIRA DE CADASTROS
+    // ==========================================
+    async atualizarContadorLixeira() {
+        const badge = document.getElementById('lixeira-contador-badge');
+        if (!badge) return;
+
+        try {
+            const res = await API.get('/alunos/lixeira');
+            if (res.success) {
+                badge.textContent = res.count || 0;
+            }
+        } catch (err) {
+            console.error('Erro ao atualizar contador da lixeira:', err);
+        }
+    },
+
+    abrirModalLixeira() {
+        UI.openModal('modal-lixeira');
+        this.carregarLixeira();
+    },
+
+    async carregarLixeira() {
+        const tbody = document.getElementById('lixeira-table-body');
+        const infoEl = document.getElementById('lixeira-total-info');
+        const btnEsvaziar = document.getElementById('btn-esvaziar-lixeira');
+        if (!tbody) return;
+
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 28px;"><div class="spinner"></div> Carregando cadastros na lixeira...</td></tr>`;
+
+        const busca = document.getElementById('search-lixeira')?.value || '';
+        try {
+            const res = await API.get(`/alunos/lixeira?busca=${encodeURIComponent(busca)}`);
+            const lista = res.data || [];
+
+            if (infoEl) {
+                infoEl.textContent = `${lista.length} cadastro(s) na lixeira`;
+            }
+
+            if (btnEsvaziar) {
+                btnEsvaziar.disabled = lista.length === 0;
+                btnEsvaziar.style.opacity = lista.length === 0 ? '0.5' : '1';
+                btnEsvaziar.style.cursor = lista.length === 0 ? 'not-allowed' : 'pointer';
+            }
+
+            if (lista.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 36px 16px; color: var(--text-muted);">
+                            <div style="font-size: 26px; margin-bottom: 8px;">🗑️</div>
+                            <div style="font-weight: 600; color: #cbd5e1; font-size: 14px;">A lixeira está vazia</div>
+                            <p style="font-size: 12px; margin: 4px 0 0 0; color: #64748b;">Nenhum cadastro de aluno foi enviado para a lixeira.</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = lista.map(item => {
+                const safeId = Number(item.id);
+                const safeNome = UI.escapeHtml(item.nome_completo);
+                const encodedNome = encodeURIComponent(item.nome_completo || '').replace(/'/g, '%27');
+                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.nome_completo || 'Aluno')}&background=334155&color=fff`;
+                const safeAvatar = UI.sanitizeUrl(item.foto_perfil_url, fallbackAvatar);
+                
+                const dataExclusaoFmt = item.deleted_at 
+                    ? new Date(item.deleted_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
+                    : 'Data não registrada';
+
+                const diasTexto = item.dias_na_lixeira !== null && item.dias_na_lixeira !== undefined
+                    ? (item.dias_na_lixeira === 0 ? 'Hoje' : `Há ${item.dias_na_lixeira} dia(s)`)
+                    : '';
+
+                return `
+                    <tr id="lixeira-row-${safeId}">
+                        <td>
+                            <div class="aluno-cell">
+                                <img src="${safeAvatar}" alt="${safeNome}" class="aluno-avatar" onerror="this.src='${fallbackAvatar}'" style="opacity: 0.75; filter: grayscale(40%);">
+                                <div>
+                                    <strong style="color: #f1f5f9; font-size: 13.5px;">${safeNome}</strong>
+                                    <div style="font-size: 11px; color: var(--text-muted);">CPF: ${UI.escapeHtml(item.cpf || 'Não informado')}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <div style="font-size: 12px; color: #cbd5e1;">${UI.escapeHtml(item.telefone_whatsapp || 'Sem telefone')}</div>
+                            <div style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(item.email || 'Sem e-mail')}</div>
+                        </td>
+                        <td>
+                            <div style="font-size: 12px; color: #f87171; font-weight: 600;">${dataExclusaoFmt}</div>
+                            ${diasTexto ? `<span style="font-size: 10.5px; background: rgba(239,68,68,0.12); color: #fca5a5; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 2px;">${diasTexto}</span>` : ''}
+                        </td>
+                        <td style="text-align: right;">
+                            <div style="display: inline-flex; gap: 8px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-secondary btn-sm" 
+                                        style="display: inline-flex; align-items: center; gap: 5px; color: #34d399; border-color: rgba(16, 185, 129, 0.35); padding: 5px 10px; font-size: 11.5px; font-weight: 700;"
+                                        onclick="AlunosModule.restaurarAluno(${safeId}, '${encodedNome}')" title="Restaurar aluno de volta para a lista ativa">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                        <polyline points="1 4 1 10 7 10"></polyline>
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                                    </svg>
+                                    <span>Restaurar</span>
+                                </button>
+                                ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
+                                    <button type="button" class="btn btn-secondary btn-sm" 
+                                            style="display: inline-flex; align-items: center; gap: 5px; color: #f87171; border-color: rgba(239, 68, 68, 0.35); padding: 5px 10px; font-size: 11.5px; font-weight: 700;"
+                                            onclick="AlunosModule.excluirPermanenteAluno(${safeId}, '${encodedNome}')" title="Apagar definitivamente do banco de dados">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                        <span>Apagar</span>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; padding: 20px; color: #ef4444;">Erro ao carregar lixeira: ${UI.escapeHtml(err.message)}</td></tr>`;
+        }
+    },
+
+    async restaurarAluno(alunoId, alunoNome) {
+        const nome = decodeURIComponent(alunoNome);
+        if (!confirm(`Deseja restaurar o cadastro de "${nome}" de volta para a lista ativa de alunos?`)) {
+            return;
+        }
+
+        try {
+            const res = await API.post(`/alunos/${alunoId}/restaurar`);
+            if (!res.success) throw new Error(res.error || 'Erro ao restaurar aluno.');
+
+            UI.showToast(`Cadastro de "${nome}" restaurado com sucesso!`, 'success');
+            await this.carregarLixeira();
+            await this.loadAlunos();
+            await this.atualizarContadorLixeira();
+            if (window.DashboardModule) DashboardModule.loadDashboard();
+        } catch (err) {
+            UI.showToast('Erro ao restaurar: ' + err.message, 'error');
+        }
+    },
+
+    async excluirPermanenteAluno(alunoId, alunoNome) {
+        if (window.AuthModule && !AuthModule.can('delete_alunos')) {
+            UI.showToast('Apenas administradores podem apagar cadastros permanentemente.', 'warning');
+            return;
+        }
+
+        const nome = decodeURIComponent(alunoNome);
+        const confirmMsg = `⚠️ ATENÇÃO: Esta ação é DEFINITIVA e IRREVERSÍVEL!\n\nDeseja realmente APAGAR PERMANENTEMENTE o aluno "${nome}"?\n\nTodas as faturas, matrículas, presenças, avaliações e login serão destruídos do banco de dados.`;
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        try {
+            const res = await API.delete(`/alunos/${alunoId}/permanente`);
+            if (!res.success) throw new Error(res.error || 'Erro ao excluir permanentemente.');
+
+            UI.showToast(`Cadastro de "${nome}" excluído permanentemente com sucesso.`, 'success');
+            await this.carregarLixeira();
+            await this.atualizarContadorLixeira();
+        } catch (err) {
+            UI.showToast('Erro ao apagar definitivamente: ' + err.message, 'error');
+        }
+    },
+
+    async esvaziarLixeira() {
+        if (window.AuthModule && !AuthModule.can('delete_alunos')) {
+            UI.showToast('Apenas administradores podem esvaziar a lixeira.', 'warning');
+            return;
+        }
+
+        const confirmMsg = `🚨 ATENÇÃO MÁXIMA: Deseja realmente ESVAZIAR A LIXEIRA?\n\nTodos os alunos atualmente na lixeira e seus respectivos históricos (faturas, presenças e avaliações) serão EXCLUÍDOS PERMANENTEMENTE do sistema.\n\nEsta operação NÃO PODE ser desfeita!`;
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        const btn = document.getElementById('btn-esvaziar-lixeira');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div> Esvaziando...`;
+        }
+
+        try {
+            const res = await API.post('/alunos/lixeira/esvaziar');
+            if (!res.success) throw new Error(res.error || 'Erro ao esvaziar lixeira.');
+
+            UI.showToast(res.message || 'Lixeira esvaziada com sucesso.', 'success');
+            await this.carregarLixeira();
+            await this.atualizarContadorLixeira();
+        } catch (err) {
+            UI.showToast('Erro ao esvaziar lixeira: ' + err.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `⚠️ Esvaziar Lixeira`;
+            }
+        }
     }
 };
 

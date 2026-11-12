@@ -129,7 +129,7 @@ router.get('/', authenticateToken, async (req, res) => {
             LEFT JOIN modalidades m ON m.id = ag.modalidade_id
             LEFT JOIN matriculas mat ON mat.aluno_id = a.id AND mat.status = 'ativa'
             LEFT JOIN planos p ON p.id = mat.plano_id
-            WHERE 1=1
+            WHERE a.deleted_at IS NULL
         `;
 
         const params = [];
@@ -173,6 +173,70 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/alunos/lixeira - Lista de cadastros de alunos na lixeira (soft-deleted) (exclusivo admin)
+router.get('/lixeira', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const { busca } = req.query;
+        let sql = `
+            SELECT 
+                a.id,
+                a.nome_completo,
+                a.cpf,
+                a.email,
+                a.telefone_whatsapp,
+                a.foto_perfil_url,
+                a.status,
+                a.created_at,
+                a.deleted_at,
+                TIMESTAMPDIFF(DAY, a.deleted_at, NOW()) AS dias_na_lixeira
+            FROM alunos a
+            WHERE a.deleted_at IS NOT NULL
+        `;
+        const params = [];
+        if (busca) {
+            sql += ` AND (a.nome_completo LIKE ? OR a.cpf LIKE ? OR a.email LIKE ? OR a.telefone_whatsapp LIKE ?)`;
+            const b = `%${busca}%`;
+            params.push(b, b, b, b);
+        }
+        sql += ` ORDER BY a.deleted_at DESC`;
+
+        const [rows] = await pool.query(sql, params);
+        res.json({ success: true, count: rows.length, data: rows });
+    } catch (err) {
+        console.error('Erro ao listar lixeira de alunos:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao consultar lixeira de alunos.' });
+    }
+});
+
+// POST /api/alunos/lixeira/esvaziar - Apaga permanentemente todos os cadastros da lixeira (exclusivo admin)
+router.post('/lixeira/esvaziar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        const [rows] = await conn.query('SELECT id FROM alunos WHERE deleted_at IS NOT NULL');
+        let totalExcluidos = 0;
+
+        for (const item of rows) {
+            await executarExclusaoPermanente(conn, item.id);
+            totalExcluidos++;
+        }
+
+        await conn.commit();
+        res.json({
+            success: true,
+            message: `Lixeira esvaziada com sucesso. ${totalExcluidos} cadastro(s) excluído(s) permanentemente.`,
+            count: totalExcluidos
+        });
+    } catch (err) {
+        await conn.rollback();
+        console.error('Erro ao esvaziar lixeira de alunos:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao esvaziar a lixeira de cadastros.' });
+    } finally {
+        conn.release();
+    }
+});
+
 // GET /api/alunos/:id - Dossiê 360 do Aluno (todos autenticados)
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
@@ -184,7 +248,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
                 a.*,
                 TIMESTAMPDIFF(YEAR, a.data_nascimento, CURDATE()) AS idade
             FROM alunos a
-            WHERE a.id = ?
+            WHERE a.id = ? AND a.deleted_at IS NULL
         `, [id]);
 
         if (alunos.length === 0) {
@@ -532,7 +596,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
                 observacoes_medicas = ?,
                 foto_perfil_url = ?,
                 status = ?
-            WHERE id = ?
+            WHERE id = ? AND deleted_at IS NULL
         `, [
             nome_completo.trim(),
             cpf ? cpf.trim() : null,
@@ -577,7 +641,7 @@ router.patch('/:id/status', authenticateToken, authorizeRoles('admin', 'recepcao
             return res.status(400).json({ success: false, error: 'Status inválido.' });
         }
 
-        const [result] = await pool.query('UPDATE alunos SET status = ? WHERE id = ?', [status, id]);
+        const [result] = await pool.query('UPDATE alunos SET status = ? WHERE id = ? AND deleted_at IS NULL', [status, id]);
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
         }
@@ -996,7 +1060,7 @@ router.post('/:id/resetar-senha', authenticateToken, authorizeRoles('admin', 'pr
             return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
         }
 
-        const [alunos] = await pool.query('SELECT id, nome_completo, email FROM alunos WHERE id = ?', [alunoId]);
+        const [alunos] = await pool.query('SELECT id, nome_completo, email FROM alunos WHERE id = ? AND deleted_at IS NULL', [alunoId]);
         if (alunos.length === 0) {
             return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
         }
@@ -1053,8 +1117,116 @@ router.post('/:id/resetar-senha', authenticateToken, authorizeRoles('admin', 'pr
     }
 });
 
-// DELETE /api/alunos/:id - Exclusão permanente do aluno e de seus dados vinculados (exclusivo admin)
+// Helper compartilhado para exclusão física/definitiva de um aluno e de seus dados relacionais em transação
+async function executarExclusaoPermanente(conn, alunoId) {
+    const [alunoRows] = await conn.query('SELECT id, nome_completo, foto_perfil_url FROM alunos WHERE id = ?', [alunoId]);
+    if (alunoRows.length === 0) {
+        return null;
+    }
+    const aluno = alunoRows[0];
+
+    // 1. Exclusão ordenada de registros dependentes (evita conflitos com foreign keys RESTRICT)
+    await conn.query('DELETE FROM faturas WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM matriculas WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM evento_graduacao_convites WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM aluno_avaliacoes_desempenho WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM aluno_avaliacoes_graduacao WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM aluno_conquistas WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM aluno_golpes_progresso WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM aluno_historico_medidas WHERE aluno_id = ?', [alunoId]);
+    await conn.query('DELETE FROM checkins WHERE aluno_id = ?', [alunoId]);
+
+    // 2. Exclui sessões, redefinições, verificações de e-mail e conta de usuário
+    await conn.query('DELETE FROM sessoes_usuarios WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
+    await conn.query('DELETE FROM redefinicoes_senha WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
+    await conn.query('DELETE FROM verificacoes_email WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
+    await conn.query('DELETE FROM usuarios_alunos WHERE aluno_id = ?', [alunoId]);
+
+    // 3. Exclui o registro principal do aluno
+    await conn.query('DELETE FROM alunos WHERE id = ?', [alunoId]);
+
+    // 4. Limpa arquivo físico de foto se for upload local do sistema
+    if (aluno.foto_perfil_url && aluno.foto_perfil_url.startsWith('/uploads/alunos/')) {
+        const filePath = path.join(__dirname, '..', 'public', aluno.foto_perfil_url);
+        try {
+            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        } catch {
+            // Silencioso se arquivo já não existir
+        }
+    }
+
+    return aluno;
+}
+
+// POST /api/alunos/:id/restaurar - Restaura um cadastro da lixeira de volta para a lista ativa (exclusivo admin)
+router.post('/:id/restaurar', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const alunoId = parseInt(req.params.id, 10);
+    if (isNaN(alunoId) || alunoId <= 0) {
+        return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
+    }
+
+    try {
+        const [alunoRows] = await pool.query('SELECT id, nome_completo, deleted_at FROM alunos WHERE id = ?', [alunoId]);
+        if (alunoRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        const aluno = alunoRows[0];
+        if (!aluno.deleted_at) {
+            return res.status(400).json({ success: false, error: 'Este cadastro já está ativo (não está na lixeira).' });
+        }
+
+        await pool.query('UPDATE alunos SET deleted_at = NULL, updated_at = NOW() WHERE id = ?', [alunoId]);
+        await pool.query('UPDATE usuarios_alunos SET status = "ativo" WHERE aluno_id = ?', [alunoId]).catch(() => {});
+
+        res.json({
+            success: true,
+            message: `Cadastro de "${aluno.nome_completo}" restaurado com sucesso!`
+        });
+    } catch (err) {
+        console.error('Erro ao restaurar aluno da lixeira:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao restaurar cadastro.' });
+    }
+});
+
+// DELETE /api/alunos/:id - Soft Delete: Move o cadastro do aluno para a lixeira (exclusivo admin)
 router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const alunoId = parseInt(req.params.id, 10);
+    if (isNaN(alunoId) || alunoId <= 0) {
+        return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
+    }
+
+    try {
+        const [alunoRows] = await pool.query('SELECT id, nome_completo, deleted_at FROM alunos WHERE id = ?', [alunoId]);
+        if (alunoRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        const aluno = alunoRows[0];
+        if (aluno.deleted_at) {
+            return res.status(400).json({ success: false, error: 'Este aluno já se encontra na lixeira.' });
+        }
+
+        // 1. Marca deleted_at no aluno
+        await pool.query('UPDATE alunos SET deleted_at = NOW(), updated_at = NOW() WHERE id = ?', [alunoId]);
+
+        // 2. Desativa acesso de login e encerra sessões ativas
+        await pool.query('UPDATE usuarios_alunos SET status = "inativo" WHERE aluno_id = ?', [alunoId]).catch(() => {});
+        await pool.query('DELETE FROM sessoes_usuarios WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]).catch(() => {});
+
+        res.json({
+            success: true,
+            message: `Aluno "${aluno.nome_completo}" movido para a lixeira com sucesso.`
+        });
+    } catch (err) {
+        console.error('Erro ao mover aluno para a lixeira:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao mover aluno para a lixeira.' });
+    }
+});
+
+// DELETE /api/alunos/:id/permanente - Hard Delete: Exclusão permanente do aluno e de todos os dados vinculados (exclusivo admin)
+router.delete('/:id/permanente', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     const alunoId = parseInt(req.params.id, 10);
     if (isNaN(alunoId) || alunoId <= 0) {
         return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
@@ -1064,50 +1236,17 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
     try {
         await conn.beginTransaction();
 
-        // 1. Verifica se o aluno existe
-        const [alunoRows] = await conn.query('SELECT id, nome_completo, foto_perfil_url FROM alunos WHERE id = ?', [alunoId]);
-        if (alunoRows.length === 0) {
+        const aluno = await executarExclusaoPermanente(conn, alunoId);
+        if (!aluno) {
             await conn.rollback();
             return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
         }
-        const aluno = alunoRows[0];
-
-        // 2. Exclusão ordenada de registros dependentes (evitando conflito com foreign keys RESTRICT)
-        await conn.query('DELETE FROM faturas WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM matriculas WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM evento_graduacao_convites WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM aluno_avaliacoes_desempenho WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM aluno_avaliacoes_graduacao WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM aluno_conquistas WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM aluno_golpes_progresso WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM aluno_historico_medidas WHERE aluno_id = ?', [alunoId]);
-        await conn.query('DELETE FROM checkins WHERE aluno_id = ?', [alunoId]);
-
-        // 3. Exclui sessões, redefinições, verificações de e-mail e conta de usuário
-        await conn.query('DELETE FROM sessoes_usuarios WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
-        await conn.query('DELETE FROM redefinicoes_senha WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
-        await conn.query('DELETE FROM verificacoes_email WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
-        await conn.query('DELETE FROM usuarios_alunos WHERE aluno_id = ?', [alunoId]);
-
-        // 4. Exclui o registro principal do aluno
-        await conn.query('DELETE FROM alunos WHERE id = ?', [alunoId]);
 
         await conn.commit();
 
-        // 5. Limpa arquivo físico de foto se for upload local do sistema
-        if (aluno.foto_perfil_url && aluno.foto_perfil_url.startsWith('/uploads/alunos/')) {
-            const filePath = path.join(__dirname, '..', 'public', aluno.foto_perfil_url);
-            try {
-                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-            } catch {
-                // Silencioso se o arquivo já não existir
-            }
-        }
-
         res.json({
             success: true,
-            message: `Aluno "${aluno.nome_completo}" excluído permanentemente com sucesso.`
+            message: `Cadastro de "${aluno.nome_completo}" e todos os registros associados foram excluídos permanentemente.`
         });
     } catch (err) {
         await conn.rollback();

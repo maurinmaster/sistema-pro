@@ -375,6 +375,10 @@ async function runMigrations() {
         await ensureColumn('aluno_avaliacoes_desempenho', 'nota_chutes', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_socos');
         await ensureColumn('aluno_avaliacoes_desempenho', 'nota_postura', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_chutes');
 
+        // 19. Soft delete e lixeira para cadastros de alunos
+        await ensureColumn('alunos', 'deleted_at', 'DATETIME NULL DEFAULT NULL AFTER updated_at');
+        await pool.query('ALTER TABLE alunos ADD INDEX idx_alunos_deleted_at (deleted_at)').catch(() => {});
+
         console.log('✅ Schema do banco de dados sincronizado com sucesso!');
     } catch (err) {
         console.error('❌ Erro ao executar migrations:', err.message);

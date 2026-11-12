@@ -17,6 +17,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
                 SUM(CASE WHEN status = 'experimental' THEN 1 ELSE 0 END) AS experimentais,
                 SUM(CASE WHEN TIMESTAMPDIFF(YEAR, data_nascimento, CURDATE()) < 18 THEN 1 ELSE 0 END) AS menores_idade
             FROM alunos
+            WHERE deleted_at IS NULL
         `);
 
         // 2. Presenças hoje e últimos 7 dias
@@ -71,7 +72,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
                 COUNT(c.id) AS total_treinos
             FROM alunos a
             JOIN checkins c ON c.aluno_id = a.id AND c.status = 'aprovado'
-            WHERE c.data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+            WHERE a.deleted_at IS NULL AND c.data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY a.id
             ORDER BY total_treinos DESC
             LIMIT 5

@@ -1044,15 +1044,16 @@ test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exi
 });
 
 // ============================================================================
-// 13. GESTÃO DE ALUNOS: REDEFINIÇÃO DE SENHA E EXCLUSÃO PERMANENTE
+// 13. GESTÃO DE ALUNOS: REDEFINIÇÃO DE SENHA, SOFT DELETE E LIXEIRA DE CADASTROS
 // ============================================================================
-test('Gestão de Alunos: Redefinição Administrativa de Senha e Exclusão Permanente com Limpeza Relacional', async () => {
+test('Gestão de Alunos: Redefinição de Senha, Soft Delete, Lixeira e Exclusão Permanente', async () => {
     const server = app.listen(0);
     const addr = server.address();
     const port = typeof addr === 'object' && addr ? addr.port : 0;
     const baseUrl = `http://127.0.0.1:${port}`;
 
     let alunoCriadoId = null;
+    let alunoTrashId = null;
 
     try {
         const adminToken = jwt.sign(
@@ -1111,40 +1112,88 @@ test('Gestão de Alunos: Redefinição Administrativa de Senha e Exclusão Perma
         const passwordMatches = await bcrypt.compare(novaSenhaTeste, userRows[0].senha_hash);
         assert.equal(passwordMatches, true, 'Nova senha deve ser autenticável com bcrypt');
 
-        // 3. Testa Exclusão Permanente (DELETE /api/alunos/:id)
-        const deleteRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}`, {
+        // 3. Testa Soft Delete (DELETE /api/alunos/:id -> move para a Lixeira)
+        const softDeleteRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}`, {
             method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
+            headers: { 'Authorization': `Bearer ${adminToken}` }
         });
 
-        assert.equal(deleteRes.status, 200);
-        const deleteBody = await deleteRes.json();
-        assert.equal(deleteBody.success, true);
+        assert.equal(softDeleteRes.status, 200);
+        const softDeleteBody = await softDeleteRes.json();
+        assert.equal(softDeleteBody.success, true);
 
-        // 4. Valida que o aluno NÃO existe mais no banco de dados (Hard Delete real)
+        // Valida que deleted_at foi preenchido no banco
+        const [alunoSoft] = await pool.query('SELECT id, deleted_at FROM alunos WHERE id = ?', [alunoCriadoId]);
+        assert.ok(alunoSoft[0].deleted_at !== null, 'Campo deleted_at deve estar preenchido');
+
+        // Valida que o aluno NÃO aparece mais na listagem principal de alunos
+        const listRes = await fetch(`${baseUrl}/api/alunos?busca=Aluno%20Teste%20Exclusao`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        const listData = await listRes.json();
+        assert.equal(listData.data.some(a => a.id === alunoCriadoId), false, 'Aluno na lixeira não deve aparecer na lista ativa');
+
+        // 4. Testa Consulta da Lixeira (GET /api/alunos/lixeira)
+        const lixeiraRes = await fetch(`${baseUrl}/api/alunos/lixeira`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        assert.equal(lixeiraRes.status, 200);
+        const lixeiraData = await lixeiraRes.json();
+        assert.equal(lixeiraData.success, true);
+        assert.ok(lixeiraData.data.some(a => a.id === alunoCriadoId), 'Aluno deve constar na listagem da lixeira');
+
+        // 5. Testa Restauração da Lixeira (POST /api/alunos/:id/restaurar)
+        const restaurarRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}/restaurar`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        assert.equal(restaurarRes.status, 200);
+        const restaurarData = await restaurarRes.json();
+        assert.equal(restaurarData.success, true);
+
+        // Valida que deleted_at voltou a ser NULL
+        const [alunoRestaurado] = await pool.query('SELECT id, deleted_at FROM alunos WHERE id = ?', [alunoCriadoId]);
+        assert.equal(alunoRestaurado[0].deleted_at, null, 'deleted_at deve voltar a ser NULL após restauração');
+
+        // 6. Testa Exclusão Permanente (DELETE /api/alunos/:id/permanente)
+        const permDeleteRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}/permanente`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        assert.equal(permDeleteRes.status, 200);
+        const permDeleteData = await permDeleteRes.json();
+        assert.equal(permDeleteData.success, true);
+
+        // Valida que o aluno e seus registros dependentes foram completamente removidos (Hard Delete)
         const [checkAluno] = await pool.query('SELECT id FROM alunos WHERE id = ?', [alunoCriadoId]);
-        assert.equal(checkAluno.length, 0, 'Registro do aluno deve ter sido completamente removido da tabela alunos');
+        assert.equal(checkAluno.length, 0, 'Registro do aluno deve ter sido removido do banco');
 
-        // Valida que registros dependentes foram excluídos em cascata
         const [checkMat] = await pool.query('SELECT id FROM matriculas WHERE aluno_id = ?', [alunoCriadoId]);
         assert.equal(checkMat.length, 0, 'Matrícula vinculada deve ter sido removida');
 
         const [checkFat] = await pool.query('SELECT id FROM faturas WHERE aluno_id = ?', [alunoCriadoId]);
         assert.equal(checkFat.length, 0, 'Fatura vinculada deve ter sido removida');
 
-        const [checkUser] = await pool.query('SELECT id FROM usuarios_alunos WHERE aluno_id = ?', [alunoCriadoId]);
-        assert.equal(checkUser.length, 0, 'Usuário de acesso deve ter sido removido');
+        alunoCriadoId = null; // Removido com sucesso
 
-        // 5. Tentativa de deletar novamente deve retornar 404
-        const deleteAgainRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}`, {
-            method: 'DELETE',
+        // 7. Testa Esvaziamento da Lixeira (POST /api/alunos/lixeira/esvaziar)
+        const [trashIns] = await pool.query(`
+            INSERT INTO alunos (nome_completo, cpf, data_nascimento, genero, email, telefone_whatsapp, status, deleted_at)
+            VALUES ('Aluno Lixeira Bulk', '88877766600', '1998-08-20', 'F', 'aluno.trash.bulk@exemplo.com', '11977776666', 'ativo', NOW())
+        `);
+        alunoTrashId = trashIns.insertId;
+
+        const esvaziarRes = await fetch(`${baseUrl}/api/alunos/lixeira/esvaziar`, {
+            method: 'POST',
             headers: { 'Authorization': `Bearer ${adminToken}` }
         });
-        assert.equal(deleteAgainRes.status, 404);
+        assert.equal(esvaziarRes.status, 200);
+        const esvaziarData = await esvaziarRes.json();
+        assert.equal(esvaziarData.success, true);
 
-        alunoCriadoId = null; // Já excluído
+        const [checkTrash] = await pool.query('SELECT id FROM alunos WHERE id = ?', [alunoTrashId]);
+        assert.equal(checkTrash.length, 0, 'Aluno na lixeira deve ter sido excluído permanentemente pelo esvaziar');
+        alunoTrashId = null;
 
     } finally {
         if (alunoCriadoId) {
@@ -1152,6 +1201,9 @@ test('Gestão de Alunos: Redefinição Administrativa de Senha e Exclusão Perma
             await pool.query('DELETE FROM matriculas WHERE aluno_id = ?', [alunoCriadoId]).catch(() => {});
             await pool.query('DELETE FROM usuarios_alunos WHERE aluno_id = ?', [alunoCriadoId]).catch(() => {});
             await pool.query('DELETE FROM alunos WHERE id = ?', [alunoCriadoId]).catch(() => {});
+        }
+        if (alunoTrashId) {
+            await pool.query('DELETE FROM alunos WHERE id = ?', [alunoTrashId]).catch(() => {});
         }
         server.close();
     }

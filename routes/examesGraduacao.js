@@ -389,7 +389,7 @@ router.get('/alunos-aptos', authenticateToken, authorizeRoles('admin', 'recepcao
             JOIN aluno_graduacoes ag ON ag.aluno_id = a.id AND ag.atual = 1
             JOIN modalidades m ON m.id = ag.modalidade_id
             JOIN graduacoes_niveis gn_atual ON gn_atual.id = ag.graduacao_nivel_id
-            WHERE a.status != 'inativo'
+            WHERE a.status != 'inativo' AND a.deleted_at IS NULL
         `;
         const params = [];
 

@@ -183,7 +183,7 @@ const AlunoDetalhesModule = {
                 </button>
                 ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
                     <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4); padding: 2px 8px; font-size: 11px;"
-                        onclick="UI.closeModal('modal-dossie'); AlunosModule.deleteAluno(${safeAlunoId}, '${encodedAlunoNome}')" title="Excluir aluno permanentemente">
+                        onclick="UI.closeModal('modal-dossie'); AlunosModule.deleteAluno(${safeAlunoId}, '${encodedAlunoNome}')" title="Mover aluno para a lixeira">
                         🗑️ Excluir
                     </button>
                 ` : ''}

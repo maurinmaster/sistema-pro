@@ -70,7 +70,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                    foto_perfil_url, peso_kg, altura_cm, torax_cm, cintura_cm, quadril_cm,
                    skin_fighter, avatar_tom, avatar_cabelo, avatar_luva, titulo_ativo, status, created_at
             FROM alunos
-            WHERE id = ? AND status != 'inativo'
+            WHERE id = ? AND status != 'inativo' AND deleted_at IS NULL
         `, [alunoId]);
 
         if (alunos.length === 0) {
@@ -884,7 +884,7 @@ router.get('/curriculo', optionalAuth, async (req, res) => {
         const [alunos] = await pool.query(`
             SELECT id, nome_completo, foto_perfil_url, genero
             FROM alunos
-            WHERE id = ? AND status != 'inativo'
+            WHERE id = ? AND status != 'inativo' AND deleted_at IS NULL
         `, [alunoId]);
 
         if (alunos.length === 0) {
@@ -1332,7 +1332,7 @@ router.put('/skin', optionalAuth, async (req, res) => {
         const [alunoRows] = await pool.query(`
             SELECT id, genero, avatar_tom, avatar_cabelo, avatar_luva, titulo_ativo, skin_fighter 
             FROM alunos 
-            WHERE id = ?
+            WHERE id = ? AND deleted_at IS NULL
         `, [alunoId]);
 
         if (alunoRows.length === 0) {

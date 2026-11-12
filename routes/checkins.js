@@ -43,7 +43,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
 
         // Verifica status do aluno
-        const [alunos] = await pool.query('SELECT status, nome_completo FROM alunos WHERE id = ?', [aluno_id]);
+        const [alunos] = await pool.query('SELECT status, nome_completo FROM alunos WHERE id = ? AND deleted_at IS NULL', [aluno_id]);
         if (alunos.length === 0) {
             return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
         }

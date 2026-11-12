@@ -329,6 +329,15 @@
                                 <option value="sim">Menores de 18 anos</option>
                                 <option value="nao">Adultos (18+)</option>
                             </select>
+
+                            <button type="button" class="btn btn-secondary" id="btn-abrir-lixeira" title="Abrir Lixeira de Cadastros" style="display: inline-flex; align-items: center; gap: 7px; border-color: rgba(239, 68, 68, 0.3);">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                <span>Lixeira</span>
+                                <span class="badge" id="lixeira-contador-badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 11px; padding: 1px 6px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.35);">0</span>
+                            </button>
                         </div>
                     </div>
 
@@ -1129,6 +1138,63 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: LIXEIRA DE CADASTROS (SOFT DELETE) -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-lixeira">
+        <div class="modal-box" style="max-width: 840px; width: 95%;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#ef4444" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Lixeira de Cadastros
+                    </h3>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                        Cadastros removidos da visualização principal. Você pode restaurar qualquer aluno ou apagá-lo definitivamente do banco.
+                    </div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-lixeira')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+                    <div class="search-box" style="flex: 1; min-width: 240px; margin: 0;">
+                        <svg viewBox="0 0 24 24">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.3-4.3" />
+                        </svg>
+                        <input type="text" id="search-lixeira" class="search-input" placeholder="Buscar na lixeira por nome ou CPF...">
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="btn-esvaziar-lixeira" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.35); font-weight: 700;">
+                        ⚠️ Esvaziar Lixeira
+                    </button>
+                </div>
+
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px;">
+                    <table class="data-table" style="margin: 0;">
+                        <thead>
+                            <tr>
+                                <th>Aluno / Cadastro</th>
+                                <th>Contato</th>
+                                <th>Excluído em</th>
+                                <th style="text-align: right;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lixeira-table-body">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="lixeira-total-info" style="font-size: 12px; color: var(--text-muted);">0 cadastros na lixeira</span>
+                <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-lixeira')">Fechar</button>
+            </div>
         </div>
     </div>
 
