@@ -2323,15 +2323,6 @@ const PainelAlunoApp = {
                         </div>
                         <h3 class="curriculum-card-title">${nomeEsc}</h3>
                         <p class="curriculum-card-desc">${descEsc}</p>
-                        <button type="button" class="curriculum-card-btn" onclick="PainelAlunoApp.abrirPassoAPassoTecnica(${g.id})">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                            <span>Estudar Técnica & Passo a Passo</span>
-                        </button>
-                    </div>
-                </div>
-                            <span>Ver Passo a Passo</span>
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-                        </button>
                     </div>
                 </div>
             `;
