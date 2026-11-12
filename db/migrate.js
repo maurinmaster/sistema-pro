@@ -138,15 +138,22 @@ async function runMigrations() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
-        // 6. Colunas de Medidas Físicas e Skin do Atleta na tabela alunos (Conforme Print do Painel)
-        await ensureColumn('alunos', 'peso_kg', 'DECIMAL(5,2) NULL DEFAULT 72.00');
-        await ensureColumn('alunos', 'altura_cm', 'INT UNSIGNED NULL DEFAULT 170');
-        await ensureColumn('alunos', 'torax_cm', 'DECIMAL(5,2) NULL DEFAULT 98.00');
-        await ensureColumn('alunos', 'cintura_cm', 'DECIMAL(5,2) NULL DEFAULT 82.00');
-        await ensureColumn('alunos', 'quadril_cm', 'DECIMAL(5,2) NULL DEFAULT 96.00');
+        // 6. Colunas de Medidas Físicas e Skin do Atleta na tabela alunos (Sem valores fictícios por padrão)
+        await ensureColumn('alunos', 'peso_kg', 'DECIMAL(5,2) NULL DEFAULT NULL');
+        await ensureColumn('alunos', 'altura_cm', 'INT UNSIGNED NULL DEFAULT NULL');
+        await ensureColumn('alunos', 'torax_cm', 'DECIMAL(5,2) NULL DEFAULT NULL');
+        await ensureColumn('alunos', 'cintura_cm', 'DECIMAL(5,2) NULL DEFAULT NULL');
+        await ensureColumn('alunos', 'quadril_cm', 'DECIMAL(5,2) NULL DEFAULT NULL');
         await ensureColumn('alunos', 'skin_fighter', "VARCHAR(100) NULL DEFAULT 'mt-skin-1.jpg'");
         await ensureColumn('alunos', 'avatar_tom', "VARCHAR(20) NULL DEFAULT 'branca'");
         await ensureColumn('alunos', 'avatar_cabelo', "VARCHAR(100) NULL DEFAULT 'cabelo-homem-1.png'");
+
+        // Garante que os defaults no banco de dados sejam NULL para novos cadastros
+        await pool.query(`ALTER TABLE alunos MODIFY COLUMN peso_kg DECIMAL(5,2) NULL DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE alunos MODIFY COLUMN altura_cm INT UNSIGNED NULL DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE alunos MODIFY COLUMN torax_cm DECIMAL(5,2) NULL DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE alunos MODIFY COLUMN cintura_cm DECIMAL(5,2) NULL DEFAULT NULL`).catch(() => {});
+        await pool.query(`ALTER TABLE alunos MODIFY COLUMN quadril_cm DECIMAL(5,2) NULL DEFAULT NULL`).catch(() => {});
 
         // 7. Tabela de Avisos, Eventos e Campanhas da Academia
         await pool.query(`

@@ -409,10 +409,13 @@ const PainelAlunoApp = {
         if (planoStatus) {
             if (plano && plano.dias_restantes > 0) {
                 planoStatus.textContent = `Ativo • ${plano.dias_restantes} dias`;
+                planoStatus.className = 'stat-pill pill-cyan';
             } else if (plano) {
                 planoStatus.textContent = 'Vence hoje';
+                planoStatus.className = 'stat-pill pill-amber';
             } else {
-                planoStatus.textContent = 'Inativo';
+                planoStatus.textContent = 'Sem matrícula';
+                planoStatus.className = 'stat-pill pill-slate';
             }
         }
 
@@ -420,17 +423,21 @@ const PainelAlunoApp = {
         const gradNome = document.getElementById('stat-graduacao-nome');
         const gradStatus = document.getElementById('stat-graduacao-status');
         if (gradNome) {
-            gradNome.textContent = graduacao.atual ? graduacao.atual.nivel_nome : 'Iniciante';
+            gradNome.textContent = (graduacao && graduacao.atual) ? graduacao.atual.nivel_nome : 'Iniciante';
         }
         if (gradStatus) {
-            if (graduacao.avaliacao && graduacao.avaliacao.apto) {
+            if (graduacao?.atual && graduacao?.avaliacao && graduacao?.avaliacao?.apto) {
                 gradStatus.textContent = `Apto p/ Exame (${graduacao.avaliacao.percentual_obtido}%)`;
                 gradStatus.className = 'stat-pill pill-cyan';
-            } else if (graduacao.avaliacao) {
+            } else if (graduacao?.atual && graduacao?.avaliacao) {
                 gradStatus.textContent = `Em Evolução (${graduacao.avaliacao.percentual_obtido}%)`;
                 gradStatus.className = 'stat-pill pill-amber';
+            } else if (graduacao?.atual) {
+                gradStatus.textContent = 'Aguardando Avaliação';
+                gradStatus.className = 'stat-pill pill-slate';
             } else {
-                gradStatus.textContent = 'Fase Inicial';
+                gradStatus.textContent = 'Sem graduação';
+                gradStatus.className = 'stat-pill pill-slate';
             }
         }
 
@@ -478,10 +485,8 @@ const PainelAlunoApp = {
         if (cardTitleChip) cardTitleChip.textContent = tituloAtivo;
 
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
-        if (cardPrajiedName && gradMt) {
-            cardPrajiedName.textContent = gradMt.nivel_nome || 'Prajied Atual';
-        }
         if (gradMt) {
+            if (cardPrajiedName) cardPrajiedName.textContent = gradMt.nivel_nome || 'Prajied Atual';
             const c1 = gradMt.cor_primaria || '#f59e0b';
             const c2 = gradMt.cor_secundaria || c1;
             if (cardPrajiedDot) {
@@ -491,9 +496,15 @@ const PainelAlunoApp = {
                 athleteAvatarRing.style.background = `linear-gradient(135deg, ${c1}, ${c2})`;
             }
             if (cardDegreeBadge) {
+                cardDegreeBadge.style.display = 'inline-block';
                 const grauNum = gradMt.ordem_hierarquica || 1;
                 cardDegreeBadge.textContent = `${grauNum}º G`;
             }
+        } else {
+            if (cardPrajiedName) cardPrajiedName.textContent = 'Iniciante (Sem graduação)';
+            if (cardPrajiedDot) cardPrajiedDot.style.background = '#64748b';
+            if (athleteAvatarRing) athleteAvatarRing.style.background = 'rgba(255, 255, 255, 0.1)';
+            if (cardDegreeBadge) cardDegreeBadge.style.display = 'none';
         }
 
         // 5.1. Situação Financeira do Aluno & Indicador de Atraso / Pagamento Asaas
@@ -532,10 +543,16 @@ const PainelAlunoApp = {
                     cardPlanStatusText.textContent = 'Situação: Pendente';
                 }
                 if (overdueAlert) overdueAlert.style.display = 'none';
-            } else {
+            } else if (plano) {
                 cardPlanStatusBadge.className = 'plan-status-badge em-dia';
                 if (cardPlanStatusText) {
                     cardPlanStatusText.textContent = 'Situação: Em dia';
+                }
+                if (overdueAlert) overdueAlert.style.display = 'none';
+            } else {
+                cardPlanStatusBadge.className = 'plan-status-badge sem-plano';
+                if (cardPlanStatusText) {
+                    cardPlanStatusText.textContent = 'Sem Plano Contratado';
                 }
                 if (overdueAlert) overdueAlert.style.display = 'none';
             }
@@ -548,33 +565,45 @@ const PainelAlunoApp = {
         const bmiPill = document.getElementById('bmi-status-pill');
         const bmiThumb = document.getElementById('bmi-slider-thumb');
 
-        if (heightVal) heightVal.textContent = aluno.medidas.altura_cm;
-        if (weightVal) weightVal.textContent = aluno.medidas.peso_kg;
-        if (bmiNum) bmiNum.textContent = aluno.medidas.imc;
+        const pesoVal = aluno.medidas?.peso_kg;
+        const alturaVal = aluno.medidas?.altura_cm;
+        const imcVal = aluno.medidas?.imc;
+
+        if (heightVal) heightVal.textContent = (alturaVal !== null && alturaVal !== undefined) ? alturaVal : '--';
+        if (weightVal) weightVal.textContent = (pesoVal !== null && pesoVal !== undefined) ? pesoVal : '--';
+        if (bmiNum) bmiNum.textContent = (imcVal !== null && imcVal !== undefined) ? imcVal : '--';
         if (bmiPill) {
-            bmiPill.textContent = aluno.medidas.imc_classificacao;
-            bmiPill.style.color = aluno.medidas.imc_cor;
+            bmiPill.textContent = aluno.medidas?.imc_classificacao || 'Não aferido';
+            bmiPill.style.color = aluno.medidas?.imc_cor || '#94a3b8';
         }
 
         // Posiciona o thumb na barra de gradiente de 15 a 40 (se existir)
         if (bmiThumb) {
-            const clampedImc = Math.max(15, Math.min(40, aluno.medidas.imc));
-            const pct = ((clampedImc - 15) / 25) * 100;
-            bmiThumb.style.left = `${pct}%`;
+            if (imcVal !== null && imcVal !== undefined) {
+                const clampedImc = Math.max(15, Math.min(40, imcVal));
+                const pct = ((clampedImc - 15) / 25) * 100;
+                bmiThumb.style.left = `${pct}%`;
+            } else {
+                bmiThumb.style.left = '0%';
+            }
         }
 
         // Subtítulo de checagem e Shape Badge
         const lastCheckEl = document.getElementById('measurements-last-check');
         const shapeBadgeEl = document.getElementById('body-shape-badge');
-        if (lastCheckEl && aluno.medidas.dias_ultima_checagem) {
-            lastCheckEl.textContent = `Última checagem: ${aluno.medidas.dias_ultima_checagem.toLowerCase()}`;
+        if (lastCheckEl) {
+            if (aluno.medidas?.dias_ultima_checagem && aluno.medidas.dias_ultima_checagem !== 'Sem aferição') {
+                lastCheckEl.textContent = `Última checagem: ${aluno.medidas.dias_ultima_checagem.toLowerCase()}`;
+            } else {
+                lastCheckEl.textContent = 'Sem aferição recente';
+            }
         }
-        if (shapeBadgeEl && aluno.medidas.shape_name) {
-            shapeBadgeEl.textContent = aluno.medidas.shape_name;
+        if (shapeBadgeEl) {
+            shapeBadgeEl.textContent = aluno.medidas?.shape_name || 'Aguardando Avaliação';
         }
 
         // Medidas Corporais e Deltas Comparativos
-        const deltas = aluno.medidas.deltas || {
+        const deltas = aluno.medidas?.deltas || {
             peso: { delta: 0, arrow: 'equal' },
             torax: { delta: 0, arrow: 'equal' },
             cintura: { delta: 0, arrow: 'equal' },
@@ -587,18 +616,25 @@ const PainelAlunoApp = {
         const deltaPesoVal = document.getElementById('delta-peso-val');
         const wingspanSub = document.getElementById('athlete-wingspan-sub');
 
-        if (deltas.peso) {
-            const d = deltas.peso.delta;
-            if (deltaPesoArrow) deltaPesoArrow.textContent = d > 0 ? '↑' : d < 0 ? '↓' : '=';
-            if (deltaPesoVal) deltaPesoVal.textContent = d !== 0 ? `${d > 0 ? '+' : ''}${d}kg mês` : 'Estável no mês';
-            if (deltaPesoSub) {
-                deltaPesoSub.className = `chip-delta-sub ${d < 0 ? 'text-emerald-400' : d > 0 ? 'text-amber-400' : 'text-slate-400'}`;
+        if (deltaPesoSub) {
+            const d = deltas.peso ? deltas.peso.delta : 0;
+            if (d && d !== 0) {
+                deltaPesoSub.style.display = 'inline-flex';
+                if (deltaPesoArrow) deltaPesoArrow.textContent = d > 0 ? '↑' : '↓';
+                if (deltaPesoVal) deltaPesoVal.textContent = `${d > 0 ? '+' : ''}${d}kg mês`;
+                deltaPesoSub.className = `chip-delta-sub ${d < 0 ? 'text-emerald-400' : 'text-amber-400'}`;
+            } else {
+                deltaPesoSub.style.display = 'none';
             }
         }
 
         if (wingspanSub) {
-            const envergadura = aluno.medidas.envergadura_cm || Math.round((parseInt(aluno.medidas.altura_cm, 10) || 170) * 1.02);
-            wingspanSub.textContent = `Envergadura: ${envergadura}cm`;
+            if (alturaVal) {
+                const envergadura = aluno.medidas?.envergadura_cm || Math.round(alturaVal * 1.02);
+                wingspanSub.textContent = `Envergadura: ${envergadura}cm`;
+            } else {
+                wingspanSub.textContent = 'Envergadura: --';
+            }
         }
 
         // Linha de Medidas Corporais no Modal de Evolução (Tórax, Cintura, Quadril)
@@ -606,13 +642,15 @@ const PainelAlunoApp = {
         const measCintura = document.getElementById('meas-cintura-val');
         const measQuadril = document.getElementById('meas-quadril-val');
 
-        if (measTorax) measTorax.textContent = aluno.medidas.torax_cm;
-        if (measCintura) measCintura.textContent = aluno.medidas.cintura_cm;
-        if (measQuadril) measQuadril.textContent = aluno.medidas.quadril_cm;
+        if (measTorax) measTorax.textContent = (aluno.medidas?.torax_cm !== null && aluno.medidas?.torax_cm !== undefined) ? aluno.medidas.torax_cm : '--';
+        if (measCintura) measCintura.textContent = (aluno.medidas?.cintura_cm !== null && aluno.medidas?.cintura_cm !== undefined) ? aluno.medidas.cintura_cm : '--';
+        if (measQuadril) measQuadril.textContent = (aluno.medidas?.quadril_cm !== null && aluno.medidas?.quadril_cm !== undefined) ? aluno.medidas.quadril_cm : '--';
 
         const circumDate = document.getElementById('modal-circumferences-date');
-        if (circumDate && aluno.medidas.dias_ultima_checagem) {
-            circumDate.textContent = `Aferição: ${aluno.medidas.dias_ultima_checagem}`;
+        if (circumDate) {
+            circumDate.textContent = (aluno.medidas?.dias_ultima_checagem && aluno.medidas.dias_ultima_checagem !== 'Sem aferição')
+                ? `Aferição: ${aluno.medidas.dias_ultima_checagem}`
+                : 'Sem aferição registrada';
         }
 
         // Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) no Flanco Direito
@@ -792,20 +830,22 @@ const PainelAlunoApp = {
         const container = document.getElementById('activity-chart-bars');
         if (!container) return;
 
-        const data = Array.isArray(activityData) && activityData.length > 0 ? activityData : [
-            { label: 'Sem 1', rose: 28, cyan: 22, amber: 20, tecnica_score: '6.8/10', clinch_score: '6.0/10', cond_score: '5.8/10' },
-            { label: 'Sem 2', rose: 30, cyan: 24, amber: 21, tecnica_score: '7.0/10', clinch_score: '6.3/10', cond_score: '6.0/10' },
-            { label: 'Sem 3', rose: 31, cyan: 25, amber: 22, tecnica_score: '7.2/10', clinch_score: '6.5/10', cond_score: '6.2/10' },
-            { label: 'Sem 4', rose: 33, cyan: 27, amber: 24, tecnica_score: '7.5/10', clinch_score: '7.0/10', cond_score: '6.7/10' },
-            { label: 'Sem 5', rose: 34, cyan: 28, amber: 25, tecnica_score: '7.7/10', clinch_score: '7.2/10', cond_score: '7.0/10' },
-            { label: 'Sem 6', rose: 36, cyan: 30, amber: 26, tecnica_score: '8.0/10', clinch_score: '7.6/10', cond_score: '7.2/10' },
-            { label: 'Sem 7', rose: 37, cyan: 31, amber: 27, tecnica_score: '8.2/10', clinch_score: '7.8/10', cond_score: '7.5/10' },
-            { label: 'Sem 8', rose: 39, cyan: 33, amber: 28, tecnica_score: '8.5/10', clinch_score: '8.1/10', cond_score: '7.7/10' },
-            { label: 'Sem 9', rose: 40, cyan: 34, amber: 30, tecnica_score: '8.7/10', clinch_score: '8.3/10', cond_score: '8.0/10' },
-            { label: 'Sem 10', rose: 42, cyan: 35, amber: 31, tecnica_score: '8.9/10', clinch_score: '8.5/10', cond_score: '8.2/10' },
-            { label: 'Sem 11', rose: 44, cyan: 37, amber: 32, tecnica_score: '9.2/10', clinch_score: '8.8/10', cond_score: '8.5/10' },
-            { label: 'Sem 12', rose: 46, cyan: 38, amber: 34, tecnica_score: '9.5/10', clinch_score: '9.0/10', cond_score: '8.8/10' }
-        ];
+        const data = Array.isArray(activityData) ? activityData : [];
+
+        if (data.length === 0) {
+            container.innerHTML = `
+                <div style="grid-column: 1 / -1; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 12px; color: #64748b; font-size: 0.8rem; text-align: center; gap: 6px;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="opacity: 0.5;">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    <span>Nenhuma avaliação técnica lançada ainda.</span>
+                    <span style="font-size: 0.72rem; color: #475569;">O gráfico de evolução será preenchido conforme as avaliações dos professores.</span>
+                </div>
+            `;
+            return;
+        }
 
         container.innerHTML = data.map(col => {
             const roseH = Math.max(8, col.rose || (col.tecnica_pct ? Math.round(col.tecnica_pct * 0.45) : 25));
@@ -916,7 +956,28 @@ const PainelAlunoApp = {
         const metaMin = prontidao.meta_minima || 70;
         const isApto = Boolean(prontidao.apto_exame);
 
-        if (beltBadge) beltBadge.textContent = prontidao.nivel_nome || 'Faixa Atual';
+        if (beltBadge) beltBadge.textContent = prontidao.nivel_nome || 'Iniciante (Sem graduação)';
+
+        if (total === 0) {
+            if (counterText) counterText.textContent = '0 técnicas vinculadas';
+            if (percentPill) {
+                percentPill.textContent = '0%';
+                percentPill.classList.remove('apto');
+            }
+            if (progressBar) {
+                progressBar.style.width = '0%';
+                progressBar.classList.remove('apto');
+            }
+            if (statusMsg) {
+                statusMsg.className = 'readiness-status-msg';
+                statusMsg.textContent = 'Aguardando definição de graduação ou técnicas da faixa.';
+            }
+            if (summarySubtitle) {
+                summarySubtitle.textContent = 'Nenhuma técnica vinculada para a graduação atual no momento.';
+            }
+            return;
+        }
+
         if (counterText) counterText.textContent = `${dominados} de ${total} ${total === 1 ? 'técnica dominada' : 'técnicas dominadas'}`;
         
         if (percentPill) {
@@ -942,9 +1003,7 @@ const PainelAlunoApp = {
                 const necessarios = Math.max(1, Math.ceil((total * metaMin) / 100));
                 const faltam = Math.max(1, necessarios - dominados);
                 statusMsg.className = 'readiness-status-msg';
-                statusMsg.textContent = total > 0
-                    ? `Falta dominar ${faltam} ${faltam === 1 ? 'técnica' : 'técnicas'} para atingir a meta mínima (${metaMin}%).`
-                    : 'Aguardando vinculação dos movimentos da faixa.';
+                statusMsg.textContent = `Falta dominar ${faltam} ${faltam === 1 ? 'técnica' : 'técnicas'} para atingir a meta mínima (${metaMin}%).`;
             }
         }
 
@@ -3086,6 +3145,9 @@ const PainelAlunoApp = {
             } else if (resumo.status_financeiro === 'pendente') {
                 statusEl.innerHTML = `<span class="status-pulse-dot" style="background: #f59e0b;"></span> Pendente`;
                 statusEl.className = 'faturas-metric-val amber';
+            } else if (resumo.status_financeiro === 'sem_faturas' || itens.length === 0) {
+                statusEl.innerHTML = `<span class="status-pulse-dot" style="background: #94a3b8;"></span> Sem faturas`;
+                statusEl.className = 'faturas-metric-val slate';
             } else {
                 statusEl.innerHTML = `<span class="status-pulse-dot" style="background: #10b981;"></span> Em dia`;
                 statusEl.className = 'faturas-metric-val green';

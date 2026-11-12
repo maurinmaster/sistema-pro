@@ -14,7 +14,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=3.1">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=3.2">
 </head>
 
 <body>
@@ -501,12 +501,12 @@
                                     <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
                                 </div>
                             </div>
-                            <span class="degree-badge" id="card-athlete-degree-badge">1º G</span>
+                            <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
                         </div>
 
                         <div class="athlete-meta-info">
                             <div class="athlete-name-row">
-                                <h2 class="athlete-card-name" id="card-athlete-name">Mauro Silva</h2>
+                                <h2 class="athlete-card-name" id="card-athlete-name">Atleta</h2>
                                 <svg class="verified-icon" width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b">
                                     <path
                                         d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
@@ -517,19 +517,19 @@
                             <div class="athlete-badges-row">
                                 <span class="prajied-chip" id="card-prajied-chip">
                                     <span class="prajied-dot" id="card-prajied-dot"></span>
-                                    <span id="card-prajied-name">Prajied Amarelo e Branco</span>
+                                    <span id="card-prajied-name">Iniciante</span>
                                 </span>
                                 <span class="title-chip" id="card-title-chip">Iniciante Focado</span>
                             </div>
 
                             <!-- Situação Financeira do Aluno (Em dia, Em atraso, Pendente) -->
                             <div class="athlete-plan-row" id="athlete-plan-row">
-                                <span class="plan-status-badge em-dia" id="card-plan-status-badge" style="cursor: pointer;" title="Clique para ver suas faturas e histórico de pagamentos">
+                                <span class="plan-status-badge sem-plano" id="card-plan-status-badge" style="cursor: pointer;" title="Clique para ver suas faturas e histórico de pagamentos">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
                                         <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
                                         <line x1="1" y1="10" x2="23" y2="10"/>
                                     </svg>
-                                    <span id="card-plan-status-text">Situação: Em dia</span>
+                                    <span id="card-plan-status-text">Sem Plano Contratado</span>
                                 </span>
                             </div>
 
@@ -580,12 +580,12 @@
                                 <span>Peso</span>
                             </span>
                             <div class="bio-stat-val">
-                                <span class="stat-num" id="ruler-weight-val">72</span>
+                                <span class="stat-num" id="ruler-weight-val">--</span>
                                 <span class="stat-unit">kg</span>
                             </div>
-                            <div class="chip-delta-sub" id="delta-peso-sub">
-                                <span id="delta-peso-arrow">↓</span>
-                                <span id="delta-peso-val">-0.8kg mês</span>
+                            <div class="chip-delta-sub" id="delta-peso-sub" style="display: none;">
+                                <span id="delta-peso-arrow">=</span>
+                                <span id="delta-peso-val">Sem variação</span>
                             </div>
                         </div>
 
@@ -600,10 +600,10 @@
                                 <span>Altura</span>
                             </span>
                             <div class="bio-stat-val">
-                                <span class="stat-num" id="ruler-height-val">170</span>
+                                <span class="stat-num" id="ruler-height-val">--</span>
                                 <span class="stat-unit">cm</span>
                             </div>
-                            <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: 173cm</span>
+                            <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: --</span>
                         </div>
 
                         <!-- IMC -->
@@ -617,9 +617,9 @@
                                 <span>IMC</span>
                             </span>
                             <div class="bio-stat-val">
-                                <span class="stat-num" id="bmi-number">24.9</span>
+                                <span class="stat-num" id="bmi-number">--</span>
                             </div>
-                            <span class="chip-status-tag" id="bmi-status-pill">Saudável</span>
+                            <span class="chip-status-tag" id="bmi-status-pill">Não aferido</span>
                         </div>
                     </div>
 
@@ -1526,7 +1526,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=3.1"></script>
+    <script src="/js/painel-aluno.js?v=3.2"></script>
 </body>
 
 </html>

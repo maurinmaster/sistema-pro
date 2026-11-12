@@ -89,25 +89,32 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) idade--;
         }
 
-        // Cálculo de IMC (Índice de Massa Corporal)
-        const peso = parseFloat(aluno.peso_kg) || 72.0;
-        const alturaMetros = (parseInt(aluno.altura_cm, 10) || 170) / 100;
-        const imcValor = parseFloat((peso / (alturaMetros * alturaMetros)).toFixed(1));
+        // Cálculo de IMC (Índice de Massa Corporal) - Real e sem dados fictícios
+        const peso = aluno.peso_kg !== null && aluno.peso_kg !== undefined ? parseFloat(aluno.peso_kg) : null;
+        const alturaCm = aluno.altura_cm !== null && aluno.altura_cm !== undefined ? parseInt(aluno.altura_cm, 10) : null;
+        const toraxCm = aluno.torax_cm !== null && aluno.torax_cm !== undefined ? parseFloat(aluno.torax_cm) : null;
+        const cinturaCm = aluno.cintura_cm !== null && aluno.cintura_cm !== undefined ? parseFloat(aluno.cintura_cm) : null;
+        const quadrilCm = aluno.quadril_cm !== null && aluno.quadril_cm !== undefined ? parseFloat(aluno.quadril_cm) : null;
 
-        let imcClassificacao = 'Normal';
-        let imcCor = '#10b981'; // verde
-        if (imcValor < 18.5) {
-            imcClassificacao = 'Abaixo do peso';
-            imcCor = '#38bdf8';
-        } else if (imcValor <= 24.9) {
-            imcClassificacao = 'Saudável (Ideal)';
-            imcCor = '#10b981';
-        } else if (imcValor <= 29.9) {
-            imcClassificacao = 'Sobrepeso Leve';
-            imcCor = '#f59e0b';
-        } else {
-            imcClassificacao = 'Acima da meta';
-            imcCor = '#ef4444';
+        let imcValor = null;
+        let imcClassificacao = 'Não aferido';
+        let imcCor = '#94a3b8'; // neutro
+        if (peso && alturaCm && alturaCm > 0) {
+            const alturaMetros = alturaCm / 100;
+            imcValor = parseFloat((peso / (alturaMetros * alturaMetros)).toFixed(1));
+            if (imcValor < 18.5) {
+                imcClassificacao = 'Abaixo do peso';
+                imcCor = '#38bdf8';
+            } else if (imcValor <= 24.9) {
+                imcClassificacao = 'Saudável (Ideal)';
+                imcCor = '#10b981';
+            } else if (imcValor <= 29.9) {
+                imcClassificacao = 'Sobrepeso Leve';
+                imcCor = '#f59e0b';
+            } else {
+                imcClassificacao = 'Acima da meta';
+                imcCor = '#ef4444';
+            }
         }
 
         // 2. Plano Contratado e Matrícula Ativa
@@ -415,23 +422,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             }).reverse();
         }
 
-        // Se não houver lançamentos, mantém a sequência visual padrão de 12 semanas progressivas
-        if (evolucaoDesempenho.length === 0) {
-            evolucaoDesempenho = [
-                { label: 'Sem 1', rose: 28, cyan: 22, amber: 20, tecnica_score: '6.8/10', clinch_score: '6.0/10', cond_score: '5.8/10' },
-                { label: 'Sem 2', rose: 30, cyan: 24, amber: 21, tecnica_score: '7.0/10', clinch_score: '6.3/10', cond_score: '6.0/10' },
-                { label: 'Sem 3', rose: 31, cyan: 25, amber: 22, tecnica_score: '7.2/10', clinch_score: '6.5/10', cond_score: '6.2/10' },
-                { label: 'Sem 4', rose: 33, cyan: 27, amber: 24, tecnica_score: '7.5/10', clinch_score: '7.0/10', cond_score: '6.7/10' },
-                { label: 'Sem 5', rose: 34, cyan: 28, amber: 25, tecnica_score: '7.7/10', clinch_score: '7.2/10', cond_score: '7.0/10' },
-                { label: 'Sem 6', rose: 36, cyan: 30, amber: 26, tecnica_score: '8.0/10', clinch_score: '7.6/10', cond_score: '7.2/10' },
-                { label: 'Sem 7', rose: 37, cyan: 31, amber: 27, tecnica_score: '8.2/10', clinch_score: '7.8/10', cond_score: '7.5/10' },
-                { label: 'Sem 8', rose: 39, cyan: 33, amber: 28, tecnica_score: '8.5/10', clinch_score: '8.1/10', cond_score: '7.7/10' },
-                { label: 'Sem 9', rose: 40, cyan: 34, amber: 30, tecnica_score: '8.7/10', clinch_score: '8.3/10', cond_score: '8.0/10' },
-                { label: 'Sem 10', rose: 42, cyan: 35, amber: 31, tecnica_score: '8.9/10', clinch_score: '8.5/10', cond_score: '8.2/10' },
-                { label: 'Sem 11', rose: 44, cyan: 37, amber: 32, tecnica_score: '9.2/10', clinch_score: '8.8/10', cond_score: '8.5/10' },
-                { label: 'Sem 12', rose: 46, cyan: 38, amber: 34, tecnica_score: '9.5/10', clinch_score: '9.0/10', cond_score: '8.8/10' }
-            ];
-        }
+        // Se não houver lançamentos, mantém array vazio (zero dados sintéticos ou simulados)
 
         // 4. Graduação Atual & Avaliação Técnica (Priorizando Muay Thai para o Prajied)
         const [graduacoes] = await pool.query(`
@@ -538,10 +529,10 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
         // Cálculo da Barra de Prontidão para o Exame de Faixa (Gamificação da Wiki)
         const totalGolpesFaixa = golpesFaixaAtual.length;
         const golpesDominados = golpesFaixaAtual.filter(g => g.status_progresso === 'dominado').length;
-        const golpesEmTreino = totalGolpesFaixa - golpesDominados;
-        const percentualProntidao = totalGolpesFaixa > 0 ? Math.round((golpesDominados / totalGolpesFaixa) * 100) : 100;
+        const golpesEmTreino = Math.max(0, totalGolpesFaixa - golpesDominados);
+        const percentualProntidao = totalGolpesFaixa > 0 ? Math.round((golpesDominados / totalGolpesFaixa) * 100) : 0;
         const metaProntidao = Number(graduacaoAtual ? graduacaoAtual.porcentagem_minima : 70) || 70;
-        const aptoExame = percentualProntidao >= metaProntidao;
+        const aptoExame = totalGolpesFaixa > 0 && percentualProntidao >= metaProntidao;
 
         const prontidaoExame = {
             total_golpes: totalGolpesFaixa,
@@ -551,7 +542,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             meta_minima: metaProntidao,
             apto_exame: aptoExame,
             nivel_id: graduacaoAtual ? graduacaoAtual.nivel_id : null,
-            nivel_nome: graduacaoAtual ? graduacaoAtual.nivel_nome : 'Faixa Atual'
+            nivel_nome: graduacaoAtual ? graduacaoAtual.nivel_nome : 'Iniciante (Sem graduação)'
         };
 
         let proximaGraduacao = null;
@@ -634,8 +625,8 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             quadril: { delta: 0, arrow: 'equal' },
             imc: { delta: 0, arrow: 'equal' }
         };
-        let diasUltimaChecagem = 'Hoje';
-        let shapeName = 'Atleta em Evolução';
+        let diasUltimaChecagem = 'Sem aferição';
+        let shapeName = 'Aguardando Avaliação';
 
         if (historicoMedidas.length > 0) {
             const latest = historicoMedidas[0];
@@ -733,10 +724,10 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                 status: aluno.status,
                 medidas: {
                     peso_kg: peso,
-                    altura_cm: parseInt(aluno.altura_cm, 10) || 170,
-                    torax_cm: parseFloat(aluno.torax_cm) || 98.0,
-                    cintura_cm: parseFloat(aluno.cintura_cm) || 82.0,
-                    quadril_cm: parseFloat(aluno.quadril_cm) || 96.0,
+                    altura_cm: alturaCm,
+                    torax_cm: toraxCm,
+                    cintura_cm: cinturaCm,
+                    quadril_cm: quadrilCm,
                     imc: imcValor,
                     imc_classificacao: imcClassificacao,
                     imc_cor: imcCor,
@@ -836,13 +827,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                     pontos_possiveis: avaliacaoTecnica.total_pontos_possiveis,
                     apto: avaliacaoTecnica.apto === 1,
                     observacoes: avaliacaoTecnica.observacoes_professor
-                } : {
-                    percentual_obtido: 75.0,
-                    pontos_obtidos: 15,
-                    pontos_possiveis: 20,
-                    apto: true,
-                    observacoes: 'Excelente postura e evolução nos fundamentos.'
-                },
+                } : null,
                 historico: historicoGraduacoes,
                 proxima_graduacao: proximaGraduacao,
                 faixas_progresso: faixasProgresso,
@@ -1604,7 +1589,7 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
                 qtd_total: itens.length,
                 qtd_pagos: itens.filter(i => i.status === 'pago').length,
                 qtd_pendentes: itens.filter(i => ['pendente', 'atrasado'].includes(i.status)).length,
-                status_financeiro: temAtraso ? 'atrasado' : (totalPendente > 0 ? 'pendente' : 'em_dia'),
+                status_financeiro: temAtraso ? 'atrasado' : (totalPendente > 0 ? 'pendente' : (itens.length > 0 ? 'em_dia' : 'sem_faturas')),
                 has_atraso: temAtraso
             },
             itens

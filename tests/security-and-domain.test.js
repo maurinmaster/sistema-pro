@@ -1209,6 +1209,72 @@ test('Gestão de Alunos: Redefinição de Senha, Soft Delete, Lixeira e Exclusã
     }
 });
 
+// ============================================================================
+// 14. PAINEL DO ALUNO: ALUNO NOVO SEM DADOS SINTÉTICOS OU FICTÍCIOS
+// ============================================================================
+test('Painel do Aluno: Aluno recém-cadastrado não deve conter dados sintéticos ou fictícios', async () => {
+    const server = app.listen(0);
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let novoAlunoId = null;
+
+    try {
+        const [novoIns] = await pool.query(`
+            INSERT INTO alunos (nome_completo, cpf, data_nascimento, genero, email, telefone_whatsapp, status)
+            VALUES ('Atleta Sem Dados Ficticios', '11122233344', '2000-01-01', 'M', 'novo.zerado@exemplo.com', '11999998888', 'ativo')
+        `);
+        novoAlunoId = novoIns.insertId;
+
+        // 1. Consulta painel consolidado do novo aluno
+        const resPainel = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${novoAlunoId}`);
+        assert.equal(resPainel.status, 200);
+        const dataPainel = await resPainel.json();
+
+        assert.equal(dataPainel.success, true);
+        assert.equal(dataPainel.aluno.nome_completo, 'Atleta Sem Dados Ficticios');
+
+        // Medidas devem ser estritamente nulas sem fallbacks artificiais
+        assert.equal(dataPainel.aluno.medidas.peso_kg, null, 'Peso não deve inventar valor fictício');
+        assert.equal(dataPainel.aluno.medidas.altura_cm, null, 'Altura não deve inventar valor fictício');
+        assert.equal(dataPainel.aluno.medidas.torax_cm, null, 'Tórax não deve conter valor padrão fixo');
+        assert.equal(dataPainel.aluno.medidas.cintura_cm, null, 'Cintura não deve conter valor padrão fixo');
+        assert.equal(dataPainel.aluno.medidas.quadril_cm, null, 'Quadril não deve conter valor padrão fixo');
+        assert.equal(dataPainel.aluno.medidas.imc, null, 'IMC não deve ser calculado com dados fictícios');
+        assert.equal(dataPainel.aluno.medidas.imc_classificacao, 'Não aferido');
+        assert.equal(dataPainel.aluno.medidas.dias_ultima_checagem, 'Sem aferição');
+        assert.equal(dataPainel.aluno.medidas.shape_name, 'Aguardando Avaliação');
+
+        // Situação de plano e financeira
+        assert.equal(dataPainel.plano, null, 'Aluno sem matrícula não deve ter objeto de plano');
+
+        // Graduação e avaliações técnicas
+        assert.equal(dataPainel.graduacao.atual, null, 'Aluno novo não deve ter graduação ativa vinculada');
+        assert.equal(dataPainel.graduacao.avaliacao, null, 'Aluno novo sem avaliação não deve ter pontuação ou aptidão fake');
+        assert.equal(dataPainel.prontidao_exame.apto_exame, false, 'Aluno sem graduação ou técnicas não deve estar apto para exame');
+        assert.equal(dataPainel.prontidao_exame.percentual_prontidao, 0, 'Prontidão deve ser 0% sem técnicas vinculadas');
+        assert.equal(dataPainel.frequencia.activity_growth.length, 0, 'Activity growth não deve conter semanas sintéticas simuladas');
+
+        // 2. Consulta histórico financeiro
+        const resFin = await fetch(`${baseUrl}/api/aluno/historico-financeiro?aluno_id=${novoAlunoId}`);
+        assert.equal(resFin.status, 200);
+        const dataFin = await resFin.json();
+
+        assert.equal(dataFin.success, true);
+        assert.equal(dataFin.resumo.status_financeiro, 'sem_faturas');
+        assert.equal(dataFin.resumo.total_pago, 0);
+        assert.equal(dataFin.resumo.total_pendente, 0);
+        assert.equal(dataFin.itens.length, 0, 'Aluno novo não deve ter faturas geradas');
+
+    } finally {
+        if (novoAlunoId) {
+            await pool.query('DELETE FROM alunos WHERE id = ?', [novoAlunoId]).catch(() => {});
+        }
+        server.close();
+    }
+});
+
 test.after(async () => {
     try {
         await pool.end();
