@@ -615,7 +615,9 @@ test('Portal do Aluno Gamificação: Fogo de Frequência (Streak), Prontidão de
 
     assert.ok(htmlContent.includes('streak-hero-card'), 'HTML deve conter card de Fogo de Frequência');
     assert.ok(htmlContent.includes('weekly-streak-ruler'), 'HTML deve conter régua semanal dos 7 dias');
-    assert.ok(htmlContent.includes('readiness-hero-card'), 'HTML deve conter card de Prontidão para o Exame');
+    assert.ok(htmlContent.includes('next-rank-card'), 'HTML deve conter card de Próxima Graduação');
+    assert.ok(!htmlContent.includes('readiness-hero-card'), 'Card readiness-hero-card deve ter sido retirado no desktop');
+    assert.ok(!htmlContent.includes('activity-growth-card'), 'Card activity-growth-card deve ter sido retirado no desktop');
     assert.ok(htmlContent.includes('gloves-options-grid'), 'HTML deve conter grid de opções de luvas no modal');
     assert.ok(htmlContent.includes('titles-options-grid'), 'HTML deve conter grid de opções de títulos no modal');
     assert.ok(htmlContent.includes('header-athlete-title'), 'HTML deve conter exibição do título de honra no cabeçalho');
