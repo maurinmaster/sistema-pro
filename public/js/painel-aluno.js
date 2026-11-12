@@ -43,6 +43,13 @@ const PainelAlunoApp = {
         return '';
     },
 
+    sanitizeColor(color, fallback = '#94a3b8') {
+        if (!color) return fallback;
+        const clean = String(color).trim();
+        if (/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(clean)) return clean;
+        return fallback;
+    },
+
     updateHairElement(element, cabeloFile, modeloFile) {
         if (!element) return;
         element.src = `/assets/avatar/${cabeloFile}`;
@@ -230,6 +237,9 @@ const PainelAlunoApp = {
         document.getElementById('mob-nav-faturas')?.addEventListener('click', () => {
             this.switchView('faturas');
         });
+        document.getElementById('mob-nav-graduacoes')?.addEventListener('click', () => {
+            this.switchView('graduacoes');
+        });
         document.getElementById('mob-nav-perfil')?.addEventListener('click', () => {
             this.openSkinsModal();
         });
@@ -265,6 +275,8 @@ const PainelAlunoApp = {
                     this.switchView('wiki');
                 } else if (tab === 'faturas') {
                     this.switchView('faturas');
+                } else if (tab === 'graduacoes') {
+                    this.switchView('graduacoes');
                 } else if (tab === 'visao-geral') {
                     this.switchView('dashboard');
                     this.scrollToSection('.content-header');
@@ -305,10 +317,12 @@ const PainelAlunoApp = {
             });
         }
 
-        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas)
+        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas vs #graduacoes)
         window.addEventListener('popstate', () => {
             if (window.location.hash === '#faturas') {
                 this.switchView('faturas', false);
+            } else if (window.location.hash === '#graduacoes') {
+                this.switchView('graduacoes', false);
             } else if (window.location.hash === '#wiki') {
                 this.switchView('wiki', false);
             } else {
@@ -318,6 +332,8 @@ const PainelAlunoApp = {
 
         if (window.location.hash === '#faturas') {
             this.switchView('faturas', false);
+        } else if (window.location.hash === '#graduacoes') {
+            this.switchView('graduacoes', false);
         } else if (window.location.hash === '#wiki') {
             this.switchView('wiki', false);
         }
@@ -393,6 +409,11 @@ const PainelAlunoApp = {
 
             this.alunoData = data;
             this.renderDashboard(data);
+            if (this.currentView === 'graduacoes') {
+                this.renderGraduacoesView();
+            } else if (this.currentView === 'wiki') {
+                this.renderWikiSpaView();
+            }
             await this.loadMeusExames();
 
         } catch (err) {
@@ -2014,20 +2035,22 @@ const PainelAlunoApp = {
     // -------------------------------------------------------------------------
 
     /**
-     * Alterna instantaneamente a visão entre Dashboard, Wiki e Faturas (SPA dinâmico sem reload)
+     * Alterna instantaneamente a visão entre Dashboard, Wiki, Faturas e Graduações (SPA dinâmico sem reload)
      */
     switchView(viewName, updateHash = true) {
-        this.currentView = (viewName === 'wiki' || viewName === 'faturas') ? viewName : 'dashboard';
+        this.currentView = (viewName === 'wiki' || viewName === 'faturas' || viewName === 'graduacoes') ? viewName : 'dashboard';
 
         const dashboardView = document.getElementById('spa-view-dashboard');
         const wikiView = document.getElementById('spa-view-wiki');
         const faturasView = document.getElementById('spa-view-faturas');
+        const graduacoesView = document.getElementById('spa-view-graduacoes');
         const rightPanel = document.querySelector('.right-panel-dark');
         const shell = document.querySelector('.dashboard-shell');
 
         if (this.currentView === 'faturas') {
             if (dashboardView) dashboardView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'none';
+            if (graduacoesView) graduacoesView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -2042,9 +2065,26 @@ const PainelAlunoApp = {
             });
 
             this.carregarHistoricoFinanceiro();
+        } else if (this.currentView === 'graduacoes') {
+            if (dashboardView) dashboardView.style.display = 'none';
+            if (wikiView) wikiView.style.display = 'none';
+            if (faturasView) faturasView.style.display = 'none';
+            if (graduacoesView) graduacoesView.style.display = 'block';
+            if (rightPanel) rightPanel.style.display = 'none';
+            if (shell) shell.classList.add('wiki-spa-expanded');
+
+            document.querySelectorAll('.dock-btn[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'graduacoes');
+            });
+            document.querySelectorAll('.mobile-nav-item[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'graduacoes');
+            });
+
+            this.renderGraduacoesView();
         } else if (this.currentView === 'wiki') {
             if (dashboardView) dashboardView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
+            if (graduacoesView) graduacoesView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -2062,6 +2102,7 @@ const PainelAlunoApp = {
         } else {
             if (wikiView) wikiView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
+            if (graduacoesView) graduacoesView.style.display = 'none';
             if (dashboardView) dashboardView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = '';
             if (shell) shell.classList.remove('wiki-spa-expanded');
@@ -2077,13 +2118,173 @@ const PainelAlunoApp = {
         }
 
         if (updateHash) {
-            const hash = this.currentView === 'faturas' ? '#faturas' : (this.currentView === 'wiki' ? '#wiki' : '#dashboard');
+            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', wiki: '#wiki', dashboard: '#dashboard' };
+            const hash = hashMap[this.currentView] || '#dashboard';
             if (window.location.hash !== hash) {
                 history.pushState(null, '', hash);
             }
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    /**
+     * Renderiza a seção SPA de Graduações e Avaliações Ponto a Ponto do Professor
+     */
+    renderGraduacoesView() {
+        const aluno = this.alunoData?.aluno;
+        if (aluno) {
+            const avatarEl = document.getElementById('graduacoes-header-avatar-img');
+            const nameEl = document.getElementById('graduacoes-header-student-name');
+            if (avatarEl) {
+                const avatarSrc = this.sanitizeUrl(aluno.foto_url) ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome || 'Atleta')}&background=ef4444&color=fff`;
+                avatarEl.src = avatarSrc;
+            }
+            if (nameEl) {
+                nameEl.textContent = (aluno.nome || 'Atleta').split(' ')[0];
+            }
+        }
+
+        const gradData = this.alunoData?.graduacao || {};
+        const avaliacoes = Array.isArray(gradData.avaliacoes) ? gradData.avaliacoes : [];
+        const atualNome = gradData.atual?.nivel_nome || 'Não definida';
+        const avalAtual = avaliacoes.find(a => a.is_atual) || avaliacoes[0] || gradData.avaliacao || null;
+
+        const elAtual = document.getElementById('grad-summary-atual');
+        const elScore = document.getElementById('grad-summary-score');
+        const elTotal = document.getElementById('grad-summary-total');
+
+        if (elAtual) elAtual.textContent = atualNome;
+        if (elScore) {
+            if (avalAtual && avalAtual.total_pontos_possiveis > 0) {
+                const pct = Math.round(Number(avalAtual.percentual_obtido) || 0);
+                const ptsObt = Number(avalAtual.total_pontos_obtidos ?? avalAtual.pontos_obtidos) || 0;
+                const ptsMax = Number(avalAtual.total_pontos_possiveis ?? avalAtual.pontos_possiveis) || 0;
+                elScore.textContent = `${pct}% (${ptsObt}/${ptsMax} pts)`;
+                elScore.className = `faturas-metric-val ${avalAtual.apto ? 'green' : 'amber'}`;
+            } else {
+                elScore.textContent = 'Sem avaliação';
+                elScore.className = 'faturas-metric-val slate';
+            }
+        }
+        if (elTotal) elTotal.textContent = String(avaliacoes.length);
+
+        const listEl = document.getElementById('graduacoes-avaliacoes-list');
+        if (!listEl) return;
+
+        if (avaliacoes.length === 0) {
+            listEl.innerHTML = `
+                <div class="grad-empty-state">
+                    <div class="grad-empty-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <circle cx="12" cy="8" r="6"/>
+                            <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+                        </svg>
+                    </div>
+                    <h3>Nenhuma avaliação de graduação registrada ainda</h3>
+                    <p>Assim que seu professor lançar as notas ponto a ponto e observações da sua graduação, todo o detalhamento aparecerá aqui.</p>
+                </div>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = avaliacoes.map(av => {
+            const corPrim = this.sanitizeColor(av.cor_primaria, '#38bdf8');
+            const corSec = this.sanitizeColor(av.cor_secundaria, corPrim);
+            const nivelEsc = this.escapeHtml(av.nivel_nome || 'Graduação');
+            const modEsc = this.escapeHtml(av.modalidade_nome || 'Modalidade');
+            const profEsc = av.professor_nome ? this.escapeHtml(av.professor_nome) : 'Equipe Técnica';
+            const dataFmt = av.data_avaliacao
+                ? new Date(av.data_avaliacao).toLocaleDateString('pt-BR')
+                : 'Data não informada';
+
+            const pct = Math.min(100, Math.max(0, Math.round(Number(av.percentual_obtido) || 0)));
+            const minPct = Math.round(Number(av.porcentagem_minima) || 70);
+            const ptsObt = Number(av.total_pontos_obtidos) || 0;
+            const ptsMax = Number(av.total_pontos_possiveis) || 0;
+            const statusClass = av.apto ? 'apto' : 'evolucao';
+            const statusLabel = av.apto ? 'Apto para Graduação' : 'Em Evolução';
+
+            const itens = Array.isArray(av.itens_avaliados) ? av.itens_avaliados : [];
+            const itensHtml = itens.length > 0
+                ? itens.map(it => {
+                    const nota = Math.min(5, Math.max(0, parseInt(it.nota, 10) || 0));
+                    const notaPct = Math.round((nota / 5) * 100);
+                    const tone = nota >= 4 ? 'high' : (nota >= 3 ? 'mid' : 'low');
+                    return `
+                        <div class="grad-criterio-item">
+                            <div class="grad-criterio-top">
+                                <span class="grad-criterio-nome">${this.escapeHtml(it.item || 'Critério Técnico')}</span>
+                                <span class="grad-criterio-nota ${tone}">${nota} / 5</span>
+                            </div>
+                            <div class="grad-criterio-bar-track">
+                                <div class="grad-criterio-bar-fill ${tone}" style="width: ${notaPct}%;"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')
+                : `<p class="grad-no-items">Nenhum critério individual cadastrado para esta graduação.</p>`;
+
+            const obsHtml = av.observacoes_professor
+                ? `<div class="grad-obs-box">
+                        <div class="grad-obs-label">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                            </svg>
+                            <span>Observações do Professor</span>
+                        </div>
+                        <p class="grad-obs-text">${this.escapeHtml(av.observacoes_professor)}</p>
+                   </div>`
+                : `<div class="grad-obs-box empty">
+                        <span class="grad-obs-empty-text">Nenhuma observação adicional registrada pelo professor nesta avaliação.</span>
+                   </div>`;
+
+            return `
+                <article class="grad-eval-card ${av.is_atual ? 'is-current' : ''}">
+                    <header class="grad-eval-header">
+                        <div class="grad-eval-title-group">
+                            <span class="grad-belt-swatch" style="background: linear-gradient(135deg, ${corPrim}, ${corSec});"></span>
+                            <div>
+                                <div class="grad-eval-badges">
+                                    <span class="grad-mod-badge">${modEsc}</span>
+                                    ${av.is_atual ? '<span class="grad-current-badge">Graduação Atual</span>' : ''}
+                                </div>
+                                <h3 class="grad-eval-nivel">${nivelEsc}</h3>
+                                <div class="grad-eval-meta">
+                                    <span>Avaliado por: <strong>${profEsc}</strong></span>
+                                    <span>•</span>
+                                    <span>${this.escapeHtml(dataFmt)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grad-eval-score-box">
+                            <span class="grad-status-pill ${statusClass}">${statusLabel}</span>
+                            <div class="grad-score-numbers">
+                                <strong>${pct}%</strong>
+                                <span>${ptsObt} / ${ptsMax} pts (mín. ${minPct}%)</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="grad-overall-progress">
+                        <div class="grad-overall-track">
+                            <div class="grad-overall-fill ${statusClass}" style="width: ${pct}%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="grad-criterios-section">
+                        <h4 class="grad-section-subtitle">Notas Ponto a Ponto</h4>
+                        <div class="grad-criterios-grid">
+                            ${itensHtml}
+                        </div>
+                    </div>
+
+                    ${obsHtml}
+                </article>
+            `;
+        }).join('');
     },
 
     /**

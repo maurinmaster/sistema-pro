@@ -313,12 +313,19 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
         `, [alunoId]);
 
         const [graduacoesHistory] = await pool.query(`
-            SELECT aag.id, aag.data_avaliacao, aag.percentual_obtido, aag.total_pontos_obtidos, aag.total_pontos_possiveis,
-                   gn.nome AS nivel_nome
+            SELECT aag.id, aag.modalidade_id, aag.graduacao_nivel_id, aag.professor_id,
+                   aag.data_avaliacao, aag.percentual_obtido, aag.total_pontos_obtidos, aag.total_pontos_possiveis,
+                   aag.apto, aag.observacoes_professor, aag.itens_avaliados_json,
+                   gn.nome AS nivel_nome, gn.cor_hex_primaria, gn.cor_hex_secundaria,
+                   gn.ordem_hierarquica, gn.porcentagem_minima, gn.requisitos_lista_json,
+                   m.nome AS modalidade_nome,
+                   ue.nome AS professor_nome
             FROM aluno_avaliacoes_graduacao aag
             JOIN graduacoes_niveis gn ON gn.id = aag.graduacao_nivel_id
+            JOIN modalidades m ON m.id = aag.modalidade_id
+            LEFT JOIN usuarios_equipe ue ON ue.id = aag.professor_id
             WHERE aag.aluno_id = ?
-            ORDER BY aag.data_avaliacao DESC, aag.id DESC
+            ORDER BY gn.ordem_hierarquica DESC, aag.data_avaliacao DESC, aag.id DESC
         `, [alunoId]);
 
         // Mapeia EXCLUSIVAMENTE os dados que foram de fato lançados no banco
@@ -850,6 +857,62 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                     observacoes: avaliacaoTecnica.observacoes_professor
                 } : null,
                 historico: historicoGraduacoes,
+                avaliacoes: graduacoesHistory.map(g => {
+                    let itens = [];
+                    try {
+                        if (g.itens_avaliados_json) {
+                            itens = typeof g.itens_avaliados_json === 'string'
+                                ? JSON.parse(g.itens_avaliados_json)
+                                : g.itens_avaliados_json;
+                        }
+                    } catch {
+                        itens = [];
+                    }
+                    if (!Array.isArray(itens) || itens.length === 0) {
+                        let reqs = [];
+                        try {
+                            if (g.requisitos_lista_json) {
+                                reqs = typeof g.requisitos_lista_json === 'string'
+                                    ? JSON.parse(g.requisitos_lista_json)
+                                    : g.requisitos_lista_json;
+                            }
+                        } catch {
+                            reqs = [];
+                        }
+                        if (Array.isArray(reqs) && reqs.length > 0) {
+                            itens = reqs.map(r => ({ item: String(r).trim(), nota: 0 }));
+                        } else {
+                            itens = [];
+                        }
+                    }
+                    return {
+                        id: g.id,
+                        modalidade_id: g.modalidade_id,
+                        modalidade_nome: g.modalidade_nome,
+                        graduacao_nivel_id: g.graduacao_nivel_id,
+                        nivel_nome: g.nivel_nome,
+                        cor_primaria: g.cor_hex_primaria,
+                        cor_secundaria: g.cor_hex_secundaria || g.cor_hex_primaria,
+                        ordem_hierarquica: g.ordem_hierarquica,
+                        porcentagem_minima: parseFloat(g.porcentagem_minima) || 70,
+                        professor_nome: g.professor_nome || null,
+                        data_avaliacao: g.data_avaliacao,
+                        total_pontos_obtidos: Number(g.total_pontos_obtidos) || 0,
+                        total_pontos_possiveis: Number(g.total_pontos_possiveis) || (itens.length * 5),
+                        percentual_obtido: parseFloat(g.percentual_obtido) || 0,
+                        apto: g.apto === 1,
+                        observacoes_professor: g.observacoes_professor || null,
+                        itens_avaliados: itens.map(it => ({
+                            item: String(it.item || '').trim(),
+                            nota: Math.min(Math.max(parseInt(it.nota, 10) || 0, 0), 5)
+                        })),
+                        is_atual: Boolean(
+                            graduacaoAtual &&
+                            graduacaoAtual.nivel_id === g.graduacao_nivel_id &&
+                            graduacaoAtual.modalidade_id === g.modalidade_id
+                        )
+                    };
+                }),
                 proxima_graduacao: proximaGraduacao,
                 faixas_progresso: faixasProgresso,
                 faixa_atual: faixaAtualObj,

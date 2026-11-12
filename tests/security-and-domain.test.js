@@ -1313,6 +1313,15 @@ test('Painel do Aluno: Aluno recém-cadastrado deve iniciar com a 1ª graduaçã
 
         assert.ok(dataPosEval.graduacao.avaliacao, 'Deve conter avaliação do professor após lançamento');
         assert.equal(dataPosEval.graduacao.avaliacao.percentual_obtido, 80, 'Score de elegibilidade deve refletir 80%');
+        assert.ok(Array.isArray(dataPosEval.graduacao.avaliacoes) && dataPosEval.graduacao.avaliacoes.length === 1, 'Deve retornar lista de avaliações detalhadas de graduação');
+        const avDetalhe = dataPosEval.graduacao.avaliacoes[0];
+        assert.equal(avDetalhe.observacoes_professor, 'Excelente desempenho técnico');
+        assert.equal(avDetalhe.total_pontos_obtidos, 20);
+        assert.equal(avDetalhe.total_pontos_possiveis, 25);
+        assert.equal(avDetalhe.apto, true);
+        assert.equal(avDetalhe.itens_avaliados.length, 5);
+        assert.deepEqual(avDetalhe.itens_avaliados[0], { item: 'Base e postura', nota: 4 });
+        assert.deepEqual(avDetalhe.itens_avaliados[4], { item: 'Clinch', nota: 4 });
         assert.equal(dataPosEval.graduacao.avaliacao.apto, true, 'Deve estar apto com 80% (mínimo 70%)');
 
         // 5. Consulta histórico financeiro
