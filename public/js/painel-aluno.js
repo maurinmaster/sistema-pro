@@ -748,27 +748,62 @@ const PainelAlunoApp = {
         const nextExamVenue = document.getElementById('card-next-exam-venue');
         const nextRankIcon = document.getElementById('card-next-rank-icon');
 
-        const proximaGrad = graduacao.proxima_graduacao;
+        const proximaGrad = graduacao?.proxima_graduacao;
         if (nextRankLabel) {
             nextRankLabel.textContent = proximaGrad ? `Rumo ao ${proximaGrad.nivel_nome}` : 'Rumo ao Próximo Grau';
         }
 
-        const prontidao = data.prontidao_exame || {};
-        const pctProntidao = prontidao.percentual_prontidao ?? (graduacao.avaliacao ? graduacao.avaliacao.percentual_obtido : 85);
-        const isApto = prontidao.apto_exame ?? (graduacao.avaliacao ? graduacao.avaliacao.apto : (pctProntidao >= 70));
+        // Determinação do Score de Elegibilidade:
+        // Prioridade 1: Avaliação oficial de graduação lançada pelo professor no admin (graduacao.avaliacao)
+        // Prioridade 2: Avaliação contínua dos 4 quesitos técnicos (Clinch, Socos, Chutes, Postura)
+        // Prioridade 3: Domínio de técnicas cadastradas na Wiki pelo atleta
+        const avaliacaoOficial = graduacao?.avaliacao;
+        const notasProf = data.notas_tecnicas || (aluno && aluno.notas_tecnicas);
+        const prontidaoWiki = data.prontidao_exame || {};
+
+        let scoreElegibilidade = null;
+        let isApto = false;
+        let temAvaliacao = false;
+
+        if (avaliacaoOficial && avaliacaoOficial.percentual_obtido !== null && avaliacaoOficial.percentual_obtido !== undefined) {
+            scoreElegibilidade = Math.round(Number(avaliacaoOficial.percentual_obtido));
+            isApto = Boolean(avaliacaoOficial.apto);
+            temAvaliacao = true;
+        } else if (notasProf && notasProf.clinch !== null && notasProf.clinch !== undefined && !isNaN(notasProf.clinch)) {
+            const media = (Number(notasProf.clinch) + Number(notasProf.socos || 0) + Number(notasProf.chutes || 0) + Number(notasProf.postura || 0)) / 4;
+            scoreElegibilidade = Math.round(media * 10);
+            const meta = Number(graduacao?.atual?.porcentagem_minima || 70);
+            isApto = scoreElegibilidade >= meta;
+            temAvaliacao = true;
+        } else if (prontidaoWiki.total_golpes > 0 && prontidaoWiki.golpes_dominados > 0) {
+            scoreElegibilidade = Math.round(Number(prontidaoWiki.percentual_prontidao || 0));
+            isApto = Boolean(prontidaoWiki.apto_exame);
+            temAvaliacao = true;
+        }
 
         if (eligibilityBadge) {
-            if (isApto) {
-                eligibilityBadge.textContent = '100% Elegível';
-                eligibilityBadge.className = 'eligibility-pill pill-eligible';
+            if (temAvaliacao && scoreElegibilidade !== null) {
+                if (isApto) {
+                    eligibilityBadge.textContent = `${scoreElegibilidade}% Elegível`;
+                    eligibilityBadge.className = 'eligibility-pill pill-eligible';
+                } else {
+                    eligibilityBadge.textContent = `${scoreElegibilidade}% Elegível`;
+                    eligibilityBadge.className = 'eligibility-pill pill-progress';
+                }
             } else {
-                eligibilityBadge.textContent = `${pctProntidao}% Elegível`;
-                eligibilityBadge.className = 'eligibility-pill pill-progress';
+                eligibilityBadge.textContent = 'Aguardando Avaliação';
+                eligibilityBadge.className = 'eligibility-pill pill-pending';
             }
         }
 
         if (nextRankBar) {
-            nextRankBar.style.width = `${Math.min(100, Math.max(5, pctProntidao))}%`;
+            if (temAvaliacao && scoreElegibilidade !== null) {
+                nextRankBar.style.width = `${Math.min(100, Math.max(5, scoreElegibilidade))}%`;
+                nextRankBar.className = `next-rank-bar ${isApto ? 'bar-eligible' : 'bar-progress'}`;
+            } else {
+                nextRankBar.style.width = '0%';
+                nextRankBar.className = 'next-rank-bar';
+            }
         }
 
         if (nextRankIcon && proximaGrad && proximaGrad.prajied_icone_url) {
@@ -784,9 +819,9 @@ const PainelAlunoApp = {
             if (nextExamVenue) nextExamVenue.textContent = exame.local_evento || 'Dojo Central - CT';
         } else {
             if (nextExamDate) {
-                nextExamDate.innerHTML = isApto ? `Exame: <strong>Em breve</strong>` : `Faltam treinos p/ exame`;
+                nextExamDate.innerHTML = isApto ? `Exame: <strong>Elegível p/ convocação</strong>` : `Exame: <strong>Aguardando elegibilidade</strong>`;
             }
-            if (nextExamVenue) nextExamVenue.textContent = 'Aguardando abertura de edital';
+            if (nextExamVenue) nextExamVenue.textContent = isApto ? 'Apto p/ próximo exame' : 'Em evolução técnica';
         }
 
         // 6. Badges & Conquistas (Carrossel Horizontal Moderno)

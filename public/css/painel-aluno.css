@@ -5894,6 +5894,25 @@ body {
     border: 1px solid rgba(16, 185, 129, 0.35);
     padding: 2px 7px;
     border-radius: 999px;
+    transition: all 0.3s ease;
+}
+
+.eligibility-pill.pill-eligible {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+}
+
+.eligibility-pill.pill-progress {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.45);
+}
+
+.eligibility-pill.pill-pending {
+    background: rgba(148, 163, 184, 0.14);
+    color: #94a3b8;
+    border: 1px solid rgba(148, 163, 184, 0.3);
 }
 
 .next-rank-icon-wrap {
@@ -5926,6 +5945,14 @@ body {
     border-radius: 999px;
     background: linear-gradient(90deg, #f59e0b, #f97316);
     transition: width 0.4s ease;
+}
+
+.next-rank-bar.bar-eligible {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+.next-rank-bar.bar-progress {
+    background: linear-gradient(90deg, #f59e0b, #f97316);
 }
 
 .next-rank-footer {

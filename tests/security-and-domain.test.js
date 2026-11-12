@@ -1284,7 +1284,38 @@ test('Painel do Aluno: Aluno recém-cadastrado deve iniciar com a 1ª graduaçã
         assert.equal(dataPainel.prontidao_exame.percentual_prontidao, 0, 'Prontidão deve iniciar em 0%');
         assert.equal(dataPainel.frequencia.activity_growth.length, 0, 'Activity growth não deve conter semanas sintéticas simuladas');
 
-        // 3. Consulta histórico financeiro
+        // 3. Professor lança avaliação técnica de graduação com 80% (Apto)
+        const evalRes = await fetch(`${baseUrl}/api/alunos/${novoAlunoId}/avaliacoes-graduacao`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                modalidade_id: 1,
+                graduacao_nivel_id: dataPainel.graduacao.atual.nivel_id,
+                itens_avaliados: [
+                    { item: 'Base e postura', nota: 4 },
+                    { item: 'Jab e Direto', nota: 4 },
+                    { item: 'Low Kick', nota: 4 },
+                    { item: 'Check', nota: 4 },
+                    { item: 'Clinch', nota: 4 }
+                ],
+                observacoes: 'Excelente desempenho técnico'
+            })
+        });
+        assert.equal(evalRes.status, 200);
+
+        // 4. Consulta novamente o painel do atleta e verifica se o score de elegibilidade foi atualizado
+        const resPainelPosEval = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${novoAlunoId}`);
+        assert.equal(resPainelPosEval.status, 200);
+        const dataPosEval = await resPainelPosEval.json();
+
+        assert.ok(dataPosEval.graduacao.avaliacao, 'Deve conter avaliação do professor após lançamento');
+        assert.equal(dataPosEval.graduacao.avaliacao.percentual_obtido, 80, 'Score de elegibilidade deve refletir 80%');
+        assert.equal(dataPosEval.graduacao.avaliacao.apto, true, 'Deve estar apto com 80% (mínimo 70%)');
+
+        // 5. Consulta histórico financeiro
         const resFin = await fetch(`${baseUrl}/api/aluno/historico-financeiro?aluno_id=${novoAlunoId}`);
         assert.equal(resFin.status, 200);
         const dataFin = await resFin.json();
@@ -1297,6 +1328,7 @@ test('Painel do Aluno: Aluno recém-cadastrado deve iniciar com a 1ª graduaçã
 
     } finally {
         if (novoAlunoId) {
+            await pool.query('DELETE FROM aluno_avaliacoes_graduacao WHERE aluno_id = ?', [novoAlunoId]).catch(() => {});
             await pool.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [novoAlunoId]).catch(() => {});
             await pool.query('DELETE FROM alunos WHERE id = ?', [novoAlunoId]).catch(() => {});
         }

@@ -445,16 +445,28 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             graduacaoAtual = graduacoes[0];
             graduacaoMuayThai = graduacoes.find(g => g.modalidade_nome.toLowerCase().includes('muay')) || null;
 
-            // Busca os pontos e percentual na faixa atual
+            // Busca os pontos e percentual na faixa atual (ou avaliação mais recente do aluno)
             const [avaliacoes] = await pool.query(`
                 SELECT percentual_obtido, total_pontos_obtidos, total_pontos_possiveis, apto, itens_avaliados_json, observacoes_professor
                 FROM aluno_avaliacoes_graduacao
                 WHERE aluno_id = ? AND graduacao_nivel_id = ?
+                ORDER BY data_avaliacao DESC, id DESC
                 LIMIT 1
             `, [alunoId, graduacaoAtual.nivel_id]);
 
             if (avaliacoes.length > 0) {
                 avaliacaoTecnica = avaliacoes[0];
+            } else {
+                const [outrasAvaliacoes] = await pool.query(`
+                    SELECT percentual_obtido, total_pontos_obtidos, total_pontos_possiveis, apto, itens_avaliados_json, observacoes_professor
+                    FROM aluno_avaliacoes_graduacao
+                    WHERE aluno_id = ?
+                    ORDER BY data_avaliacao DESC, id DESC
+                    LIMIT 1
+                `, [alunoId]);
+                if (outrasAvaliacoes.length > 0) {
+                    avaliacaoTecnica = outrasAvaliacoes[0];
+                }
             }
         }
 
