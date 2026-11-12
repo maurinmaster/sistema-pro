@@ -642,71 +642,23 @@
                     </button>
                 </div>
 
-                <!-- Showcase do Avatar do Lutador Multicamadas -->
-                <div class="fighter-avatar-showcase" id="fighter-avatar-container"
-                    title="Clique para personalizar seu avatar">
-
-
-                    <div class="avatar-stage" id="avatar-main-stage">
-                        <!-- 1. Camada Base: Corpo do Avatar (Mulher/Homem - Branca/Negra) -->
-                        <img id="avatar-body-img" class="avatar-layer avatar-layer-body"
-                            src="/assets/avatar/homem-branco.png" alt="Avatar Atleta">
-
-                        <!-- 2. Camada Cabelo: PNG com z-index superior -->
-                        <img id="avatar-hair-img" class="avatar-layer avatar-layer-hair cabelo-homem-1"
-                            src="/assets/avatar/cabelo-homem-1.png" data-hair="cabelo-homem-1.png"
-                            alt="Cabelo do Avatar">
-
-                        <!-- 3. Camada Prajied: PNG oficial no braço direito (viewer's left) -->
-                        <div id="prajied-arm-container" class="avatar-layer avatar-layer-prajied prajied-homem"
-                            data-gender="M" style="display: none;" title="Prajied Oficial no Braço Direito">
-                            <img id="avatar-prajied-img" src="/assets/prajied/prajied-1.png" alt="Prajied">
-                            <div class="prajied-arm-tooltip" id="avatar-prajied-tooltip">Prajied</div>
-                        </div>
-                    </div>
-                    <div class="avatar-stage-pedestal"></div>
-                    <div class="avatar-hint-pill">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <circle cx="12" cy="8" r="5" />
-                            <path d="M20 21a8 8 0 1 0-16 0" />
-                        </svg>
-
-
-                        <span>Personalizar Skin</span>
-                    </div>
-                </div>
-
-                <!-- 2. Grid de Métricas Corporais & IMC em Chips Compactos -->
-                <div class="athlete-metrics-section">
-                    <div class="metrics-section-head">
-                        <span class="metrics-head-title">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444"
-                                stroke-width="2.5">
-                                <path
-                                    d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                            </svg>
-                            <span>Métricas Corporais</span>
-                        </span>
-                        <span class="metrics-head-date" id="measurements-last-check">Última aferição: ontem</span>
-                    </div>
-
-                    <!-- 3 Mini Cards em Grid -->
-                    <div class="metrics-chips-grid">
+                <!-- Showcase do Avatar do Lutador Flanqueado por Métricas Corporais -->
+                <div class="athlete-bio-showcase-row">
+                    <!-- Flanco Esquerdo: Peso, Altura, IMC -->
+                    <div class="athlete-flank-col flank-left">
                         <!-- Peso -->
-                        <div class="metric-chip">
-                            <span class="chip-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
-                                    stroke-width="2">
+                        <div class="bio-stat-card">
+                            <span class="bio-stat-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
                                     <circle cx="12" cy="12" r="9" />
                                     <circle cx="12" cy="12" r="3" />
                                     <line x1="12" y1="3" x2="12" y2="5" />
                                 </svg>
                                 <span>Peso</span>
                             </span>
-                            <div class="chip-val-row">
-                                <span class="chip-num" id="ruler-weight-val">72</span>
-                                <span class="chip-unit">kg</span>
+                            <div class="bio-stat-val">
+                                <span class="stat-num" id="ruler-weight-val">72</span>
+                                <span class="stat-unit">kg</span>
                             </div>
                             <div class="chip-delta-sub" id="delta-peso-sub">
                                 <span id="delta-peso-arrow">↓</span>
@@ -715,88 +667,132 @@
                         </div>
 
                         <!-- Altura -->
-                        <div class="metric-chip">
-                            <span class="chip-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8"
-                                    stroke-width="2">
+                        <div class="bio-stat-card">
+                            <span class="bio-stat-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
                                     <line x1="12" y1="2" x2="12" y2="22" />
                                     <polyline points="8 6 12 2 16 6" />
                                     <polyline points="8 18 12 22 16 18" />
                                 </svg>
                                 <span>Altura</span>
                             </span>
-                            <div class="chip-val-row">
-                                <span class="chip-num" id="ruler-height-val">170</span>
-                                <span class="chip-unit">cm</span>
+                            <div class="bio-stat-val">
+                                <span class="stat-num" id="ruler-height-val">170</span>
+                                <span class="stat-unit">cm</span>
                             </div>
                             <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: 173cm</span>
                         </div>
 
                         <!-- IMC -->
-                        <div class="metric-chip">
-                            <span class="chip-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a855f7"
-                                    stroke-width="2">
+                        <div class="bio-stat-card">
+                            <span class="bio-stat-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
                                     <line x1="18" y1="20" x2="18" y2="10" />
                                     <line x1="12" y1="20" x2="12" y2="4" />
                                     <line x1="6" y1="20" x2="6" y2="14" />
                                 </svg>
                                 <span>IMC</span>
                             </span>
-                            <div class="chip-val-row">
-                                <span class="chip-num" id="bmi-number">24.9</span>
+                            <div class="bio-stat-val">
+                                <span class="stat-num" id="bmi-number">24.9</span>
                             </div>
                             <span class="chip-status-tag" id="bmi-status-pill">Saudável</span>
                         </div>
                     </div>
 
-                    <!-- Linha Compacta de Medidas (Tórax, Cintura, Quadril) com Ações -->
-                    <div class="compact-measurements-row">
-                        <div class="meas-items-group">
-                            <span class="meas-label-tag"
-                                style="display: inline-flex; align-items: center; gap: 4px; color: #94a3b8; font-size: 11px; font-weight: 600;">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    <!-- Centro: Showcase do Avatar Multicamadas -->
+                    <div class="fighter-avatar-showcase" id="fighter-avatar-container" title="Clique para personalizar seu avatar">
+                        <div class="avatar-stage" id="avatar-main-stage">
+                            <!-- 1. Camada Base: Corpo do Avatar (Mulher/Homem - Branca/Negra) -->
+                            <img id="avatar-body-img" class="avatar-layer avatar-layer-body" src="/assets/avatar/homem-branco.png" alt="Avatar Atleta">
+
+                            <!-- 2. Camada Cabelo: PNG com z-index superior -->
+                            <img id="avatar-hair-img" class="avatar-layer avatar-layer-hair cabelo-homem-1" src="/assets/avatar/cabelo-homem-1.png" data-hair="cabelo-homem-1.png" alt="Cabelo do Avatar">
+
+                            <!-- 3. Camada Prajied: PNG oficial no braço direito (viewer's left) -->
+                            <div id="prajied-arm-container" class="avatar-layer avatar-layer-prajied prajied-homem" data-gender="M" style="display: none;" title="Prajied Oficial no Braço Direito">
+                                <img id="avatar-prajied-img" src="/assets/prajied/prajied-1.png" alt="Prajied">
+                                <div class="prajied-arm-tooltip" id="avatar-prajied-tooltip">Prajied</div>
+                            </div>
+                        </div>
+                        <div class="avatar-stage-pedestal"></div>
+                        <div class="avatar-hint-pill">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <circle cx="12" cy="8" r="5" />
+                                <path d="M20 21a8 8 0 1 0-16 0" />
+                            </svg>
+                            <span>Personalizar Skin</span>
+                        </div>
+                    </div>
+
+                    <!-- Flanco Direito: Tórax, Cintura, Quadril -->
+                    <div class="athlete-flank-col flank-right">
+                        <!-- Tórax -->
+                        <div class="bio-stat-card">
+                            <span class="bio-stat-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
                                 </svg>
-                                <span>Medidas:</span>
+                                <span>Tórax</span>
                             </span>
-                            <div class="meas-inline-item">
-                                <span class="meas-inline-name">Tórax</span>
-                                <strong class="meas-inline-val" id="meas-torax-val">98</strong><span
-                                    class="meas-unit-inline">&nbsp;cm</span>
-                                <span class="meas-delta-inline" id="delta-torax-tag" style="display: none;"><span
-                                        id="arrow-torax"></span><span id="delta-torax-num"></span></span>
+                            <div class="bio-stat-val">
+                                <span class="stat-num" id="meas-torax-val">98</span>
+                                <span class="stat-unit">cm</span>
                             </div>
-                            <span class="meas-sep">•</span>
-                            <div class="meas-inline-item">
-                                <span class="meas-inline-name">Cintura</span>
-                                <strong class="meas-inline-val" id="meas-cintura-val">82</strong><span
-                                    class="meas-unit-inline">&nbsp;cm</span>
-                                <span class="meas-delta-inline" id="delta-cintura-tag" style="display: none;"><span
-                                        id="arrow-cintura"></span><span id="delta-cintura-num"></span></span>
-                            </div>
-                            <span class="meas-sep">•</span>
-                            <div class="meas-inline-item">
-                                <span class="meas-inline-name">Quadril</span>
-                                <strong class="meas-inline-val" id="meas-quadril-val">96</strong><span
-                                    class="meas-unit-inline">&nbsp;cm</span>
-                                <span class="meas-delta-inline" id="delta-quadril-tag" style="display: none;"><span
-                                        id="arrow-quadril"></span><span id="delta-quadril-num"></span></span>
-                            </div>
+                            <span class="meas-delta-inline" id="delta-torax-tag" style="display: none;">
+                                <span id="arrow-torax"></span><span id="delta-torax-num"></span>
+                            </span>
                         </div>
 
-                        <div class="meas-quick-actions">
-                            <button type="button" class="btn-meas-action" id="btn-modal-medidas"
-                                title="Lançar Nova Medição">
-                                <span>+ Medir</span>
-                            </button>
-                            <button type="button" class="btn-meas-action btn-meas-accent" id="btn-open-evolution"
-                                title="Histórico e Comparativo de Evolução">
-                                <span>Evolução</span>
-                            </button>
+                        <!-- Cintura -->
+                        <div class="bio-stat-card">
+                            <span class="bio-stat-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                                </svg>
+                                <span>Cintura</span>
+                            </span>
+                            <div class="bio-stat-val">
+                                <span class="stat-num" id="meas-cintura-val">82</span>
+                                <span class="stat-unit">cm</span>
+                            </div>
+                            <span class="meas-delta-inline" id="delta-cintura-tag" style="display: none;">
+                                <span id="arrow-cintura"></span><span id="delta-cintura-num"></span>
+                            </span>
                         </div>
+
+                        <!-- Quadril -->
+                        <div class="bio-stat-card">
+                            <span class="bio-stat-label">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <line x1="3" y1="9" x2="21" y2="9" />
+                                    <line x1="9" y1="21" x2="9" y2="9" />
+                                </svg>
+                                <span>Quadril</span>
+                            </span>
+                            <div class="bio-stat-val">
+                                <span class="stat-num" id="meas-quadril-val">96</span>
+                                <span class="stat-unit">cm</span>
+                            </div>
+                            <span class="meas-delta-inline" id="delta-quadril-tag" style="display: none;">
+                                <span id="arrow-quadril"></span><span id="delta-quadril-num"></span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra Inferior de Ações e Última Aferição das Medidas -->
+                <div class="athlete-bio-actions-bar">
+                    <span class="metrics-head-date" id="measurements-last-check">Última checagem: ontem</span>
+                    <div class="meas-quick-actions">
+                        <button type="button" class="btn-meas-action" id="btn-modal-medidas" title="Lançar Nova Medição">
+                            <span>+ Medir</span>
+                        </button>
+                        <button type="button" class="btn-meas-action btn-meas-accent" id="btn-open-evolution" title="Histórico e Comparativo de Evolução">
+                            <span>Evolução</span>
+                        </button>
                     </div>
                 </div>
 
