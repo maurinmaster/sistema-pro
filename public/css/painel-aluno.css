@@ -5534,6 +5534,52 @@ body {
     gap: 8px;
 }
 
+/* Mini Barras de Desempenho Técnico (Clinch, Socos, Chutes, Postura) */
+.eval-stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.eval-stat-card .eval-num {
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.eval-mini-bar-track {
+    width: 100%;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.eval-mini-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.eval-mini-bar-fill.bar-clinch {
+    background: #38bdf8;
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+.eval-mini-bar-fill.bar-socos {
+    background: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.eval-mini-bar-fill.bar-chutes {
+    background: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.eval-mini-bar-fill.bar-postura {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+}
+
 /* Responsividade Mobile para Bio e Flancos do Avatar */
 @media (max-width: 600px) {
     .athlete-bio-showcase-row {

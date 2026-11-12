@@ -30,27 +30,26 @@ const AlunoDetalhesModule = {
             btnAprovar.addEventListener('click', () => this.aprovarPromocao());
         }
 
-        // Formulário e controles de Avaliação de Desempenho (Clinch-Sparring & Condicionamento)
+        // Formulário e controles de Avaliação Técnica (Clinch, Socos, Chutes, Postura)
         const formDesempenho = document.getElementById('form-avaliacao-desempenho');
         if (formDesempenho) {
             formDesempenho.addEventListener('submit', (e) => this.submitAvaliacaoDesempenho(e));
         }
 
-        const sliderClinch = document.getElementById('desempenho-nota-clinch');
-        const labelClinch = document.getElementById('label-nota-clinch');
-        if (sliderClinch && labelClinch) {
-            sliderClinch.addEventListener('input', (e) => {
-                labelClinch.textContent = `${Number(e.target.value).toFixed(1)} / 10`;
-            });
-        }
+        const setupDesempenhoSlider = (sliderId, labelId) => {
+            const slider = document.getElementById(sliderId);
+            const label = document.getElementById(labelId);
+            if (slider && label) {
+                slider.addEventListener('input', (e) => {
+                    label.textContent = `${Number(e.target.value).toFixed(1)} / 10`;
+                });
+            }
+        };
 
-        const sliderCond = document.getElementById('desempenho-nota-cond');
-        const labelCond = document.getElementById('label-nota-cond');
-        if (sliderCond && labelCond) {
-            sliderCond.addEventListener('input', (e) => {
-                labelCond.textContent = `${Number(e.target.value).toFixed(1)} / 10`;
-            });
-        }
+        setupDesempenhoSlider('desempenho-nota-clinch', 'label-nota-clinch');
+        setupDesempenhoSlider('desempenho-nota-socos', 'label-nota-socos');
+        setupDesempenhoSlider('desempenho-nota-chutes', 'label-nota-chutes');
+        setupDesempenhoSlider('desempenho-nota-postura', 'label-nota-postura');
     },
 
     bindContractEvents() {
@@ -558,12 +557,12 @@ const AlunoDetalhesModule = {
                 <!-- Botão de Ação & Título -->
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                     <div>
-                        <h4 style="font-family: var(--font-heading); margin: 0; font-size: 16px; color: #ffffff;">Histórico de Avaliações de Desempenho</h4>
-                        <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">As notas registradas aqui alimentam diretamente os segmentos cyan e amber do gráfico do aluno.</p>
+                        <h4 style="font-family: var(--font-heading); margin: 0; font-size: 16px; color: #ffffff;">Avaliações Técnicas do Professor</h4>
+                        <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">Notas de 0 a 10 nos quesitos: Clinch, Socos, Chutes e Postura. Exibidas no painel do atleta ao lado do avatar.</p>
                     </div>
                     <button type="button" class="btn btn-primary" onclick="AlunoDetalhesModule.openModalDesempenho(${safeAlunoId}, '${encodedAlunoNome}')">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                        + Avaliar Clinch & Condicionamento
+                        + Avaliar Quesitos Técnicos
                     </button>
                 </div>
 
@@ -571,19 +570,21 @@ const AlunoDetalhesModule = {
                 <div class="table-card">
                     ${desList.length === 0 ? `
                         <div style="text-align: center; padding: 40px; color: var(--text-muted);">
-                            <div style="font-size: 28px; margin-bottom: 8px;">🥊</div>
-                            Nenhuma avaliação de Clinch-Sparring ou Condicionamento registrada ainda.<br>
-                            <span style="font-size: 12px;">Clique no botão acima para lançar a primeira avaliação do atleta.</span>
+                            <div style="font-size: 28px; margin-bottom: 8px;">🥋</div>
+                            Nenhuma avaliação técnica de Clinch, Socos, Chutes ou Postura registrada ainda.<br>
+                            <span style="font-size: 12px;">Clique no botão acima para lançar a avaliação técnica do atleta.</span>
                         </div>
                     ` : `
                         <table class="data-table">
                             <thead>
                                 <tr>
                                     <th>Data</th>
-                                    <th>Clinch & Sparring (Cyan)</th>
-                                    <th>Condicionamento (Amber)</th>
+                                    <th>Clinch</th>
+                                    <th>Socos</th>
+                                    <th>Chutes</th>
+                                    <th>Postura</th>
                                     <th>Avaliador</th>
-                                    <th>Observações do Professor</th>
+                                    <th>Observações</th>
                                     <th>Ações</th>
                                 </tr>
                             </thead>
@@ -592,20 +593,30 @@ const AlunoDetalhesModule = {
                                     <tr>
                                         <td style="font-weight: 700;">${UI.formatDate(d.data_avaliacao)}</td>
                                         <td>
-                                            <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #38bdf8; background: rgba(14, 165, 233, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">
-                                                🥊 ${Number(d.nota_clinch_sparring).toFixed(1)} / 10
+                                            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #38bdf8; background: rgba(14, 165, 233, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">
+                                                🥋 ${Number(d.nota_clinch ?? d.nota_clinch_sparring ?? 0).toFixed(1)}
                                             </span>
                                         </td>
                                         <td>
-                                            <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #f59e0b; background: rgba(217, 119, 6, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">
-                                                ⚡ ${Number(d.nota_condicionamento).toFixed(1)} / 10
+                                            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #f87171; background: rgba(239, 68, 68, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">
+                                                🥊 ${Number(d.nota_socos ?? 0).toFixed(1)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #fbbf24; background: rgba(245, 158, 11, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">
+                                                🦵 ${Number(d.nota_chutes ?? 0).toFixed(1)}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #34d399; background: rgba(16, 185, 129, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">
+                                                🧘 ${Number(d.nota_postura ?? 0).toFixed(1)}
                                             </span>
                                         </td>
                                         <td><span style="font-size: 12px; color: #cbd5e1;">${UI.escapeHtml(d.professor_nome || 'Professor')}</span></td>
                                         <td><span style="font-size: 12px; color: #94a3b8;">${UI.escapeHtml(d.observacoes || 'Sem observações')}</span></td>
                                         <td>
                                             <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 2px 8px; font-size: 11px;"
-                                                onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})" title="Excluir medição">
+                                                onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})" title="Excluir avaliação">
                                                 Excluir
                                             </button>
                                         </td>
@@ -1111,27 +1122,29 @@ const AlunoDetalhesModule = {
         }
     },
 
-    // 8. Modal e Registro de Avaliações de Desempenho (Clinch, Sparring e Condicionamento)
+    // 8. Modal e Registro de Avaliações Técnicas (Clinch, Socos, Chutes, Postura)
     openModalDesempenho(alunoId, alunoNome) {
         document.getElementById('desempenho-aluno-id').value = alunoId;
         const sub = document.getElementById('desempenho-modal-sub');
         if (sub && alunoNome) {
-            sub.textContent = `Atleta: ${decodeURIComponent(alunoNome)} • Clinch-Sparring & Condicionamento`;
+            sub.textContent = `Atleta: ${decodeURIComponent(alunoNome)} • Notas de 0 a 10`;
         }
         const dataInput = document.getElementById('desempenho-data');
         if (dataInput) {
             dataInput.value = new Date().toISOString().split('T')[0];
         }
 
-        const sliderClinch = document.getElementById('desempenho-nota-clinch');
-        const labelClinch = document.getElementById('label-nota-clinch');
-        if (sliderClinch) sliderClinch.value = '8.0';
-        if (labelClinch) labelClinch.textContent = '8.0 / 10';
+        const setSliderValue = (sliderId, labelId, val) => {
+            const slider = document.getElementById(sliderId);
+            const label = document.getElementById(labelId);
+            if (slider) slider.value = val;
+            if (label) label.textContent = `${Number(val).toFixed(1)} / 10`;
+        };
 
-        const sliderCond = document.getElementById('desempenho-nota-cond');
-        const labelCond = document.getElementById('label-nota-cond');
-        if (sliderCond) sliderCond.value = '7.5';
-        if (labelCond) labelCond.textContent = '7.5 / 10';
+        setSliderValue('desempenho-nota-clinch', 'label-nota-clinch', '8.0');
+        setSliderValue('desempenho-nota-socos', 'label-nota-socos', '8.0');
+        setSliderValue('desempenho-nota-chutes', 'label-nota-chutes', '8.0');
+        setSliderValue('desempenho-nota-postura', 'label-nota-postura', '8.0');
 
         const obsInput = document.getElementById('desempenho-obs');
         if (obsInput) obsInput.value = '';
@@ -1143,9 +1156,11 @@ const AlunoDetalhesModule = {
         e.preventDefault();
         const alunoId = document.getElementById('desempenho-aluno-id').value;
         const data_avaliacao = document.getElementById('desempenho-data').value;
-        const nota_clinch_sparring = parseFloat(document.getElementById('desempenho-nota-clinch').value);
-        const nota_condicionamento = parseFloat(document.getElementById('desempenho-nota-cond').value);
-        const observacoes = document.getElementById('desempenho-obs').value.trim();
+        const nota_clinch = parseFloat(document.getElementById('desempenho-nota-clinch')?.value || 8.0);
+        const nota_socos = parseFloat(document.getElementById('desempenho-nota-socos')?.value || 8.0);
+        const nota_chutes = parseFloat(document.getElementById('desempenho-nota-chutes')?.value || 8.0);
+        const nota_postura = parseFloat(document.getElementById('desempenho-nota-postura')?.value || 8.0);
+        const observacoes = (document.getElementById('desempenho-obs')?.value || '').trim();
 
         const btn = document.getElementById('btn-salvar-desempenho');
         if (btn) {
@@ -1156,14 +1171,16 @@ const AlunoDetalhesModule = {
         try {
             const res = await API.post(`/alunos/${alunoId}/avaliacoes-desempenho`, {
                 data_avaliacao,
-                nota_clinch_sparring,
-                nota_condicionamento,
+                nota_clinch,
+                nota_socos,
+                nota_chutes,
+                nota_postura,
                 observacoes
             });
 
             if (!res.success) throw new Error(res.error || 'Erro ao registrar avaliação.');
 
-            UI.showToast('Avaliação de Clinch & Condicionamento registrada com sucesso!', 'success');
+            UI.showToast('Avaliação técnica (Clinch, Socos, Chutes, Postura) registrada com sucesso!', 'success');
             UI.closeModal('modal-avaliacao-desempenho');
 
             // Recarrega o dossiê e permanece na aba de desempenho

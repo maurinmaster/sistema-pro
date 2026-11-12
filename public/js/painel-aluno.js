@@ -601,7 +601,7 @@ const PainelAlunoApp = {
             wingspanSub.textContent = `Envergadura: ${envergadura}cm`;
         }
 
-        // Linha Compacta de Medidas Corporais (Tórax, Cintura, Quadril)
+        // Linha de Medidas Corporais no Modal de Evolução (Tórax, Cintura, Quadril)
         const measTorax = document.getElementById('meas-torax-val');
         const measCintura = document.getElementById('meas-cintura-val');
         const measQuadril = document.getElementById('meas-quadril-val');
@@ -609,6 +609,31 @@ const PainelAlunoApp = {
         if (measTorax) measTorax.textContent = aluno.medidas.torax_cm;
         if (measCintura) measCintura.textContent = aluno.medidas.cintura_cm;
         if (measQuadril) measQuadril.textContent = aluno.medidas.quadril_cm;
+
+        const circumDate = document.getElementById('modal-circumferences-date');
+        if (circumDate && aluno.medidas.dias_ultima_checagem) {
+            circumDate.textContent = `Aferição: ${aluno.medidas.dias_ultima_checagem}`;
+        }
+
+        // Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) no Flanco Direito
+        const notas = data.notas_tecnicas || (aluno && aluno.notas_tecnicas) || {};
+        const setEvalScore = (numId, barId, val) => {
+            const numEl = document.getElementById(numId);
+            const barEl = document.getElementById(barId);
+            if (val !== null && val !== undefined && !isNaN(val)) {
+                const n = Number(val);
+                if (numEl) numEl.textContent = n.toFixed(1);
+                if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, (n / 10) * 100))}%`;
+            } else {
+                if (numEl) numEl.textContent = '--';
+                if (barEl) barEl.style.width = '0%';
+            }
+        };
+
+        setEvalScore('eval-score-clinch', 'eval-bar-clinch', notas.clinch);
+        setEvalScore('eval-score-socos', 'eval-bar-socos', notas.socos);
+        setEvalScore('eval-score-chutes', 'eval-bar-chutes', notas.chutes);
+        setEvalScore('eval-score-postura', 'eval-bar-postura', notas.postura);
 
         // Atualização dos tags de variação (Deltas) - oculta se delta for 0 para não exibir "=0"
         const updateDeltaTag = (tagId, arrowId, numId, metric) => {

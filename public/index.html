@@ -1316,19 +1316,19 @@
 
     <!-- ========================================== -->
     <!-- MODAL: AVALIAÇÃO DE DESEMPENHO             -->
-    <!-- (CLINCH-SPARRING & CONDICIONAMENTO)        -->
+    <!-- (CLINCH, SOCOS, CHUTES, POSTURA)           -->
     <!-- ========================================== -->
     <div class="modal-overlay" id="modal-avaliacao-desempenho">
-        <div class="modal-box" style="max-width: 520px;">
+        <div class="modal-box" style="max-width: 540px;">
             <div class="modal-header">
                 <div>
                     <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
-                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#0ea5e9" stroke-width="2">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" stroke-width="2">
                             <path d="M18 20V10M12 20V4M6 20v-6" />
                         </svg>
-                        Avaliar Desempenho do Aluno
+                        Avaliar Quesitos Técnicos do Atleta
                     </h3>
-                    <div id="desempenho-modal-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Quesitos de Clinch-Sparring e Condicionamento</div>
+                    <div id="desempenho-modal-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Notas de 0.0 a 10.0: Clinch, Socos, Chutes e Postura</div>
                 </div>
                 <button class="modal-close" onclick="UI.closeModal('modal-avaliacao-desempenho')">&times;</button>
             </div>
@@ -1341,29 +1341,49 @@
                         <input type="date" id="desempenho-data" class="form-control" required style="background: rgba(0,0,0,0.3); color: #fff;">
                     </div>
 
-                    <!-- Quesito 1: Clinch & Sparring (seg-cyan) -->
-                    <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <label class="form-label" style="color: #38bdf8; font-weight: 700; margin: 0; font-size: 13px;">🥊 Clinch & Sparring (seg-cyan)</label>
+                    <!-- Quesito 1: Clinch (0 a 10) -->
+                    <div style="background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="form-label" style="color: #38bdf8; font-weight: 700; margin: 0; font-size: 13px;">🥋 Clinch</label>
                             <span id="label-nota-clinch" style="font-size: 14px; font-weight: 800; color: #38bdf8;">8.0 / 10</span>
                         </div>
-                        <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">Avalie postura, domínio na esgrima, joelhadas no clinch, defesas e desenvoltura geral no sparring.</p>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.3;">Domínio de esgrima, pescoço, controle de tronco, joelhadas e quedas no clinch.</p>
                         <input type="range" id="desempenho-nota-clinch" min="0" max="10" step="0.5" value="8.0" style="width: 100%; accent-color: #0ea5e9; cursor: pointer;">
                     </div>
 
-                    <!-- Quesito 2: Condicionamento Físico (seg-amber) -->
-                    <div style="background: rgba(217, 119, 6, 0.08); border: 1px solid rgba(217, 119, 6, 0.25); border-radius: 10px; padding: 14px; margin-bottom: 14px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <label class="form-label" style="color: #f59e0b; font-weight: 700; margin: 0; font-size: 13px;">⚡ Condicionamento Físico (seg-amber)</label>
-                            <span id="label-nota-cond" style="font-size: 14px; font-weight: 800; color: #f59e0b;">7.5 / 10</span>
+                    <!-- Quesito 2: Socos (0 a 10) -->
+                    <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="form-label" style="color: #f87171; font-weight: 700; margin: 0; font-size: 13px;">🥊 Socos</label>
+                            <span id="label-nota-socos" style="font-size: 14px; font-weight: 800; color: #f87171;">8.0 / 10</span>
                         </div>
-                        <p style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.4;">Avalie capacidade aeróbica, fôlego nos rounds, explosão muscular, recuperação e intensidade.</p>
-                        <input type="range" id="desempenho-nota-cond" min="0" max="10" step="0.5" value="7.5" style="width: 100%; accent-color: #d97706; cursor: pointer;">
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.3;">Alinhamento dos golpes (jab, direto, cruzado, uppercut), rotação de quadril e precisão.</p>
+                        <input type="range" id="desempenho-nota-socos" min="0" max="10" step="0.5" value="8.0" style="width: 100%; accent-color: #ef4444; cursor: pointer;">
+                    </div>
+
+                    <!-- Quesito 3: Chutes (0 a 10) -->
+                    <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="form-label" style="color: #fbbf24; font-weight: 700; margin: 0; font-size: 13px;">🦵 Chutes</label>
+                            <span id="label-nota-chutes" style="font-size: 14px; font-weight: 800; color: #fbbf24;">8.0 / 10</span>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.3;">Trajetória circular/frontal, giro do pé de base, impacto da tíbia e retorno da perna.</p>
+                        <input type="range" id="desempenho-nota-chutes" min="0" max="10" step="0.5" value="8.0" style="width: 100%; accent-color: #f59e0b; cursor: pointer;">
+                    </div>
+
+                    <!-- Quesito 4: Postura (0 a 10) -->
+                    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                            <label class="form-label" style="color: #34d399; font-weight: 700; margin: 0; font-size: 13px;">🧘 Postura</label>
+                            <span id="label-nota-postura" style="font-size: 14px; font-weight: 800; color: #34d399;">8.0 / 10</span>
+                        </div>
+                        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; line-height: 1.3;">Base marcial, guarda alta protegida, equilíbrio nas ações e postura durante o combate.</p>
+                        <input type="range" id="desempenho-nota-postura" min="0" max="10" step="0.5" value="8.0" style="width: 100%; accent-color: #10b981; cursor: pointer;">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" style="font-size: 12px; color: var(--text-muted);">Observações Técnicas do Professor</label>
-                        <textarea id="desempenho-obs" class="form-control" rows="3" placeholder="Ex: Bom domínio de clinch na curta distância; manter guarda fechada nas saídas de sparring." style="background: rgba(0,0,0,0.3); color: #fff;"></textarea>
+                        <textarea id="desempenho-obs" class="form-control" rows="2" placeholder="Ex: Excelente evolução na postura e chutes médios. Focar em recolher mais rápido a mão do jab." style="background: rgba(0,0,0,0.3); color: #fff;"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">

@@ -973,6 +973,73 @@ test('Portal do Aluno: Histórico Financeiro Unificado (Mensalidades + Graduaç�
     }
 });
 
+// ============================================================================
+// 12. AVALIAÇÕES TÉCNICAS (CLINCH, SOCOS, CHUTES, POSTURA) - ADMIN & PORTAL
+// ============================================================================
+test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exibição no Painel do Aluno', async () => {
+    const server = app.listen(0);
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let avaliacaoId = null;
+
+    try {
+        const profToken = jwt.sign(
+            { id: 1, cargo: 'professor', nome: 'Mestre Anderson' },
+            JWT_SECRET,
+            { expiresIn: '1h', algorithm: 'HS256' }
+        );
+
+        // 1. Professor registra avaliação com os 4 quesitos de 0 a 10
+        const postRes = await fetch(`${baseUrl}/api/alunos/1/avaliacoes-desempenho`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${profToken}`
+            },
+            body: JSON.stringify({
+                data_avaliacao: '2026-11-12',
+                nota_clinch: 9.5,
+                nota_socos: 8.5,
+                nota_chutes: 9.0,
+                nota_postura: 8.0,
+                observacoes: 'Excelente base e evolução nos chutes e clinch'
+            })
+        });
+
+        assert.equal(postRes.status, 201);
+        const postData = await postRes.json();
+        assert.equal(postData.success, true);
+        assert.ok(postData.data.id, 'Deve retornar o ID da avaliação criada');
+        avaliacaoId = postData.data.id;
+
+        assert.equal(postData.data.nota_clinch, 9.5);
+        assert.equal(postData.data.nota_socos, 8.5);
+        assert.equal(postData.data.nota_chutes, 9.0);
+        assert.equal(postData.data.nota_postura, 8.0);
+
+        // 2. Consulta Meu Painel e valida que as 4 notas técnicas aparecem consolidadas
+        const painelRes = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=1`);
+        assert.equal(painelRes.status, 200);
+        const painelData = await painelRes.json();
+
+        assert.equal(painelData.success, true);
+        assert.ok(painelData.notas_tecnicas, 'Deve retornar objeto notas_tecnicas');
+        assert.equal(painelData.notas_tecnicas.clinch, 9.5);
+        assert.equal(painelData.notas_tecnicas.socos, 8.5);
+        assert.equal(painelData.notas_tecnicas.chutes, 9.0);
+        assert.equal(painelData.notas_tecnicas.postura, 8.0);
+        assert.equal(painelData.aluno.notas_tecnicas.clinch, 9.5);
+
+    } finally {
+        if (avaliacaoId) {
+            await pool.query('DELETE FROM aluno_avaliacoes_desempenho WHERE id = ?', [avaliacaoId]).catch(() => {});
+        }
+        server.close();
+    }
+});
+
 test.after(async () => {
     try {
         await pool.end();

@@ -369,6 +369,12 @@ async function runMigrations() {
         await ensureColumn('faturas', 'asaas_pix_copia_cola', 'TEXT NULL AFTER asaas_pix_qrcode');
         await ensureColumn('faturas', 'asaas_status', "VARCHAR(50) NULL DEFAULT 'PENDING' AFTER asaas_pix_copia_cola");
 
+        // 18. Quesitos Técnicos do Professor (Clinch, Socos, Chutes, Postura de 0 a 10)
+        await ensureColumn('aluno_avaliacoes_desempenho', 'nota_clinch', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER data_avaliacao');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'nota_socos', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_clinch');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'nota_chutes', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_socos');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'nota_postura', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_chutes');
+
         console.log('✅ Schema do banco de dados sincronizado com sucesso!');
     } catch (err) {
         console.error('❌ Erro ao executar migrations:', err.message);

@@ -295,7 +295,9 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
 
         // 3.3. Histórico Real de Avaliações Contínuas de Desempenho e Graduações (Sem dados sintéticos)
         const [desempenhoHistory] = await pool.query(`
-            SELECT aad.id, aad.data_avaliacao, aad.nota_clinch_sparring, aad.nota_condicionamento, aad.observacoes,
+            SELECT aad.id, aad.data_avaliacao, 
+                   aad.nota_clinch, aad.nota_socos, aad.nota_chutes, aad.nota_postura,
+                   aad.nota_clinch_sparring, aad.nota_condicionamento, aad.observacoes,
                    ue.nome AS professor_nome
             FROM aluno_avaliacoes_desempenho aad
             LEFT JOIN usuarios_equipe ue ON ue.id = aad.professor_id
@@ -316,6 +318,27 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
         const ultGradPct = graduacoesHistory.length > 0 
             ? parseFloat(graduacoesHistory[0].percentual_obtido) || 0
             : 0;
+
+        const ultAvaliacao = desempenhoHistory.length > 0 ? desempenhoHistory[0] : null;
+        const notasTecnicas = ultAvaliacao ? {
+            id: ultAvaliacao.id,
+            clinch: Number(parseFloat(ultAvaliacao.nota_clinch !== null && ultAvaliacao.nota_clinch !== undefined ? ultAvaliacao.nota_clinch : (ultAvaliacao.nota_clinch_sparring || 0)).toFixed(1)),
+            socos: Number(parseFloat(ultAvaliacao.nota_socos !== null && ultAvaliacao.nota_socos !== undefined ? ultAvaliacao.nota_socos : 0).toFixed(1)),
+            chutes: Number(parseFloat(ultAvaliacao.nota_chutes !== null && ultAvaliacao.nota_chutes !== undefined ? ultAvaliacao.nota_chutes : 0).toFixed(1)),
+            postura: Number(parseFloat(ultAvaliacao.nota_postura !== null && ultAvaliacao.nota_postura !== undefined ? ultAvaliacao.nota_postura : 0).toFixed(1)),
+            data_avaliacao: ultAvaliacao.data_avaliacao,
+            professor_nome: ultAvaliacao.professor_nome,
+            observacoes: ultAvaliacao.observacoes
+        } : {
+            id: null,
+            clinch: null,
+            socos: null,
+            chutes: null,
+            postura: null,
+            data_avaliacao: null,
+            professor_nome: null,
+            observacoes: null
+        };
 
         const ultClinch = desempenhoHistory.length > 0
             ? parseFloat(desempenhoHistory[0].nota_clinch_sparring || 0)
@@ -721,6 +744,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                     shape_name: shapeName,
                     deltas: ultimasMedidasDelta
                 },
+                notas_tecnicas: notasTecnicas,
                 historico_medidas: historicoMedidas
             },
             plano: plano ? {
@@ -828,6 +852,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             exame_proximo: exameProximo,
             avisos_campanhas: avisos,
             conquistas,
+            notas_tecnicas: notasTecnicas,
             golpes_faixa_atual: golpesFaixaAtual,
             faixas_progresso: faixasProgresso,
             faixa_atual: faixaAtualObj,

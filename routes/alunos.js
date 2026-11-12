@@ -755,7 +755,7 @@ router.post('/:id/avaliacoes-graduacao', authenticateToken, authorizeRoles('admi
     }
 });
 
-// POST /api/alunos/:id/avaliacoes-desempenho - Registrar avaliação contínua de Clinch, Sparring e Condicionamento
+// POST /api/alunos/:id/avaliacoes-desempenho - Registrar avaliação técnica (Clinch, Socos, Chutes, Postura)
 router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
     try {
         const alunoId = parseInt(req.params.id, 10);
@@ -763,17 +763,35 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
         }
 
-        const { data_avaliacao, nota_clinch_sparring, nota_condicionamento, observacoes } = req.body;
+        const {
+            data_avaliacao,
+            nota_clinch,
+            nota_socos,
+            nota_chutes,
+            nota_postura,
+            nota_clinch_sparring,
+            nota_condicionamento,
+            observacoes
+        } = req.body;
 
-        const rawClinch = parseFloat(nota_clinch_sparring);
-        const rawCond = parseFloat(nota_condicionamento);
+        // Suporte aos 4 quesitos solicitados: Clinch, Socos, Chutes, Postura (0 a 10)
+        // Fallback para campos legados caso enviado por interface antiga
+        const rawClinch = parseFloat(nota_clinch !== undefined ? nota_clinch : nota_clinch_sparring);
+        const rawSocos = parseFloat(nota_socos !== undefined ? nota_socos : (nota_condicionamento !== undefined ? nota_condicionamento : 0));
+        const rawChutes = parseFloat(nota_chutes !== undefined ? nota_chutes : (nota_condicionamento !== undefined ? nota_condicionamento : 0));
+        const rawPostura = parseFloat(nota_postura !== undefined ? nota_postura : (nota_clinch_sparring !== undefined ? nota_clinch_sparring : 0));
 
         if (isNaN(rawClinch) || rawClinch < 0 || rawClinch > 10) {
-            return res.status(400).json({ success: false, error: 'A nota de Clinch-Sparring deve estar entre 0.0 e 10.0.' });
+            return res.status(400).json({ success: false, error: 'A nota de Clinch deve estar entre 0.0 e 10.0.' });
         }
-
-        if (isNaN(rawCond) || rawCond < 0 || rawCond > 10) {
-            return res.status(400).json({ success: false, error: 'A nota de Condicionamento deve estar entre 0.0 e 10.0.' });
+        if (isNaN(rawSocos) || rawSocos < 0 || rawSocos > 10) {
+            return res.status(400).json({ success: false, error: 'A nota de Socos deve estar entre 0.0 e 10.0.' });
+        }
+        if (isNaN(rawChutes) || rawChutes < 0 || rawChutes > 10) {
+            return res.status(400).json({ success: false, error: 'A nota de Chutes deve estar entre 0.0 e 10.0.' });
+        }
+        if (isNaN(rawPostura) || rawPostura < 0 || rawPostura > 10) {
+            return res.status(400).json({ success: false, error: 'A nota de Postura deve estar entre 0.0 e 10.0.' });
         }
 
         // Validação da data
@@ -785,21 +803,29 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
         const professorId = req.user && req.user.id ? req.user.id : null;
         const cleanObs = observacoes ? String(observacoes).trim().substring(0, 500) : null;
 
+        // Campos legados calculados para compatibilidade
+        const legacyClinch = rawClinch;
+        const legacyCond = Number(((rawSocos + rawChutes + rawPostura) / 3).toFixed(1));
+
         const [result] = await pool.query(`
             INSERT INTO aluno_avaliacoes_desempenho 
-            (aluno_id, professor_id, data_avaliacao, nota_clinch_sparring, nota_condicionamento, observacoes)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `, [alunoId, professorId, dataAval, rawClinch, rawCond, cleanObs]);
+            (aluno_id, professor_id, data_avaliacao, nota_clinch, nota_socos, nota_chutes, nota_postura, nota_clinch_sparring, nota_condicionamento, observacoes)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [alunoId, professorId, dataAval, rawClinch, rawSocos, rawChutes, rawPostura, legacyClinch, legacyCond, cleanObs]);
 
         res.status(201).json({
             success: true,
-            message: 'Avaliação de Clinch-Sparring e Condicionamento registrada com sucesso!',
+            message: 'Avaliação técnica (Clinch, Socos, Chutes, Postura) registrada com sucesso!',
             data: {
                 id: result.insertId,
                 aluno_id: alunoId,
                 data_avaliacao: dataAval,
-                nota_clinch_sparring: rawClinch,
-                nota_condicionamento: rawCond,
+                nota_clinch: rawClinch,
+                nota_socos: rawSocos,
+                nota_chutes: rawChutes,
+                nota_postura: rawPostura,
+                nota_clinch_sparring: legacyClinch,
+                nota_condicionamento: legacyCond,
                 observacoes: cleanObs
             }
         });
