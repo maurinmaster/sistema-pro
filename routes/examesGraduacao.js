@@ -640,6 +640,36 @@ router.post('/convites/:conviteId/confirmar-manual', authenticateToken, authoriz
     }
 });
 
+/**
+ * POST /api/exames/convites/:conviteId/reativar
+ * Permite ao gestor reativar um convite que havia sido recusado pelo atleta caso ele mude de ideia
+ */
+router.post('/convites/:conviteId/reativar', authenticateToken, authorizeRoles('admin', 'recepcao', 'professor'), async (req, res) => {
+    try {
+        const conviteId = parseInt(req.params.conviteId, 10);
+        if (isNaN(conviteId)) {
+            return res.status(400).json({ success: false, error: 'ID do convite inválido.' });
+        }
+
+        const [result] = await pool.query(`
+            UPDATE evento_graduacao_convites
+            SET status = 'convidado',
+                motivo_recusa = NULL,
+                data_resposta = NULL
+            WHERE id = ?
+        `, [conviteId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Convite não encontrado.' });
+        }
+
+        res.json({ success: true, message: 'Inscrição reativada com sucesso! O atleta poderá confirmar participação novamente.' });
+    } catch (err) {
+        console.error('Erro ao reativar convite:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao reativar inscrição.' });
+    }
+});
+
 // ============================================================================
 // 2. ROTAS DO PORTAL DO ALUNO - ACEITE E PAGAMENTO VIA GATEWAY ASAAS
 // ============================================================================
@@ -969,6 +999,79 @@ router.post('/exames/:conviteId/recusar', optionalAuth, async (req, res) => {
         res.json({ success: true, message: 'Resposta registrada com sucesso. Seu professor foi notificado.' });
     } catch (err) {
         console.error('Erro ao recusar convite:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao registrar recusa.' });
+    }
+});
+
+/**
+ * POST /api/aluno/exames/:eventoId/recusar-evento
+ * O aluno recusa a convocação diretamente no evento (mesmo sem convite prévio)
+ */
+router.post('/exames/:eventoId/recusar-evento', optionalAuth, async (req, res) => {
+    try {
+        const eventoId = parseInt(req.params.eventoId, 10);
+        if (isNaN(eventoId)) {
+            return res.status(400).json({ success: false, error: 'ID do evento inválido.' });
+        }
+
+        let alunoId = null;
+        if (req.user) {
+            alunoId = req.user.aluno_id || (req.user.cargo === 'aluno' ? req.user.id : null);
+        }
+        if (!alunoId && req.body.aluno_id) {
+            alunoId = parseInt(req.body.aluno_id, 10);
+        }
+        if (!alunoId) alunoId = 1;
+
+        const { motivo } = req.body;
+        const cleanMotivo = motivo ? String(motivo).trim().substring(0, 255) : 'Não poderei comparecer na data do evento';
+
+        // 1. Verifica se já existe convite emitido
+        const [conviteRows] = await pool.query('SELECT id FROM evento_graduacao_convites WHERE evento_id = ? AND aluno_id = ?', [eventoId, alunoId]);
+
+        if (conviteRows.length > 0) {
+            await pool.query(`
+                UPDATE evento_graduacao_convites
+                SET status = 'recusado',
+                    data_resposta = NOW(),
+                    motivo_recusa = ?
+                WHERE id = ?
+            `, [cleanMotivo, conviteRows[0].id]);
+        } else {
+            const [eventos] = await pool.query('SELECT * FROM eventos_graduacao WHERE id = ?', [eventoId]);
+            if (eventos.length === 0) {
+                return res.status(404).json({ success: false, error: 'Evento de exame não encontrado.' });
+            }
+            const ev = eventos[0];
+
+            const [gradRows] = await pool.query(`
+                SELECT ag.modalidade_id, ag.graduacao_nivel_id, gn.ordem_hierarquica
+                FROM aluno_graduacoes ag
+                JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
+                WHERE ag.aluno_id = ? AND ag.atual = 1
+                ORDER BY ag.id DESC LIMIT 1
+            `, [alunoId]);
+
+            const modId = ev.modalidade_id || (gradRows[0] ? gradRows[0].modalidade_id : 1);
+            const gradAtualId = gradRows[0] ? gradRows[0].graduacao_nivel_id : 1;
+            const ordemAtual = gradRows[0] ? gradRows[0].ordem_hierarquica : 1;
+
+            const [proxRows] = await pool.query('SELECT id FROM graduacoes_niveis WHERE modalidade_id = ? AND ordem_hierarquica = ? LIMIT 1', [modId, ordemAtual + 1]);
+            const gradPretId = proxRows[0] ? proxRows[0].id : gradAtualId;
+
+            await pool.query(`
+                INSERT INTO evento_graduacao_convites (
+                    evento_id, aluno_id, modalidade_id,
+                    graduacao_atual_id, graduacao_pretendida_id,
+                    percentual_avaliacao, apto_motivo, valor,
+                    status, data_convite, data_resposta, motivo_recusa
+                ) VALUES (?, ?, ?, ?, ?, 100, 'Convocação recusada pelo atleta', ?, 'recusado', NOW(), NOW(), ?)
+            `, [eventoId, alunoId, modId, gradAtualId, gradPretId, ev.taxa_inscricao, cleanMotivo]);
+        }
+
+        res.json({ success: true, message: 'Desistência registrada com sucesso. Seu professor foi notificado.' });
+    } catch (err) {
+        console.error('Erro ao recusar evento:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao registrar recusa.' });
     }
 });

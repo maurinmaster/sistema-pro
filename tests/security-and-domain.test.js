@@ -1434,6 +1434,107 @@ test('Exames de Graduação: Aluno elegível visualiza exame aberto com taxa e r
     }
 });
 
+test('Exames de Graduação: Aluno recusa exame (desistência) e Administrador pode reativar caso o aluno mude de ideia', async () => {
+    const server = app.listen(0);
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let alunoId = null;
+    let eventoId = null;
+    let conviteId = null;
+
+    try {
+        const adminToken = jwt.sign(
+            { id: 1, cargo: 'admin', nome: 'Admin Master' },
+            JWT_SECRET,
+            { expiresIn: '1h', algorithm: 'HS256' }
+        );
+
+        // 1. Cria evento de exame
+        const [evIns] = await pool.query(`
+            INSERT INTO eventos_graduacao (
+                titulo, modalidade_id, data_evento, horario_inicio,
+                local_evento, taxa_inscricao, status
+            ) VALUES (
+                'Exame Teste Recusa e Reativacao', 1, DATE_ADD(CURDATE(), INTERVAL 20 DAY),
+                '09:30:00', 'Tatame Kaizen', 110.00, 'aberto'
+            )
+        `);
+        eventoId = evIns.insertId;
+
+        // 2. Cria atleta
+        const [alunoIns] = await pool.query(`
+            INSERT INTO alunos (nome_completo, cpf, data_nascimento, genero, email, telefone_whatsapp, status)
+            VALUES ('Atleta Desistente Teste', '45678912300', '1996-07-22', 'M', 'desistente.exame@exemplo.com', '11966665555', 'ativo')
+        `);
+        alunoId = alunoIns.insertId;
+
+        const [niveis] = await pool.query('SELECT id FROM graduacoes_niveis WHERE modalidade_id = 1 ORDER BY ordem_hierarquica ASC LIMIT 2');
+        const nivelAtualId = niveis[0].id;
+
+        await pool.query(`
+            INSERT INTO aluno_graduacoes (aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, atual)
+            VALUES (?, 1, ?, CURDATE(), 1)
+        `, [alunoId, nivelAtualId]);
+
+        // 3. Aluno recusa o exame diretamente ("Não posso participar")
+        const resRecusa = await fetch(`${baseUrl}/api/aluno/exames/${eventoId}/recusar-evento`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ aluno_id: alunoId, motivo: 'Viagem de trabalho inadiável' })
+        });
+        assert.equal(resRecusa.status, 200);
+        const dataRecusa = await resRecusa.json();
+        assert.equal(dataRecusa.success, true);
+
+        // 4. Consulta painel do aluno e verifica status = 'recusado'
+        const resPainel = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${alunoId}`);
+        const dataPainel = await resPainel.json();
+        assert.equal(dataPainel.exame_proximo.convite_status, 'recusado', 'Status deve constar como recusado');
+        conviteId = dataPainel.exame_proximo.convite_id;
+        assert.ok(conviteId, 'Convite deve ter sido registrado');
+
+        // 5. Administrador visualiza convite com status recusado e motivo
+        const resEventoAdmin = await fetch(`${baseUrl}/api/exames/eventos/${eventoId}`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        assert.equal(resEventoAdmin.status, 200);
+        const dataEventoAdmin = await resEventoAdmin.json();
+        const conviteAdmin = dataEventoAdmin.data.convites.find(c => c.convite_id === conviteId);
+        assert.ok(conviteAdmin, 'Convite deve constar na lista do admin');
+        assert.equal(conviteAdmin.convite_status, 'recusado');
+        assert.equal(conviteAdmin.motivo_recusa, 'Viagem de trabalho inadiável');
+
+        // 6. Aluno mudou de ideia: Administrador reativa a inscrição
+        const resReativar = await fetch(`${baseUrl}/api/exames/convites/${conviteId}/reativar`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${adminToken}`, 'Content-Type': 'application/json' }
+        });
+        assert.equal(resReativar.status, 200);
+        const dataReativar = await resReativar.json();
+        assert.equal(dataReativar.success, true);
+
+        // 7. Consulta novamente o painel do atleta e valida que o status voltou para 'convidado'
+        const resPainelPosReativar = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${alunoId}`);
+        const dataPainelPosReativar = await resPainelPosReativar.json();
+        assert.equal(dataPainelPosReativar.exame_proximo.convite_status, 'convidado', 'Status deve voltar para convidado após reativação');
+
+    } finally {
+        if (conviteId) {
+            await pool.query('DELETE FROM evento_graduacao_convites WHERE id = ?', [conviteId]).catch(() => {});
+        }
+        if (alunoId) {
+            await pool.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [alunoId]).catch(() => {});
+            await pool.query('DELETE FROM alunos WHERE id = ?', [alunoId]).catch(() => {});
+        }
+        if (eventoId) {
+            await pool.query('DELETE FROM eventos_graduacao WHERE id = ?', [eventoId]).catch(() => {});
+        }
+        server.close();
+    }
+});
+
 test.after(async () => {
     try {
         await pool.end();

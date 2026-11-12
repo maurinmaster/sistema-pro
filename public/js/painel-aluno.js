@@ -122,6 +122,11 @@ const PainelAlunoApp = {
             this.abrirFluxoInscricaoExame();
         });
 
+        document.getElementById('btn-convocacao-nao-posso')?.addEventListener('click', () => {
+            const conviteId = this.alunoData?.exame_proximo?.convite_id || null;
+            this.recusarConviteExame(conviteId);
+        });
+
         // Abrir modal de edição de medidas
         document.getElementById('btn-modal-medidas')?.addEventListener('click', () => {
             this.openMedidasModal();
@@ -2794,6 +2799,8 @@ const PainelAlunoApp = {
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const queryAlunoId = urlParams.get('aluno_id');
+            const alunoId = this.alunoData?.aluno?.id || (queryAlunoId ? parseInt(queryAlunoId, 10) : 1);
+            const exameId = this.alunoData?.exame_proximo?.id;
 
             const headers = { 'Content-Type': 'application/json' };
             if (this.authToken && this.authToken !== 'null') {
@@ -2803,7 +2810,16 @@ const PainelAlunoApp = {
             const bodyPayload = { motivo };
             if (queryAlunoId) bodyPayload.aluno_id = parseInt(queryAlunoId, 10);
 
-            const res = await fetch(`/api/aluno/exames/${conviteId}/recusar`, {
+            let endpoint = conviteId 
+                ? `/api/aluno/exames/${conviteId}/recusar`
+                : (exameId ? `/api/aluno/exames/${exameId}/recusar-evento` : null);
+
+            if (!endpoint) {
+                alert('Evento de exame não identificado.');
+                return;
+            }
+
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers,
                 body: JSON.stringify(bodyPayload)
@@ -2815,10 +2831,28 @@ const PainelAlunoApp = {
                 return;
             }
 
-            const modal = document.getElementById('modal-exame-aluno');
-            if (modal) modal.style.display = 'none';
+            // Persiste recusa e ciência localmente para JAMAIS reexibir o pop-up
+            if (exameId) {
+                localStorage.setItem(`graduacao_recusada_${alunoId}_${exameId}`, 'true');
+                localStorage.setItem(`graduacao_ciente_${alunoId}_${exameId}`, 'true');
+            }
+
+            if (this.alunoData && this.alunoData.exame_proximo) {
+                this.alunoData.exame_proximo.convite_status = 'recusado';
+            }
+
+            const modalExame = document.getElementById('modal-exame-aluno');
+            if (modalExame) modalExame.style.display = 'none';
+
+            const modalConvocacao = document.getElementById('modal-convocacao-exame');
+            if (modalConvocacao) modalConvocacao.style.display = 'none';
+
+            this.showToast('Desistência registrada com sucesso. Seu professor foi notificado.', 'info');
 
             await this.loadMeusExames();
+            if (this.alunoData) {
+                this.renderDashboard(this.alunoData);
+            }
 
         } catch (err) {
             console.error('Erro ao recusar convite:', err);
@@ -2903,19 +2937,24 @@ const PainelAlunoApp = {
         } else if (conviteStatus === 'aceito') {
             btnInscrever.className = 'btn-inscrever-exame btn-exame-pendente';
             if (btnText) btnText.textContent = '💳 Concluir Pagamento PIX';
+        } else if (conviteStatus === 'recusado') {
+            btnInscrever.className = 'btn-inscrever-exame btn-exame-recusado';
+            if (btnText) btnText.textContent = '❌ Desistência Registrada • Mudar de Ideia?';
         } else {
             btnInscrever.className = 'btn-inscrever-exame';
             if (btnText) btnText.textContent = '🥋 Inscrever-se no Exame de Graduação';
         }
 
-        // Verifica se o atleta já marcou ciência expressa deste exame nesta sessão/armazenamento
+        // Verifica se o atleta já marcou ciência expressa ou desistência deste exame
         const alunoId = aluno?.id || 1;
         const exameId = exame.id;
         const chaveCiencia = `graduacao_ciente_${alunoId}_${exameId}`;
+        const chaveRecusa = `graduacao_recusada_${alunoId}_${exameId}`;
         const jaCiente = localStorage.getItem(chaveCiencia) === 'true';
+        const jaRecusou = localStorage.getItem(chaveRecusa) === 'true';
 
-        // Se ainda não marcou ciência e a vaga não está quitada, abre o pop-up obrigatório
-        if (!jaCiente && conviteStatus !== 'pago') {
+        // Se o atleta recusou (no banco OU localmente) OU já está pago OU já confirmou ciência: NUNCA abre o pop-up!
+        if (!jaCiente && !jaRecusou && conviteStatus !== 'pago' && conviteStatus !== 'recusado') {
             this.abrirModalConvocacao(exame, graduacao, aluno);
         }
     },
@@ -2989,13 +3028,22 @@ const PainelAlunoApp = {
         const exame = this.alunoData?.exame_proximo;
         if (!exame) return;
 
-        // Se já existe convite gerado no banco, abre o modal do exame com o Asaas
-        if (exame.convite_id) {
+        // Se o aluno havia recusado mas clicou no botão para mudar de ideia
+        if (exame.convite_status === 'recusado') {
+            if (!confirm('Você havia registrado desistência deste exame de graduação. Deseja mudar de ideia e reativar sua inscrição agora?')) {
+                return;
+            }
+            const alunoId = this.alunoData?.aluno?.id || 1;
+            localStorage.removeItem(`graduacao_recusada_${alunoId}_${exame.id}`);
+        }
+
+        // Se já existe convite gerado no banco e não está recusado, abre o modal do exame com o Asaas
+        if (exame.convite_id && exame.convite_status !== 'recusado') {
             this.abrirModalExame(exame.convite_id);
             return;
         }
 
-        // Se o atleta está apto mas o convite não existia na tabela, auto-inscreve via API
+        // Se ainda não existe convite registrado ou estava recusado, realiza auto-inscrição via API
         try {
             const urlParams = new URLSearchParams(window.location.search);
             const queryAlunoId = urlParams.get('aluno_id');

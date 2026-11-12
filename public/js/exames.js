@@ -474,7 +474,12 @@ const ExamesModule = {
             } else if (c.convite_status === 'aceito') {
                 statusBadge = '<span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">Aceito (Aguardando Pgto)</span>';
             } else if (c.convite_status === 'recusado') {
-                statusBadge = '<span class="status-badge status-danger">Recusado pelo Aluno</span>';
+                statusBadge = `
+                    <span class="status-badge status-danger" title="${UI.escapeHtml(c.motivo_recusa || 'Desistência informada pelo atleta')}">
+                        Recusado pelo Aluno
+                    </span>
+                    ${c.motivo_recusa ? `<div style="font-size: 10.5px; color: #ef4444; margin-top: 3px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${UI.escapeHtml(c.motivo_recusa)}">Motivo: ${UI.escapeHtml(c.motivo_recusa)}</div>` : ''}
+                `;
             }
 
             // Ações e Gateway Asaas
@@ -489,7 +494,25 @@ const ExamesModule = {
                 `;
             }
 
-            const canConfirmManual = c.convite_status !== 'pago';
+            let actionBtn = '';
+            if (c.convite_status === 'recusado') {
+                actionBtn = `
+                    <button type="button" class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px;" 
+                            onclick="ExamesModule.reativarConvite(${c.convite_id})" title="Reativar convocação caso o aluno tenha mudado de ideia">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        <span>Reativar Inscrição</span>
+                    </button>
+                `;
+            } else if (c.convite_status !== 'pago') {
+                actionBtn = `
+                    <button type="button" class="btn btn-secondary btn-sm" style="color: #10b981; border-color: rgba(16, 185, 129, 0.3);" 
+                            onclick="ExamesModule.confirmarPagamentoManual(${c.convite_id})" title="Confirmar pagamento em dinheiro/balcão">
+                        Baixa Manual
+                    </button>
+                `;
+            } else {
+                actionBtn = `<span style="font-size: 11px; color: #10b981; font-weight: 700;">Inscrição Confirmada</span>`;
+            }
 
             return `
                 <tr>
@@ -512,16 +535,26 @@ const ExamesModule = {
                     <td>${statusBadge}</td>
                     <td>${asaasAction}</td>
                     <td>
-                        ${canConfirmManual 
-                            ? `<button type="button" class="btn btn-secondary btn-sm" style="color: #10b981; border-color: rgba(16, 185, 129, 0.3);" 
-                                       onclick="ExamesModule.confirmarPagamentoManual(${c.convite_id})" title="Confirmar pagamento em dinheiro/balcão">
-                                    Baixa Manual
-                               </button>` 
-                            : `<span style="font-size: 11px; color: #10b981; font-weight: 700;">Inscrição Confirmada</span>`}
+                        ${actionBtn}
                     </td>
                 </tr>
             `;
         }).join('');
+    },
+
+    async reativarConvite(conviteId) {
+        if (!confirm('O aluno mudou de ideia? Deseja reativar esta inscrição para que ele possa participar do exame?')) {
+            return;
+        }
+
+        try {
+            const res = await API.post(`/exames/convites/${conviteId}/reativar`, {});
+            UI.showToast(res.message || 'Inscrição reativada com sucesso!', 'success');
+            await this.carregarDetalhesEvento(this.eventoSelecionadoId);
+            await this.loadEventos();
+        } catch (err) {
+            UI.showToast('Erro ao reativar inscrição: ' + err.message, 'error');
+        }
     },
 
     async confirmarPagamentoManual(conviteId) {
