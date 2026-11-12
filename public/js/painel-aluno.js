@@ -76,11 +76,50 @@ const PainelAlunoApp = {
             });
         });
 
-        // Fechar modal ao clicar no backdrop
+        // Fechar modal ao clicar no backdrop (bloqueado para modais com data-static-backdrop)
         document.querySelectorAll('.modal-backdrop').forEach(modal => {
             modal.addEventListener('click', (e) => {
-                if (e.target === modal) modal.style.display = 'none';
+                if (e.target === modal) {
+                    if (modal.dataset.staticBackdrop === 'true' || modal.id === 'modal-convocacao-exame') {
+                        return; // O pop-up só sai se marcar expressamente a confirmação!
+                    }
+                    modal.style.display = 'none';
+                }
             });
+        });
+
+        // Eventos do Modal de Convocação & Ciência Obrigatória do Exame
+        const checkConvocacao = document.getElementById('check-convocacao-ciente');
+        const btnConvocacaoCiente = document.getElementById('btn-convocacao-ciente');
+        const btnConvocacaoInscrever = document.getElementById('btn-convocacao-inscrever');
+        const lockMsg = document.getElementById('convocacao-lock-msg');
+
+        checkConvocacao?.addEventListener('change', (e) => {
+            const isChecked = e.target.checked;
+            if (btnConvocacaoCiente) btnConvocacaoCiente.disabled = !isChecked;
+            if (btnConvocacaoInscrever) btnConvocacaoInscrever.disabled = !isChecked;
+            if (lockMsg) lockMsg.style.display = isChecked ? 'none' : 'flex';
+        });
+
+        btnConvocacaoCiente?.addEventListener('click', () => {
+            if (!checkConvocacao || !checkConvocacao.checked) {
+                alert('Você precisa marcar a caixa de ciência para continuar.');
+                return;
+            }
+            this.confirmarCienciaExame();
+        });
+
+        btnConvocacaoInscrever?.addEventListener('click', () => {
+            if (!checkConvocacao || !checkConvocacao.checked) {
+                alert('Você precisa marcar a caixa de ciência para continuar.');
+                return;
+            }
+            this.confirmarCienciaExame();
+            this.abrirFluxoInscricaoExame();
+        });
+
+        document.getElementById('btn-inscrever-exame')?.addEventListener('click', () => {
+            this.abrirFluxoInscricaoExame();
         });
 
         // Abrir modal de edição de medidas
@@ -823,6 +862,9 @@ const PainelAlunoApp = {
             }
             if (nextExamVenue) nextExamVenue.textContent = isApto ? 'Apto p/ próximo exame' : 'Em evolução técnica';
         }
+
+        // 5.2. Botão de Inscrição no Exame & Pop-up Obrigatório de Convocação (quando Elegível + Exame Aberto)
+        this.renderBotaoEPopUpExame({ isApto, exame, data, aluno, graduacao });
 
         // 6. Badges & Conquistas (Carrossel Horizontal Moderno)
         const badgesContainer = document.getElementById('badges-container');
@@ -2832,6 +2874,162 @@ const PainelAlunoApp = {
         }).catch(err => {
             console.error('Erro ao copiar Pix:', err);
         });
+    },
+
+    // =========================================================================
+    // CONVOCAÇÃO OBRIGATÓRIA & BOTÃO DE INSCRIÇÃO DO EXAME DE GRADUAÇÃO
+    // =========================================================================
+    renderBotaoEPopUpExame({ isApto, exame, data, aluno, graduacao }) {
+        const actionWrap = document.getElementById('card-next-rank-action-wrap');
+        const btnInscrever = document.getElementById('btn-inscrever-exame');
+        const btnText = document.getElementById('btn-inscrever-exame-text');
+
+        if (!actionWrap || !btnInscrever) return;
+
+        // Condição: Aluno elegível e existe exame de graduação aberto
+        const elegivelComExame = Boolean(isApto && exame && exame.id);
+
+        if (!elegivelComExame) {
+            actionWrap.style.display = 'none';
+            return;
+        }
+
+        actionWrap.style.display = 'block';
+
+        const conviteStatus = exame.convite_status;
+        if (conviteStatus === 'pago') {
+            btnInscrever.className = 'btn-inscrever-exame btn-exame-pago';
+            if (btnText) btnText.textContent = '✓ Inscrição Confirmada & Paga';
+        } else if (conviteStatus === 'aceito') {
+            btnInscrever.className = 'btn-inscrever-exame btn-exame-pendente';
+            if (btnText) btnText.textContent = '💳 Concluir Pagamento PIX';
+        } else {
+            btnInscrever.className = 'btn-inscrever-exame';
+            if (btnText) btnText.textContent = '🥋 Inscrever-se no Exame de Graduação';
+        }
+
+        // Verifica se o atleta já marcou ciência expressa deste exame nesta sessão/armazenamento
+        const alunoId = aluno?.id || 1;
+        const exameId = exame.id;
+        const chaveCiencia = `graduacao_ciente_${alunoId}_${exameId}`;
+        const jaCiente = localStorage.getItem(chaveCiencia) === 'true';
+
+        // Se ainda não marcou ciência e a vaga não está quitada, abre o pop-up obrigatório
+        if (!jaCiente && conviteStatus !== 'pago') {
+            this.abrirModalConvocacao(exame, graduacao, aluno);
+        }
+    },
+
+    abrirModalConvocacao(exame, graduacao, aluno) {
+        if (!exame) return;
+
+        const modal = document.getElementById('modal-convocacao-exame');
+        if (!modal) return;
+
+        const tituloEl = document.getElementById('modal-convocacao-evento-titulo');
+        const modEl = document.getElementById('modal-convocacao-modalidade');
+        const atualEl = document.getElementById('modal-convocacao-grad-atual');
+        const pretEl = document.getElementById('modal-convocacao-grad-pretendida');
+        const dataEl = document.getElementById('modal-convocacao-data');
+        const horaEl = document.getElementById('modal-convocacao-horario');
+        const localEl = document.getElementById('modal-convocacao-local');
+        const taxaEl = document.getElementById('modal-convocacao-taxa');
+        const instEl = document.getElementById('modal-convocacao-instrucoes');
+        const checkCiente = document.getElementById('check-convocacao-ciente');
+        const btnCiente = document.getElementById('btn-convocacao-ciente');
+        const btnModalInscrever = document.getElementById('btn-convocacao-inscrever');
+        const lockMsg = document.getElementById('convocacao-lock-msg');
+
+        if (tituloEl) tituloEl.textContent = exame.titulo || 'Exame de Graduação Oficial';
+        if (modEl) modEl.textContent = graduacao?.atual?.modalidade_nome || 'Muay Thai';
+        if (atualEl) atualEl.textContent = graduacao?.atual?.nivel_nome || 'Prajied Atual';
+        if (pretEl) pretEl.textContent = graduacao?.proxima_graduacao?.nivel_nome || 'Próximo Grau';
+
+        if (dataEl && exame.data_evento) {
+            const dObj = new Date(exame.data_evento);
+            dataEl.textContent = !isNaN(dObj.getTime())
+                ? dObj.toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' })
+                : exame.data_evento;
+        }
+        if (horaEl) horaEl.textContent = exame.horario_inicio ? exame.horario_inicio.substring(0, 5) : '10:00';
+        if (localEl) localEl.textContent = exame.local_evento || 'Tatame Central - CT Kaizen';
+
+        const valorTaxa = parseFloat(exame.convite_valor || exame.taxa_inscricao || 0);
+        if (taxaEl) {
+            taxaEl.textContent = valorTaxa > 0
+                ? valorTaxa.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                : 'Gratuito / Incluso';
+        }
+
+        if (instEl) {
+            instEl.textContent = exame.descricao || 'Compareça com seu uniforme oficial limpo, luvas/proteções e antecedência de 15 minutos.';
+        }
+
+        // Reseta estado do checkbox e botões: Pop-up SÓ SAI SE MARCAR!
+        if (checkCiente) checkCiente.checked = false;
+        if (btnCiente) btnCiente.disabled = true;
+        if (btnModalInscrever) btnModalInscrever.disabled = true;
+        if (lockMsg) lockMsg.style.display = 'flex';
+
+        modal.style.display = 'flex';
+    },
+
+    confirmarCienciaExame() {
+        const alunoId = this.alunoData?.aluno?.id || 1;
+        const exameId = this.alunoData?.exame_proximo?.id;
+        if (exameId) {
+            localStorage.setItem(`graduacao_ciente_${alunoId}_${exameId}`, 'true');
+        }
+        const modal = document.getElementById('modal-convocacao-exame');
+        if (modal) modal.style.display = 'none';
+        this.showToast('Ciência confirmada com sucesso! Bons treinos.', 'success');
+    },
+
+    async abrirFluxoInscricaoExame() {
+        const exame = this.alunoData?.exame_proximo;
+        if (!exame) return;
+
+        // Se já existe convite gerado no banco, abre o modal do exame com o Asaas
+        if (exame.convite_id) {
+            this.abrirModalExame(exame.convite_id);
+            return;
+        }
+
+        // Se o atleta está apto mas o convite não existia na tabela, auto-inscreve via API
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryAlunoId = urlParams.get('aluno_id');
+            const alunoId = this.alunoData?.aluno?.id || (queryAlunoId ? parseInt(queryAlunoId, 10) : null);
+
+            const headers = { 'Content-Type': 'application/json' };
+            if (this.authToken && this.authToken !== 'null') {
+                headers['Authorization'] = `Bearer ${this.authToken}`;
+            }
+
+            const bodyPayload = { billing_type: 'PIX' };
+            if (alunoId) bodyPayload.aluno_id = alunoId;
+
+            const res = await fetch(`/api/aluno/exames/${exame.id}/inscrever`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(bodyPayload)
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.error || 'Erro ao realizar inscrição no exame.');
+                return;
+            }
+
+            // Atualiza estado e abre a tela de cobrança Asaas
+            await this.loadMeusExames();
+            if (data.convite_id) {
+                this.abrirModalExame(data.convite_id);
+            }
+        } catch (err) {
+            console.error('Erro ao inscrever no exame:', err);
+            alert('Falha ao processar inscrição: ' + err.message);
+        }
     },
 
     showToast(message, type = 'info') {

@@ -1336,6 +1336,104 @@ test('Painel do Aluno: Aluno recém-cadastrado deve iniciar com a 1ª graduaçã
     }
 });
 
+test('Exames de Graduação: Aluno elegível visualiza exame aberto com taxa e realiza inscrição gerando cobrança Asaas', async () => {
+    const server = app.listen(0);
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let alunoId = null;
+    let eventoId = null;
+    let conviteId = null;
+
+    try {
+        // 1. Cria evento de exame com data futura
+        const [evIns] = await pool.query(`
+            INSERT INTO eventos_graduacao (
+                titulo, modalidade_id, data_evento, horario_inicio, data_limite_inscricao,
+                local_evento, taxa_inscricao, descricao, status
+            ) VALUES (
+                'Exame Especial de Teste Convocacao', 1, DATE_ADD(CURDATE(), INTERVAL 15 DAY),
+                '10:00:00', DATE_ADD(CURDATE(), INTERVAL 14 DAY),
+                'Tatame Central - CT Kaizen', 125.00, 'Trazer luvas e uniforme oficial', 'aberto'
+            )
+        `);
+        eventoId = evIns.insertId;
+
+        // 2. Cria atleta de teste com 1ª graduação
+        const [alunoIns] = await pool.query(`
+            INSERT INTO alunos (nome_completo, cpf, data_nascimento, genero, email, telefone_whatsapp, status)
+            VALUES ('Atleta Elegivel Exame', '12399988800', '1998-04-12', 'M', 'elegivel.exame@exemplo.com', '11977776666', 'ativo')
+        `);
+        alunoId = alunoIns.insertId;
+
+        const [niveis] = await pool.query('SELECT id FROM graduacoes_niveis WHERE modalidade_id = 1 ORDER BY ordem_hierarquica ASC LIMIT 2');
+        const nivelAtualId = niveis[0].id;
+
+        await pool.query(`
+            INSERT INTO aluno_graduacoes (aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, atual)
+            VALUES (?, 1, ?, CURDATE(), 1)
+        `, [alunoId, nivelAtualId]);
+
+        // 3. Cadastra avaliação técnica deixando o atleta APTO (85%)
+        await pool.query(`
+            INSERT INTO aluno_avaliacoes_graduacao (
+                aluno_id, modalidade_id, graduacao_nivel_id,
+                professor_id, percentual_obtido, apto, data_avaliacao, itens_avaliados_json
+            ) VALUES (?, 1, ?, 1, 85.00, 1, CURDATE(), '[]')
+        `, [alunoId, nivelAtualId]);
+
+        // 4. Consulta painel do atleta e valida dados enriquecidos do exame
+        const resPainel = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${alunoId}`);
+        assert.equal(resPainel.status, 200);
+        const dataPainel = await resPainel.json();
+
+        assert.equal(dataPainel.success, true);
+        assert.ok(dataPainel.graduacao.avaliacao.apto, 'Atleta deve estar apto/elegível');
+        assert.ok(dataPainel.exame_proximo, 'Deve retornar o próximo exame aberto');
+        assert.equal(dataPainel.exame_proximo.id, eventoId);
+        assert.equal(Number(dataPainel.exame_proximo.taxa_inscricao), 125.00, 'Taxa do exame deve ser retornada');
+        assert.equal(dataPainel.exame_proximo.local_evento, 'Tatame Central - CT Kaizen');
+
+        // 5. Realiza a inscrição direta no exame pelo endpoint do atleta
+        const resInscricao = await fetch(`${baseUrl}/api/aluno/exames/${eventoId}/inscrever`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ aluno_id: alunoId, billing_type: 'PIX' })
+        });
+        assert.equal(resInscricao.status, 200);
+        const dataInscricao = await resInscricao.json();
+
+        assert.equal(dataInscricao.success, true);
+        assert.ok(dataInscricao.convite_id, 'Deve retornar o ID do convite gerado');
+        conviteId = dataInscricao.convite_id;
+        assert.ok(dataInscricao.cobranca, 'Deve conter os dados de cobrança');
+        assert.ok(dataInscricao.cobranca.asaas_payment_id, 'Deve ter ID de pagamento Asaas gerado');
+        assert.equal(Number(dataInscricao.cobranca.valor), 125.00);
+
+        // 6. Consulta novamente o painel do atleta e verifica se o status foi atualizado para 'aceito'
+        const resPainelPos = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=${alunoId}`);
+        const dataPainelPos = await resPainelPos.json();
+
+        assert.equal(dataPainelPos.exame_proximo.convite_status, 'aceito', 'Status do convite deve ser aceito');
+        assert.equal(dataPainelPos.exame_proximo.convite_id, conviteId);
+
+    } finally {
+        if (conviteId) {
+            await pool.query('DELETE FROM evento_graduacao_convites WHERE id = ?', [conviteId]).catch(() => {});
+        }
+        if (alunoId) {
+            await pool.query('DELETE FROM aluno_avaliacoes_graduacao WHERE aluno_id = ?', [alunoId]).catch(() => {});
+            await pool.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [alunoId]).catch(() => {});
+            await pool.query('DELETE FROM alunos WHERE id = ?', [alunoId]).catch(() => {});
+        }
+        if (eventoId) {
+            await pool.query('DELETE FROM eventos_graduacao WHERE id = ?', [eventoId]).catch(() => {});
+        }
+        server.close();
+    }
+});
+
 test.after(async () => {
     try {
         await pool.end();

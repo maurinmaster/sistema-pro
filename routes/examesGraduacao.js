@@ -711,6 +711,112 @@ router.get('/meus-exames', optionalAuth, async (req, res) => {
 });
 
 /**
+ * Helper para processar aceite de convite de graduação e geração de cobrança Asaas
+ */
+async function executarAceiteConvite({ conviteId, alunoId, billingType = 'PIX' }) {
+    const [conviteRows] = await pool.query(`
+        SELECT c.*, eg.titulo AS evento_titulo, eg.data_evento, eg.data_limite_inscricao,
+               a.nome_completo, a.email, a.cpf, a.telefone_whatsapp,
+               gn_pret.nome AS graduacao_pretendida_nome
+        FROM evento_graduacao_convites c
+        JOIN eventos_graduacao eg ON eg.id = c.evento_id
+        JOIN alunos a ON a.id = c.aluno_id
+        JOIN graduacoes_niveis gn_pret ON gn_pret.id = c.graduacao_pretendida_id
+        WHERE c.id = ? AND c.aluno_id = ?
+    `, [conviteId, alunoId]);
+
+    if (conviteRows.length === 0) {
+        return { success: false, status: 404, error: 'Convite não encontrado ou não pertence a este aluno.' };
+    }
+
+    const convite = conviteRows[0];
+
+    if (convite.status === 'pago') {
+        return {
+            success: true,
+            status: 200,
+            message: 'Este exame já foi pago e sua vaga está confirmada!',
+            ja_pago: true,
+            convite
+        };
+    }
+
+    // 1. Cria ou busca o cliente no Gateway Asaas
+    const customer = await asaasService.criarOuBuscarCliente({
+        nome: convite.nome_completo,
+        email: convite.email,
+        cpfCnpj: convite.cpf,
+        telefone: convite.telefone_whatsapp,
+        alunoId: convite.aluno_id
+    });
+
+    // 2. Determina a data de vencimento da taxa
+    let dueDate = convite.data_limite_inscricao;
+    if (!dueDate) {
+        const evDate = new Date(convite.data_evento);
+        dueDate = evDate.toISOString().split('T')[0];
+    }
+
+    // 3. Gera a cobrança no Gateway Asaas
+    const cobranca = await asaasService.criarCobranca({
+        customerId: customer.id,
+        valor: convite.valor,
+        vencimento: dueDate,
+        descricao: `Taxa de Exame: ${convite.evento_titulo} - Promoção para ${convite.graduacao_pretendida_nome}`,
+        externalReference: `convite_${convite.id}_aluno_${convite.aluno_id}`,
+        billingType: billingType
+    });
+
+    const pixQrCode = cobranca.pixQrCode ? cobranca.pixQrCode.encodedImage : null;
+    const pixPayload = cobranca.pixQrCode ? cobranca.pixQrCode.payload : null;
+
+    // 4. Salva os dados do Gateway Asaas no convite e altera status para 'aceito'
+    await pool.query(`
+        UPDATE evento_graduacao_convites
+        SET status = 'aceito',
+            data_resposta = NOW(),
+            asaas_customer_id = ?,
+            asaas_payment_id = ?,
+            asaas_invoice_url = ?,
+            asaas_pix_qrcode = ?,
+            asaas_pix_copia_cola = ?,
+            asaas_billing_type = ?,
+            asaas_status = ?
+        WHERE id = ?
+    `, [
+        customer.id,
+        cobranca.id,
+        cobranca.invoiceUrl,
+        pixQrCode,
+        pixPayload,
+        billingType,
+        cobranca.status,
+        conviteId
+    ]);
+
+    return {
+        success: true,
+        status: 200,
+        message: 'Convite aceito com sucesso! Efetue o pagamento para garantir sua vaga.',
+        convite_id: conviteId,
+        cobranca: {
+            payment_id: cobranca.id,
+            asaas_payment_id: cobranca.id,
+            invoice_url: cobranca.invoiceUrl,
+            asaas_invoice_url: cobranca.invoiceUrl,
+            pix_copia_cola: pixPayload,
+            asaas_pix_copia_cola: pixPayload,
+            pix_qrcode_base64: pixQrCode,
+            asaas_pix_qrcode: pixQrCode,
+            valor: cobranca.value,
+            vencimento: cobranca.dueDate,
+            status: cobranca.status,
+            is_mock: cobranca.is_mock
+        }
+    };
+}
+
+/**
  * POST /api/aluno/exames/:conviteId/aceitar
  * O aluno aceita o convite e o sistema gera a cobrança via Gateway Asaas (Pix / Fatura)
  */
@@ -730,111 +836,98 @@ router.post('/exames/:conviteId/aceitar', optionalAuth, async (req, res) => {
         }
         if (!alunoId) alunoId = 1;
 
-        // Busca o convite e valida pertencimento
-        const [conviteRows] = await pool.query(`
-            SELECT c.*, eg.titulo AS evento_titulo, eg.data_evento, eg.data_limite_inscricao,
-                   a.nome_completo, a.email, a.cpf, a.telefone_whatsapp,
-                   gn_pret.nome AS graduacao_pretendida_nome
-            FROM evento_graduacao_convites c
-            JOIN eventos_graduacao eg ON eg.id = c.evento_id
-            JOIN alunos a ON a.id = c.aluno_id
-            JOIN graduacoes_niveis gn_pret ON gn_pret.id = c.graduacao_pretendida_id
-            WHERE c.id = ? AND c.aluno_id = ?
-        `, [conviteId, alunoId]);
-
-        if (conviteRows.length === 0) {
-            return res.status(404).json({ success: false, error: 'Convite não encontrado ou não pertence a este aluno.' });
-        }
-
-        const convite = conviteRows[0];
-
-        if (convite.status === 'pago') {
-            return res.json({
-                success: true,
-                message: 'Este exame já foi pago e sua vaga está confirmada!',
-                ja_pago: true,
-                convite
-            });
-        }
-
         const billingType = req.body.billing_type || 'PIX';
-
-        // 1. Cria ou busca o cliente no Gateway Asaas
-        const customer = await asaasService.criarOuBuscarCliente({
-            nome: convite.nome_completo,
-            email: convite.email,
-            cpfCnpj: convite.cpf,
-            telefone: convite.telefone_whatsapp,
-            alunoId: convite.aluno_id
-        });
-
-        // 2. Determina a data de vencimento da taxa
-        let dueDate = convite.data_limite_inscricao;
-        if (!dueDate) {
-            const evDate = new Date(convite.data_evento);
-            dueDate = evDate.toISOString().split('T')[0];
-        }
-
-        // 3. Gera a cobrança no Gateway Asaas
-        const cobranca = await asaasService.criarCobranca({
-            customerId: customer.id,
-            valor: convite.valor,
-            vencimento: dueDate,
-            descricao: `Taxa de Exame: ${convite.evento_titulo} - Promoção para ${convite.graduacao_pretendida_nome}`,
-            externalReference: `convite_${convite.id}_aluno_${convite.aluno_id}`,
-            billingType: billingType
-        });
-
-        const pixQrCode = cobranca.pixQrCode ? cobranca.pixQrCode.encodedImage : null;
-        const pixPayload = cobranca.pixQrCode ? cobranca.pixQrCode.payload : null;
-
-        // 4. Salva os dados do Gateway Asaas no convite e altera status para 'aceito'
-        await pool.query(`
-            UPDATE evento_graduacao_convites
-            SET status = 'aceito',
-                data_resposta = NOW(),
-                asaas_customer_id = ?,
-                asaas_payment_id = ?,
-                asaas_invoice_url = ?,
-                asaas_pix_qrcode = ?,
-                asaas_pix_copia_cola = ?,
-                asaas_billing_type = ?,
-                asaas_status = ?
-            WHERE id = ?
-        `, [
-            customer.id,
-            cobranca.id,
-            cobranca.invoiceUrl,
-            pixQrCode,
-            pixPayload,
-            billingType,
-            cobranca.status,
-            conviteId
-        ]);
-
-        res.json({
-            success: true,
-            message: 'Convite aceito com sucesso! Efetue o pagamento para garantir sua vaga.',
-            convite_id: conviteId,
-            cobranca: {
-                payment_id: cobranca.id,
-                asaas_payment_id: cobranca.id,
-                invoice_url: cobranca.invoiceUrl,
-                asaas_invoice_url: cobranca.invoiceUrl,
-                pix_copia_cola: pixPayload,
-                asaas_pix_copia_cola: pixPayload,
-                pix_qrcode_base64: pixQrCode,
-                asaas_pix_qrcode: pixQrCode,
-                valor: cobranca.value,
-                vencimento: cobranca.dueDate,
-                status: cobranca.status,
-                is_mock: cobranca.is_mock
-            }
-        });
+        const result = await executarAceiteConvite({ conviteId, alunoId, billingType });
+        return res.status(result.status || 200).json(result);
 
     } catch (err) {
         console.error('Erro ao aceitar convite de exame:', err);
         res.status(500).json({ success: false, error: 'Erro ao processar aceite e cobrança Asaas: ' + err.message });
+    }
+});
+
+/**
+ * POST /api/aluno/exames/:eventoId/inscrever
+ * Inscrição direta no exame quando o aluno está apto / elegível
+ */
+router.post('/exames/:eventoId/inscrever', optionalAuth, async (req, res) => {
+    try {
+        const eventoId = parseInt(req.params.eventoId, 10);
+        if (isNaN(eventoId)) {
+            return res.status(400).json({ success: false, error: 'ID do evento inválido.' });
+        }
+
+        let alunoId = null;
+        if (req.user) {
+            alunoId = req.user.aluno_id || (req.user.cargo === 'aluno' ? req.user.id : null);
+        }
+        if (!alunoId && req.body.aluno_id) {
+            alunoId = parseInt(req.body.aluno_id, 10);
+        }
+        if (!alunoId) alunoId = 1;
+
+        // 1. Verifica se evento existe e está com inscrições abertas
+        const [eventos] = await pool.query(`
+            SELECT eg.*, m.nome AS modalidade_nome
+            FROM eventos_graduacao eg
+            LEFT JOIN modalidades m ON m.id = eg.modalidade_id
+            WHERE eg.id = ? AND eg.status IN ('aberto', 'em_andamento')
+        `, [eventoId]);
+
+        if (eventos.length === 0) {
+            return res.status(404).json({ success: false, error: 'Evento de exame não encontrado ou inscrições encerradas.' });
+        }
+        const evento = eventos[0];
+
+        // 2. Busca graduação atual e pretendida do atleta
+        const [gradRows] = await pool.query(`
+            SELECT ag.modalidade_id, ag.graduacao_nivel_id, gn.ordem_hierarquica, gn.nome AS nivel_nome
+            FROM aluno_graduacoes ag
+            JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
+            WHERE ag.aluno_id = ? AND ag.atual = 1
+            ORDER BY ag.id DESC LIMIT 1
+        `, [alunoId]);
+
+        const modId = evento.modalidade_id || (gradRows[0] ? gradRows[0].modalidade_id : 1);
+        const gradAtualId = gradRows[0] ? gradRows[0].graduacao_nivel_id : 1;
+        const ordemAtual = gradRows[0] ? gradRows[0].ordem_hierarquica : 1;
+
+        const [proxRows] = await pool.query(`
+            SELECT id, nome FROM graduacoes_niveis
+            WHERE modalidade_id = ? AND ordem_hierarquica = ?
+            LIMIT 1
+        `, [modId, ordemAtual + 1]);
+
+        const gradPretId = proxRows[0] ? proxRows[0].id : gradAtualId;
+        const valorTaxa = parseFloat(evento.taxa_inscricao) || 150.00;
+
+        // 3. Busca convite existente ou cria novo
+        const [conviteExistente] = await pool.query(`
+            SELECT id FROM evento_graduacao_convites WHERE evento_id = ? AND aluno_id = ?
+        `, [eventoId, alunoId]);
+
+        let conviteId;
+        if (conviteExistente.length > 0) {
+            conviteId = conviteExistente[0].id;
+        } else {
+            const [insertRes] = await pool.query(`
+                INSERT INTO evento_graduacao_convites (
+                    evento_id, aluno_id, modalidade_id,
+                    graduacao_atual_id, graduacao_pretendida_id,
+                    percentual_avaliacao, apto_motivo, valor,
+                    status, data_convite
+                ) VALUES (?, ?, ?, ?, ?, 100, 'Inscrição confirmada pelo atleta no portal', ?, 'convidado', NOW())
+            `, [eventoId, alunoId, modId, gradAtualId, gradPretId, valorTaxa]);
+            conviteId = insertRes.insertId;
+        }
+
+        const billingType = req.body.billing_type || 'PIX';
+        const result = await executarAceiteConvite({ conviteId, alunoId, billingType });
+        return res.status(result.status || 200).json(result);
+
+    } catch (err) {
+        console.error('Erro na inscrição do exame:', err);
+        res.status(500).json({ success: false, error: 'Erro ao processar inscrição: ' + err.message });
     }
 });
 

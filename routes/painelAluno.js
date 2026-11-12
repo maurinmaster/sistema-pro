@@ -573,15 +573,24 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
 
         let exameProximo = null;
         try {
+            let modFilter = '';
+            const exameParams = [alunoId];
+            if (graduacaoAtual && graduacaoAtual.modalidade_id) {
+                modFilter = ' AND (eg.modalidade_id IS NULL OR eg.modalidade_id = ?)';
+                exameParams.push(graduacaoAtual.modalidade_id);
+            }
+
             const [exameRows] = await pool.query(`
-                SELECT eg.id, eg.titulo, eg.data_evento, eg.horario_inicio, eg.local_evento,
-                       c.status AS convite_status, c.id AS convite_id
+                SELECT eg.id, eg.titulo, eg.modalidade_id, eg.data_evento, eg.horario_inicio, eg.local_evento,
+                       eg.taxa_inscricao, eg.descricao, eg.data_limite_inscricao,
+                       c.status AS convite_status, c.id AS convite_id, c.valor AS convite_valor,
+                       c.asaas_payment_id, c.asaas_invoice_url, c.asaas_pix_qrcode, c.asaas_pix_copia_cola
                 FROM eventos_graduacao eg
                 LEFT JOIN evento_graduacao_convites c ON c.evento_id = eg.id AND c.aluno_id = ?
-                WHERE eg.status IN ('aberto', 'em_andamento') AND eg.data_evento >= CURDATE()
+                WHERE eg.status IN ('aberto', 'em_andamento') AND eg.data_evento >= CURDATE() ${modFilter}
                 ORDER BY eg.data_evento ASC
                 LIMIT 1
-            `, [alunoId]);
+            `, exameParams);
             if (exameRows.length > 0) {
                 exameProximo = exameRows[0];
             }

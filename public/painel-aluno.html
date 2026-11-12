@@ -14,7 +14,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=3.3">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=3.4">
 </head>
 
 <body>
@@ -774,6 +774,15 @@
                         </div>
                         <span class="exam-venue-info" id="card-next-exam-venue">Dojo Central - Kaizen CT</span>
                     </div>
+
+                    <!-- Botão de Ação: Inscrição no Exame de Graduação (visível quando apto e com exame disponível) -->
+                    <div class="next-rank-action-wrap" id="card-next-rank-action-wrap" style="display: none;">
+                        <button type="button" class="btn-inscrever-exame" id="btn-inscrever-exame">
+                            <span class="btn-inscrever-icon">🥋</span>
+                            <span id="btn-inscrever-exame-text">Inscrever-se no Exame de Graduação</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- 4. Carrossel Horizontal de Conquistas & Medalhas -->
@@ -1361,6 +1370,118 @@
     </div>
 
     <!-- ================================================================= -->
+    <!-- MODAL POP-UP OBRIGATÓRIO: CONVOCAÇÃO & CIÊNCIA DO EXAME            -->
+    <!-- (Só fecha se o atleta marcar expressamente a ciência da graduação)  -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop modal-backdrop-static" id="modal-convocacao-exame" data-static-backdrop="true" style="display: none;">
+        <div class="modal-card modal-medium modal-convocacao-card" style="max-width: 600px;">
+            <div class="modal-header modal-convocacao-header">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="convocacao-trophy-icon">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2">
+                            <circle cx="12" cy="8" r="6" />
+                            <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="convocacao-badge-top">
+                            <span class="convocacao-pulse-dot"></span>
+                            <span>CONVOCAÇÃO OFICIAL PARA GRADUAÇÃO</span>
+                        </div>
+                        <h3 class="convocacao-title" id="modal-convocacao-titulo">Parabéns! Você está Elegível</h3>
+                        <p class="convocacao-subtitle">Seu progresso marcial atingiu os critérios para o próximo grau!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-body modal-convocacao-body">
+                <!-- Card com Informações do Exame -->
+                <div class="convocacao-details-box">
+                    <div class="convocacao-event-title-row">
+                        <h4 id="modal-convocacao-evento-titulo" class="convocacao-event-name">Exame de Graduação Oficial</h4>
+                        <span id="modal-convocacao-modalidade" class="convocacao-modality-pill">Muay Thai</span>
+                    </div>
+
+                    <div class="convocacao-ranks-flow">
+                        <div class="rank-step-box">
+                            <span class="rank-step-label">Graduação Atual</span>
+                            <strong id="modal-convocacao-grad-atual" class="rank-step-val">Prajied Branco</strong>
+                        </div>
+                        <div class="rank-step-arrow">➜</div>
+                        <div class="rank-step-box rank-step-target">
+                            <span class="rank-step-label">Próxima Graduação</span>
+                            <strong id="modal-convocacao-grad-pretendida" class="rank-step-val-highlight">Ponta Vermelha</strong>
+                        </div>
+                    </div>
+
+                    <div class="convocacao-grid-info">
+                        <div class="info-pill-item">
+                            <span class="info-icon">📅</span>
+                            <div>
+                                <span class="info-lbl">Data do Exame</span>
+                                <strong id="modal-convocacao-data" class="info-val">--/--/----</strong>
+                            </div>
+                        </div>
+                        <div class="info-pill-item">
+                            <span class="info-icon">⏰</span>
+                            <div>
+                                <span class="info-lbl">Horário</span>
+                                <strong id="modal-convocacao-horario" class="info-val">--:--</strong>
+                            </div>
+                        </div>
+                        <div class="info-pill-item">
+                            <span class="info-icon">📍</span>
+                            <div>
+                                <span class="info-lbl">Local</span>
+                                <strong id="modal-convocacao-local" class="info-val">Tatame Central</strong>
+                            </div>
+                        </div>
+                        <div class="info-pill-item">
+                            <span class="info-icon">💰</span>
+                            <div>
+                                <span class="info-lbl">Taxa de Inscrição</span>
+                                <strong id="modal-convocacao-taxa" class="info-val info-val-green">R$ 0,00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="convocacao-guidelines-box">
+                        <span class="guidelines-title">🥋 Orientações da Banca Examinadora:</span>
+                        <p id="modal-convocacao-instrucoes" class="guidelines-desc">
+                            Compareça com uniforme oficial limpo, equipamentos de proteção e 15 minutos de antecedência.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Box de Termo de Ciência Obrigatório -->
+                <div class="convocacao-term-box" id="box-termo-ciencia-container">
+                    <label class="convocacao-term-label" for="check-convocacao-ciente">
+                        <input type="checkbox" id="check-convocacao-ciente" class="convocacao-checkbox">
+                        <span class="convocacao-term-text">
+                            <strong>Declaro estar ciente da graduação</strong>, da data, horário, local e dos requisitos técnicos exigidos pela banca do Centro de Treinamento.
+                        </span>
+                    </label>
+                    <div class="convocacao-lock-alert" id="convocacao-lock-msg">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <span>Marque a caixa acima para confirmar sua ciência e desbloquear a tela.</span>
+                    </div>
+                </div>
+
+                <!-- Rodapé de Ações: Só liberadas após marcar -->
+                <div class="convocacao-actions-row">
+                    <button type="button" class="btn-convocacao-secondary" id="btn-convocacao-ciente" disabled>
+                        <span>Estou Ciente e Continuar</span>
+                    </button>
+                    <button type="button" class="btn-convocacao-primary" id="btn-convocacao-inscrever" disabled>
+                        <span>🥋 Inscrever-se Agora / Ver Pagamento</span>
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
     <!-- MODAL 6: INSCRIÇÃO & PAGAMENTO DO EXAME DE GRADUAÇÃO (ASAAS)      -->
     <!-- ================================================================= -->
     <div class="modal-backdrop" id="modal-exame-aluno" style="display: none;">
@@ -1526,7 +1647,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=3.3"></script>
+    <script src="/js/painel-aluno.js?v=3.4"></script>
 </body>
 
 </html>
