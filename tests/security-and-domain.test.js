@@ -1535,6 +1535,164 @@ test('Exames de Graduação: Aluno recusa exame (desistência) e Administrador p
     }
 });
 
+test('Pagamento por Cartão de Crédito: Validações de segurança e quitação de mensalidades e exames', async () => {
+    const http = require('http');
+    const app = require('../server');
+    const server = http.createServer(app);
+    await new Promise(resolve => server.listen(0, resolve));
+    const port = server.address().port;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let alunoId = null;
+    let matriculaId = null;
+    let faturaId = null;
+    let eventoId = null;
+    let conviteId = null;
+
+    try {
+        // 1. Cria aluno de teste
+        const [alunoRes] = await pool.query(`
+            INSERT INTO alunos (nome_completo, email, cpf, telefone_whatsapp, data_nascimento, status)
+            VALUES (?, ?, ?, ?, '1998-05-15', 'ativo')
+        `, [`Atleta Cartão Teste ${Date.now()}`, `cartao.${Date.now()}@teste.com`, '12345678901', '11988887777']);
+        alunoId = alunoRes.insertId;
+
+        // Cria matrícula ativa
+        const [planRows] = await pool.query('SELECT id FROM planos LIMIT 1');
+        const planoId = planRows.length > 0 ? planRows[0].id : 1;
+        const [matRes] = await pool.query(`
+            INSERT INTO matriculas (aluno_id, plano_id, data_inicio, valor_acordado, dia_vencimento, status)
+            VALUES (?, ?, CURDATE(), 150.00, 10, 'ativa')
+        `, [alunoId, planoId]);
+        matriculaId = matRes.insertId;
+
+        // 2. Cria fatura pendente
+        const [fatRes] = await pool.query(`
+            INSERT INTO faturas (matricula_id, aluno_id, competencia, valor_original, data_vencimento, status)
+            VALUES (?, ?, '11/2026', 150.00, '2026-11-25', 'pendente')
+        `, [matriculaId, alunoId]);
+        faturaId = fatRes.insertId;
+
+        // 3. Testa rejeição com dados de cartão incompletos/inválidos
+        const resInvalido = await fetch(`${baseUrl}/api/aluno/faturas/${faturaId}/pagar-cartao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: alunoId,
+                numero_cartao: '123', // número inválido
+                nome_impresso: 'TESTE',
+                mes_validade: '12',
+                ano_validade: '28',
+                cvv: '12' // CVV muito curto
+            })
+        });
+        assert.equal(resInvalido.status, 400, 'Deve rejeitar cartão com dados inválidos');
+
+        // 4. Paga mensalidade com dados válidos de cartão
+        const resValido = await fetch(`${baseUrl}/api/aluno/faturas/${faturaId}/pagar-cartao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: alunoId,
+                numero_cartao: '4111 1111 1111 1111',
+                nome_impresso: 'ALUNO TESTE CARTAO',
+                mes_validade: '12',
+                ano_validade: '2028',
+                cvv: '123',
+                cpf_titular: '12345678901'
+            })
+        });
+        assert.equal(resValido.status, 200, 'Pagamento com cartão válido deve ser aprovado');
+        const dataValido = await resValido.json();
+        assert.equal(dataValido.success, true);
+        assert.equal(dataValido.pago, true);
+        assert.equal(dataValido.detalhes.bandeira, 'VISA');
+        assert.equal(dataValido.detalhes.ultimos4, '1111');
+
+        // 5. Verifica se a fatura foi atualizada no banco
+        const [faturasDb] = await pool.query('SELECT status, metodo_pagamento, valor_pago FROM faturas WHERE id = ?', [faturaId]);
+        assert.equal(faturasDb[0].status, 'pago');
+        assert.equal(faturasDb[0].metodo_pagamento, 'cartao_credito');
+        assert.equal(Number(faturasDb[0].valor_pago), 150.00);
+
+        // 6. Tenta pagar a mesma fatura de novo -> deve recusar pois já está paga
+        const resDuplicado = await fetch(`${baseUrl}/api/aluno/faturas/${faturaId}/pagar-cartao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: alunoId,
+                numero_cartao: '4111 1111 1111 1111',
+                nome_impresso: 'ALUNO TESTE CARTAO',
+                mes_validade: '12',
+                ano_validade: '2028',
+                cvv: '123'
+            })
+        });
+        assert.equal(resDuplicado.status, 400, 'Deve rejeitar fatura já quitada');
+
+        // 7. Testa pagamento de exame de graduação com cartão
+        const [modRows] = await pool.query('SELECT id FROM modalidades LIMIT 1');
+        const modId = modRows.length > 0 ? modRows[0].id : 1;
+        const [gradRows] = await pool.query('SELECT id FROM graduacoes_niveis WHERE modalidade_id = ? ORDER BY ordem_hierarquica LIMIT 2', [modId]);
+        const gradAtualId = gradRows[0]?.id || 1;
+        const gradPretId = gradRows[1]?.id || 2;
+
+        const [evRes] = await pool.query(`
+            INSERT INTO eventos_graduacao (titulo, modalidade_id, data_evento, taxa_inscricao, status)
+            VALUES (?, ?, '2026-12-30', 175.00, 'aberto')
+        `, [`Exame Cartao ${Date.now()}`, modId]);
+        eventoId = evRes.insertId;
+
+        const [convRes] = await pool.query(`
+            INSERT INTO evento_graduacao_convites (evento_id, aluno_id, modalidade_id, graduacao_atual_id, graduacao_pretendida_id, valor, status)
+            VALUES (?, ?, ?, ?, ?, 175.00, 'convidado')
+        `, [eventoId, alunoId, modId, gradAtualId, gradPretId]);
+        conviteId = convRes.insertId;
+
+        const resCardExame = await fetch(`${baseUrl}/api/aluno/exames/${conviteId}/pagar-cartao`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                aluno_id: alunoId,
+                numero_cartao: '5502 0999 8888 4444',
+                nome_impresso: 'ALUNO TESTE EXAME',
+                mes_validade: '08',
+                ano_validade: '29',
+                cvv: '999'
+            })
+        });
+        assert.equal(resCardExame.status, 200, 'Taxa de exame paga com cartão deve ser aprovada');
+        const dataCardExame = await resCardExame.json();
+        assert.equal(dataCardExame.success, true);
+        assert.equal(dataCardExame.pago, true);
+        assert.equal(dataCardExame.detalhes.bandeira, 'MASTERCARD');
+        assert.equal(dataCardExame.detalhes.ultimos4, '4444');
+
+        // 8. Verifica atualização do convite no banco de dados
+        const [conviteDb] = await pool.query('SELECT status, asaas_billing_type FROM evento_graduacao_convites WHERE id = ?', [conviteId]);
+        assert.equal(conviteDb[0].status, 'pago');
+        assert.equal(conviteDb[0].asaas_billing_type, 'CREDIT_CARD');
+
+    } finally {
+        if (conviteId) {
+            await pool.query('DELETE FROM evento_graduacao_convites WHERE id = ?', [conviteId]).catch(() => {});
+        }
+        if (eventoId) {
+            await pool.query('DELETE FROM eventos_graduacao WHERE id = ?', [eventoId]).catch(() => {});
+        }
+        if (faturaId) {
+            await pool.query('DELETE FROM faturas WHERE id = ?', [faturaId]).catch(() => {});
+        }
+        if (matriculaId) {
+            await pool.query('DELETE FROM matriculas WHERE id = ?', [matriculaId]).catch(() => {});
+        }
+        if (alunoId) {
+            await pool.query('DELETE FROM alunos WHERE id = ?', [alunoId]).catch(() => {});
+        }
+        server.close();
+    }
+});
+
 test.after(async () => {
     try {
         await pool.end();

@@ -2691,44 +2691,128 @@ const PainelAlunoApp = {
             const pixCopiaCola = convite.asaas_pix_copia_cola || '00020101021226840014br.gov.bcb.pix2562kaizen-ct-pro-graduacao';
 
             cobrancaBox.innerHTML = `
-                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 20px; text-align: center;">
+                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 20px;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
                         <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">Pagamento da Taxa de Graduação</h4>
                     </div>
-                    <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">
-                        Escaneie o QR Code PIX abaixo ou copie o código Copia e Cola para pagar pelo aplicativo do seu banco:
-                    </p>
 
-                    ${pixQrCodeSrc ? `
-                        <div style="display: flex; justify-content: center; margin-bottom: 16px;">
-                            <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                                <img src="${pixQrCodeSrc}" alt="QR Code Pix" style="width: 180px; height: 180px; display: block; object-fit: contain;">
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                        <input type="text" id="input-pix-copia-cola" readonly value="${this.escapeHtml(pixCopiaCola)}" 
-                               style="flex: 1; padding: 10px 12px; font-size: 12px; font-family: monospace; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155;">
-                        <button type="button" id="btn-copiar-pix-code" onclick="PainelAlunoApp.copiarPixCopiaCola()" 
-                                style="padding: 10px 14px; font-size: 12px; font-weight: 700; background: #0284c7; color: #fff; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                            Copiar PIX
+                    <!-- Seletor de Método de Pagamento -->
+                    <div class="pay-methods-tabs" style="margin-bottom: 16px;">
+                        <button type="button" class="btn-pay-tab active" id="tab-btn-pay-pix-exame" onclick="PainelAlunoApp.alternarMetodoPagamento('pix', 'exame')">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                            <span>PIX Instantâneo</span>
+                        </button>
+                        <button type="button" class="btn-pay-tab tab-card" id="tab-btn-pay-card-exame" onclick="PainelAlunoApp.alternarMetodoPagamento('cartao', 'exame')">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                            <span>Cartão de Crédito</span>
                         </button>
                     </div>
 
-                    <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                        ${convite.asaas_invoice_url ? `
-                            <a href="${convite.asaas_invoice_url}" target="_blank" 
-                               style="padding: 10px 16px; border-radius: 8px; background: #fff; border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                                <span>🔗 Abrir Fatura / Cartão</span>
-                            </a>
+                    <!-- Box PIX Exame -->
+                    <div id="box-pay-pix-exame" style="text-align: center;">
+                        <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">
+                            Escaneie o QR Code PIX abaixo ou copie o código Copia e Cola para pagar pelo aplicativo do seu banco:
+                        </p>
+
+                        ${pixQrCodeSrc ? `
+                            <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+                                <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+                                    <img src="${pixQrCodeSrc}" alt="QR Code Pix" style="width: 180px; height: 180px; display: block; object-fit: contain;">
+                                </div>
+                            </div>
                         ` : ''}
-                        <button type="button" onclick="PainelAlunoApp.simularPagamentoExame(${convite.convite_id})"
-                                style="padding: 10px 16px; border-radius: 8px; background: #16a34a; border: none; color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
-                                title="Ambiente de Testes / Sandbox">
-                            <span>⚡ Confirmar Pagamento (Modo Teste)</span>
-                        </button>
+
+                        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                            <input type="text" id="input-pix-copia-cola" readonly value="${this.escapeHtml(pixCopiaCola)}" 
+                                   style="flex: 1; padding: 10px 12px; font-size: 12px; font-family: monospace; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155;">
+                            <button type="button" id="btn-copiar-pix-code" onclick="PainelAlunoApp.copiarPixCopiaCola()" 
+                                    style="padding: 10px 14px; font-size: 12px; font-weight: 700; background: #0284c7; color: #fff; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                                Copiar PIX
+                            </button>
+                        </div>
+
+                        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                            ${convite.asaas_invoice_url ? `
+                                <a href="${convite.asaas_invoice_url}" target="_blank" 
+                                   style="padding: 10px 16px; border-radius: 8px; background: #fff; border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                                    <span>🔗 Abrir Fatura / Cartão</span>
+                                </a>
+                            ` : ''}
+                            <button type="button" onclick="PainelAlunoApp.simularPagamentoExame(${convite.convite_id})"
+                                    style="padding: 10px 16px; border-radius: 8px; background: #16a34a; border: none; color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
+                                    title="Ambiente de Testes / Sandbox">
+                                <span>⚡ Confirmar Pagamento (Modo Teste)</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Box Cartão Exame -->
+                    <div id="box-pay-card-exame" style="display: none; background: #0f172a; border-radius: 14px; padding: 18px; color: #fff;">
+                        <div class="credit-card-preview" style="background: linear-gradient(135deg, #1e293b 0%, #0b1120 100%);">
+                            <div class="card-preview-top">
+                                <div class="card-chip-sim"></div>
+                                <div class="card-brand-badge" id="preview-brand-exame">CARTÃO</div>
+                            </div>
+                            <div class="card-preview-number" id="preview-number-exame">•••• •••• •••• ••••</div>
+                            <div class="card-preview-bottom">
+                                <div>
+                                    <div class="card-preview-holder-label">Titular</div>
+                                    <div class="card-preview-holder-val" id="preview-holder-exame">${this.escapeHtml(this.currentAlunoData?.nome || 'NOME DO TITULAR')}</div>
+                                </div>
+                                <div>
+                                    <div class="card-preview-expiry-label">Validade</div>
+                                    <div class="card-preview-expiry-val" id="preview-expiry-exame">MM/AA</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <form class="credit-card-form" onsubmit="event.preventDefault(); PainelAlunoApp.submeterPagamentoCartaoExame(${convite.convite_id});">
+                            <div class="cc-form-group">
+                                <label style="color: #cbd5e1;">Número do Cartão</label>
+                                <input type="text" id="cc-number-exame" class="cc-input" placeholder="0000 0000 0000 0000" maxlength="19" required
+                                       oninput="PainelAlunoApp.onCardNumberInput(this, 'exame')">
+                            </div>
+                            <div class="cc-form-group">
+                                <label style="color: #cbd5e1;">Nome Impresso no Cartão</label>
+                                <input type="text" id="cc-holder-exame" class="cc-input" placeholder="Como impresso no cartão" required
+                                       value="${this.escapeHtml(this.currentAlunoData?.nome || '')}"
+                                       oninput="PainelAlunoApp.onCardHolderInput(this, 'exame')">
+                            </div>
+                            <div class="cc-form-row">
+                                <div class="cc-form-group">
+                                    <label style="color: #cbd5e1;">Validade</label>
+                                    <input type="text" id="cc-expiry-exame" class="cc-input" placeholder="MM/AA" maxlength="5" required
+                                           oninput="PainelAlunoApp.onCardExpiryInput(this, 'exame')">
+                                </div>
+                                <div class="cc-form-group">
+                                    <label style="color: #cbd5e1;">CVV / Cód.</label>
+                                    <input type="password" id="cc-cvv-exame" class="cc-input" placeholder="123" maxlength="4" required
+                                           oninput="this.value = this.value.replace(/\\D/g, '').slice(0, 4)">
+                                </div>
+                            </div>
+                            <div class="cc-form-row">
+                                <div class="cc-form-group">
+                                    <label style="color: #cbd5e1;">CPF do Titular</label>
+                                    <input type="text" id="cc-cpf-exame" class="cc-input" placeholder="000.000.000-00" maxlength="14"
+                                           value="${this.escapeHtml(this.currentAlunoData?.cpf || '')}">
+                                </div>
+                                <div class="cc-form-group">
+                                    <label style="color: #cbd5e1;">Parcelamento</label>
+                                    <select id="cc-installments-exame" class="cc-input" style="background: rgba(15, 23, 42, 0.95);">
+                                        <option value="1">1x de R$ ${valorFmt} à vista</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit-card-pay" id="btn-submit-cc-exame">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                                <span>Pagar R$ ${valorFmt} no Cartão</span>
+                            </button>
+                            <div class="pay-security-badge">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <span>Pagamento 100% Criptografado & Seguro PCI-DSS</span>
+                            </div>
+                        </form>
                     </div>
                 </div>
             `;
@@ -3193,8 +3277,20 @@ const PainelAlunoApp = {
                     </div>
                 </div>
 
-                <!-- 2. Box PIX Asaas -->
-                <div class="asaas-pix-box">
+                <!-- Seletor de Método de Pagamento -->
+                <div class="pay-methods-tabs">
+                    <button type="button" class="btn-pay-tab active" id="tab-btn-pay-pix-mens" onclick="PainelAlunoApp.alternarMetodoPagamento('pix', 'mens')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <span>PIX Instantâneo</span>
+                    </button>
+                    <button type="button" class="btn-pay-tab tab-card" id="tab-btn-pay-card-mens" onclick="PainelAlunoApp.alternarMetodoPagamento('cartao', 'mens')">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        <span>Cartão de Crédito</span>
+                    </button>
+                </div>
+
+                <!-- 2. Box PIX -->
+                <div id="box-pay-pix-mens" class="asaas-pix-box">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
                             <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
@@ -3237,10 +3333,78 @@ const PainelAlunoApp = {
                         ${fat.asaas_invoice_url ? `
                             <a href="${fat.asaas_invoice_url}" target="_blank" 
                                style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: #cbd5e1; text-decoration: none; font-size: 12px; font-weight: 600;">
-                                <span>🔗 Pagar com Cartão ou Boleto</span>
+                                <span>🔗 Pagar no Checkout Digital</span>
                             </a>
                         ` : ''}
                     </div>
+                </div>
+
+                <!-- 3. Box Cartão de Crédito -->
+                <div id="box-pay-card-mens" style="display: none; background: rgba(15, 23, 42, 0.4); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 16px;">
+                    <div class="credit-card-preview">
+                        <div class="card-preview-top">
+                            <div class="card-chip-sim"></div>
+                            <div class="card-brand-badge" id="preview-brand-mens">CARTÃO</div>
+                        </div>
+                        <div class="card-preview-number" id="preview-number-mens">•••• •••• •••• ••••</div>
+                        <div class="card-preview-bottom">
+                            <div>
+                                <div class="card-preview-holder-label">Titular</div>
+                                <div class="card-preview-holder-val" id="preview-holder-mens">${this.escapeHtml(this.currentAlunoData?.nome || 'NOME DO TITULAR')}</div>
+                            </div>
+                            <div>
+                                <div class="card-preview-expiry-label">Validade</div>
+                                <div class="card-preview-expiry-val" id="preview-expiry-mens">MM/AA</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form class="credit-card-form" onsubmit="event.preventDefault(); PainelAlunoApp.submeterPagamentoCartaoMensalidade(${fat.fatura_id});">
+                        <div class="cc-form-group">
+                            <label>Número do Cartão</label>
+                            <input type="text" id="cc-number-mens" class="cc-input" placeholder="0000 0000 0000 0000" maxlength="19" required
+                                   oninput="PainelAlunoApp.onCardNumberInput(this, 'mens')">
+                        </div>
+                        <div class="cc-form-group">
+                            <label>Nome Impresso no Cartão</label>
+                            <input type="text" id="cc-holder-mens" class="cc-input" placeholder="Como impresso no cartão" required
+                                   value="${this.escapeHtml(this.currentAlunoData?.nome || '')}"
+                                   oninput="PainelAlunoApp.onCardHolderInput(this, 'mens')">
+                        </div>
+                        <div class="cc-form-row">
+                            <div class="cc-form-group">
+                                <label>Validade</label>
+                                <input type="text" id="cc-expiry-mens" class="cc-input" placeholder="MM/AA" maxlength="5" required
+                                       oninput="PainelAlunoApp.onCardExpiryInput(this, 'mens')">
+                            </div>
+                            <div class="cc-form-group">
+                                <label>CVV / Cód.</label>
+                                <input type="password" id="cc-cvv-mens" class="cc-input" placeholder="123" maxlength="4" required
+                                       oninput="this.value = this.value.replace(/\\D/g, '').slice(0, 4)">
+                            </div>
+                        </div>
+                        <div class="cc-form-row">
+                            <div class="cc-form-group">
+                                <label>CPF do Titular</label>
+                                <input type="text" id="cc-cpf-mens" class="cc-input" placeholder="000.000.000-00" maxlength="14"
+                                       value="${this.escapeHtml(this.currentAlunoData?.cpf || '')}">
+                            </div>
+                            <div class="cc-form-group">
+                                <label>Parcelamento</label>
+                                <select id="cc-installments-mens" class="cc-input" style="background: rgba(15, 23, 42, 0.95);">
+                                    <option value="1">1x de ${valFmt} à vista</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-submit-card-pay" id="btn-submit-cc-mens">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                            <span>Pagar ${valFmt} no Cartão</span>
+                        </button>
+                        <div class="pay-security-badge">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <span>Pagamento 100% Criptografado & Seguro PCI-DSS</span>
+                        </div>
+                    </form>
                 </div>
             `;
         } catch (err) {
@@ -3672,6 +3836,281 @@ const PainelAlunoApp = {
         `;
 
         modal.style.display = 'flex';
+    },
+
+    // =========================================================================
+    // MÉTODOS DE PAGAMENTO COM CARTÃO DE CRÉDITO
+    // =========================================================================
+    detectCardBrand(number) {
+        const clean = String(number || '').replace(/\D/g, '');
+        if (/^4/.test(clean)) return 'VISA';
+        if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(clean)) return 'MASTERCARD';
+        if (/^(4011|4312|4389|4514|4576|5041|5066|5067|5090|6277|6362|6363|6504|6505|6506|6507|6509|6516|6550)/.test(clean)) return 'ELO';
+        if (/^3[47]/.test(clean)) return 'AMEX';
+        if (/^(606282|3841)/.test(clean)) return 'HIPERCARD';
+        return 'CARTÃO';
+    },
+
+    formatCardNumber(val) {
+        const clean = String(val || '').replace(/\D/g, '').slice(0, 16);
+        return clean.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    },
+
+    formatCardExpiry(val) {
+        const clean = String(val || '').replace(/\D/g, '').slice(0, 4);
+        if (clean.length >= 3) {
+            return clean.slice(0, 2) + '/' + clean.slice(2);
+        }
+        return clean;
+    },
+
+    onCardNumberInput(input, prefix) {
+        const formatted = this.formatCardNumber(input.value);
+        input.value = formatted;
+        const brand = this.detectCardBrand(formatted);
+        const previewNum = document.getElementById(`preview-number-${prefix}`);
+        const previewBrand = document.getElementById(`preview-brand-${prefix}`);
+        if (previewNum) {
+            previewNum.textContent = formatted ? formatted.padEnd(19, '•') : '•••• •••• •••• ••••';
+        }
+        if (previewBrand) {
+            previewBrand.textContent = brand;
+        }
+    },
+
+    onCardHolderInput(input, prefix) {
+        input.value = input.value.toUpperCase();
+        const preview = document.getElementById(`preview-holder-${prefix}`);
+        if (preview) {
+            preview.textContent = input.value.trim() || 'NOME DO TITULAR';
+        }
+    },
+
+    onCardExpiryInput(input, prefix) {
+        const formatted = this.formatCardExpiry(input.value);
+        input.value = formatted;
+        const preview = document.getElementById(`preview-expiry-${prefix}`);
+        if (preview) {
+            preview.textContent = formatted || 'MM/AA';
+        }
+    },
+
+    alternarMetodoPagamento(metodo, prefix) {
+        const btnPix = document.getElementById(`tab-btn-pay-pix-${prefix}`);
+        const btnCard = document.getElementById(`tab-btn-pay-card-${prefix}`);
+        const boxPix = document.getElementById(`box-pay-pix-${prefix}`);
+        const boxCard = document.getElementById(`box-pay-card-${prefix}`);
+
+        if (metodo === 'cartao') {
+            if (btnPix) btnPix.classList.remove('active');
+            if (btnCard) btnCard.classList.add('active');
+            if (boxPix) boxPix.style.display = 'none';
+            if (boxCard) boxCard.style.display = 'block';
+        } else {
+            if (btnCard) btnCard.classList.remove('active');
+            if (btnPix) btnPix.classList.add('active');
+            if (boxCard) boxCard.style.display = 'none';
+            if (boxPix) boxPix.style.display = 'block';
+        }
+    },
+
+    async submeterPagamentoCartaoMensalidade(faturaId) {
+        const numInput = document.getElementById('cc-number-mens');
+        const holderInput = document.getElementById('cc-holder-mens');
+        const expiryInput = document.getElementById('cc-expiry-mens');
+        const cvvInput = document.getElementById('cc-cvv-mens');
+        const cpfInput = document.getElementById('cc-cpf-mens');
+        const submitBtn = document.getElementById('btn-submit-cc-mens');
+
+        if (!numInput || !holderInput || !expiryInput || !cvvInput) return;
+
+        const rawNum = numInput.value.replace(/\D/g, '');
+        if (rawNum.length < 13 || rawNum.length > 19) {
+            this.showToast('Por favor, informe um número de cartão de crédito válido.', 'error');
+            numInput.focus();
+            return;
+        }
+
+        const holder = holderInput.value.trim();
+        if (holder.length < 3) {
+            this.showToast('Informe o nome impresso no cartão de crédito.', 'error');
+            holderInput.focus();
+            return;
+        }
+
+        const expParts = expiryInput.value.split('/');
+        if (expParts.length !== 2 || expParts[0].length !== 2 || expParts[1].length !== 2) {
+            this.showToast('Informe a validade no formato MM/AA.', 'error');
+            expiryInput.focus();
+            return;
+        }
+
+        const rawCvv = cvvInput.value.replace(/\D/g, '');
+        if (rawCvv.length < 3) {
+            this.showToast('Informe um código CVV válido com 3 ou 4 dígitos.', 'error');
+            cvvInput.focus();
+            return;
+        }
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+                    <span>Processando pagamento com cartão...</span>
+                `;
+            }
+
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/aluno/faturas/${faturaId}/pagar-cartao`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    aluno_id: this.currentAlunoId,
+                    numero_cartao: rawNum,
+                    nome_impresso: holder,
+                    mes_validade: expParts[0],
+                    ano_validade: expParts[1],
+                    cvv: rawCvv,
+                    cpf_titular: cpfInput ? cpfInput.value.replace(/\D/g, '') : null
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Não foi possível autorizar o cartão.');
+            }
+
+            const box = document.getElementById('modal-pagamento-conteudo');
+            if (box) {
+                box.innerHTML = `
+                    <div style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid rgba(16, 185, 129, 0.4); border-radius: 16px; padding: 28px 16px; text-align: center;">
+                        <div style="width: 54px; height: 54px; border-radius: 50%; background: #10b981; color: #ffffff; font-size: 26px; font-weight: 900; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px auto; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);">
+                            ✓
+                        </div>
+                        <h4 style="margin: 0 0 6px 0; font-size: 16px; font-weight: 800; color: #34d399;">Pagamento Aprovado no Cartão!</h4>
+                        <p style="margin: 0 0 8px 0; font-size: 13px; color: #a7f3d0; line-height: 1.45;">
+                            Sua mensalidade foi quitada com sucesso. Comprovante emitido e seu plano marcial está em dia!
+                        </p>
+                        <div style="font-size: 11.5px; color: #94a3b8; margin-bottom: 16px;">
+                            ${this.escapeHtml(data.detalhes?.bandeira || 'Cartão')} final •••• ${this.escapeHtml(data.detalhes?.ultimos4 || '••••')}
+                        </div>
+                        <button type="button" onclick="document.getElementById('modal-pagamento-mensalidade').style.display='none'"
+                                style="padding: 10px 22px; border-radius: 10px; background: #10b981; border: none; color: #ffffff; font-weight: 800; font-size: 13px; cursor: pointer;">
+                            Concluir & Voltar ao Painel
+                        </button>
+                    </div>
+                `;
+            }
+            this.showToast('Mensalidade paga com sucesso no cartão de crédito!', 'success');
+            setTimeout(() => {
+                this.init();
+            }, 1200);
+
+        } catch (err) {
+            console.error('Erro ao pagar mensalidade com cartão:', err);
+            this.showToast(err.message || 'Erro ao processar pagamento por cartão.', 'error');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    <span>Tentar Novamente</span>
+                `;
+            }
+        }
+    },
+
+    async submeterPagamentoCartaoExame(conviteId) {
+        const numInput = document.getElementById('cc-number-exame');
+        const holderInput = document.getElementById('cc-holder-exame');
+        const expiryInput = document.getElementById('cc-expiry-exame');
+        const cvvInput = document.getElementById('cc-cvv-exame');
+        const cpfInput = document.getElementById('cc-cpf-exame');
+        const submitBtn = document.getElementById('btn-submit-cc-exame');
+
+        if (!numInput || !holderInput || !expiryInput || !cvvInput) return;
+
+        const rawNum = numInput.value.replace(/\D/g, '');
+        if (rawNum.length < 13 || rawNum.length > 19) {
+            this.showToast('Por favor, informe um número de cartão de crédito válido.', 'error');
+            numInput.focus();
+            return;
+        }
+
+        const holder = holderInput.value.trim();
+        if (holder.length < 3) {
+            this.showToast('Informe o nome impresso no cartão de crédito.', 'error');
+            holderInput.focus();
+            return;
+        }
+
+        const expParts = expiryInput.value.split('/');
+        if (expParts.length !== 2 || expParts[0].length !== 2 || expParts[1].length !== 2) {
+            this.showToast('Informe a validade no formato MM/AA.', 'error');
+            expiryInput.focus();
+            return;
+        }
+
+        const rawCvv = cvvInput.value.replace(/\D/g, '');
+        if (rawCvv.length < 3) {
+            this.showToast('Informe um código CVV válido com 3 ou 4 dígitos.', 'error');
+            cvvInput.focus();
+            return;
+        }
+
+        try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = `
+                    <div class="spinner" style="width: 16px; height: 16px; border-width: 2px;"></div>
+                    <span>Processando pagamento com cartão...</span>
+                `;
+            }
+
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/aluno/exames/convites/${conviteId}/pagar-cartao`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                },
+                body: JSON.stringify({
+                    aluno_id: this.currentAlunoId,
+                    numero_cartao: rawNum,
+                    nome_impresso: holder,
+                    mes_validade: expParts[0],
+                    ano_validade: expParts[1],
+                    cvv: rawCvv,
+                    cpf_titular: cpfInput ? cpfInput.value.replace(/\D/g, '') : null
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Não foi possível autorizar o cartão.');
+            }
+
+            this.showToast('Taxa de exame paga com sucesso no cartão de crédito!', 'success');
+            await this.loadMeusExames();
+            this.abrirModalExame(conviteId);
+            setTimeout(() => {
+                this.init();
+            }, 1000);
+
+        } catch (err) {
+            console.error('Erro ao pagar taxa de exame com cartão:', err);
+            this.showToast(err.message || 'Erro ao processar pagamento por cartão.', 'error');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                    <span>Tentar Novamente</span>
+                `;
+            }
+        }
     }
 };
 

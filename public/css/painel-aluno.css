@@ -6941,3 +6941,242 @@ body {
     filter: brightness(1.08);
 }
 
+/* ========================================================================= */
+/* MÓDULO DE PAGAMENTO: SELETOR DE MÉTODO & CARTÃO DE CRÉDITO                */
+/* ========================================================================= */
+.pay-methods-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    background: rgba(15, 23, 42, 0.6);
+    padding: 4px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-pay-tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 9px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.btn-pay-tab:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.btn-pay-tab.active {
+    background: #0284c7;
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+}
+
+.btn-pay-tab.active.tab-card {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+/* Cartão Visual Preview */
+.credit-card-preview {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 18px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.credit-card-preview::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(56, 189, 248, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.card-preview-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+}
+
+.card-chip-sim {
+    width: 36px;
+    height: 26px;
+    background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+    border-radius: 5px;
+    border: 1px solid rgba(245, 158, 11, 0.6);
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.2);
+}
+
+.card-brand-badge {
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #ffffff;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+}
+
+.card-preview-number {
+    font-family: monospace;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #f8fafc;
+    margin-bottom: 18px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    word-spacing: 3px;
+}
+
+.card-preview-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.card-preview-holder-label, .card-preview-expiry-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.card-preview-holder-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    max-width: 190px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.card-preview-expiry-val {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 1px;
+    font-family: monospace;
+}
+
+/* Formulário de Cartão */
+.credit-card-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.cc-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cc-form-group label {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #cbd5e1;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.cc-input {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    font-size: 13.5px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.cc-input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+}
+
+.cc-input::placeholder {
+    color: #64748b;
+}
+
+.cc-form-row {
+    display: flex;
+    gap: 10px;
+}
+
+.cc-form-row > * {
+    flex: 1;
+}
+
+.btn-submit-card-pay {
+    width: 100%;
+    padding: 12px 18px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border: none;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35);
+    transition: all 0.2s ease;
+    margin-top: 6px;
+    font-family: inherit;
+}
+
+.btn-submit-card-pay:hover:not([disabled]) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+    filter: brightness(1.06);
+}
+
+.btn-submit-card-pay:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.pay-security-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 10px;
+    text-align: center;
+}
+
+

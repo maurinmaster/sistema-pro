@@ -1837,5 +1837,136 @@ router.post('/faturas/:id/verificar-asaas', optionalAuth, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/aluno/faturas/:id/pagar-cartao
+ * Processa pagamento direto com cartão de crédito para fatura de mensalidade
+ */
+router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
+    try {
+        let alunoId = req.user ? (req.user.aluno_id || req.user.id) : null;
+        if (!alunoId && req.body.aluno_id) alunoId = parseInt(req.body.aluno_id, 10);
+        if (!alunoId) alunoId = 1;
+
+        const faturaId = parseInt(req.params.id, 10);
+        const {
+            numero_cartao,
+            nome_impresso,
+            mes_validade,
+            ano_validade,
+            cvv,
+            cpf_titular,
+            cep_titular,
+            numero_endereco,
+            telefone_titular
+        } = req.body;
+
+        if (!numero_cartao || !nome_impresso || !mes_validade || !ano_validade || !cvv) {
+            return res.status(400).json({
+                success: false,
+                error: 'Informe todos os dados do cartão de crédito (número, nome impresso, validade e CVV).'
+            });
+        }
+
+        const [faturas] = await pool.query(`
+            SELECT f.id, f.aluno_id, f.valor_original, f.status, f.asaas_payment_id, f.asaas_customer_id, f.competencia,
+                   a.nome_completo, a.email, a.cpf, a.telefone_whatsapp,
+                   p.nome AS plano_nome
+            FROM faturas f
+            JOIN alunos a ON f.aluno_id = a.id
+            LEFT JOIN matriculas m ON f.matricula_id = m.id
+            LEFT JOIN planos p ON m.plano_id = p.id
+            WHERE f.id = ? AND f.aluno_id = ?
+        `, [faturaId, alunoId]);
+
+        if (faturas.length === 0) {
+            return res.status(404).json({ success: false, error: 'Fatura não encontrada.' });
+        }
+
+        const fat = faturas[0];
+
+        if (fat.status === 'pago') {
+            return res.status(400).json({ success: false, error: 'Esta fatura já se encontra quitada.' });
+        }
+
+        // 1. Obtém ou cria o cliente no gateway Asaas se não existir
+        let customerId = fat.asaas_customer_id;
+        if (!customerId) {
+            const customer = await asaasService.criarOuBuscarCliente({
+                nome: fat.nome_completo,
+                email: fat.email,
+                cpfCnpj: fat.cpf,
+                telefone: fat.telefone_whatsapp,
+                alunoId: fat.aluno_id
+            });
+            customerId = customer.id;
+        }
+
+        // 2. Processa o pagamento via cartão de crédito
+        const cobranca = await asaasService.pagarComCartao({
+            paymentId: fat.asaas_payment_id,
+            customerId: customerId,
+            valor: Number(fat.valor_original),
+            descricao: `Mensalidade ${fat.competencia || ''} - ${fat.plano_nome || 'Kaizen CT PRO'}`,
+            externalReference: `fatura_${fat.id}_aluno_${fat.aluno_id}`,
+            creditCard: {
+                holderName: nome_impresso,
+                number: numero_cartao,
+                expiryMonth: mes_validade,
+                expiryYear: ano_validade,
+                ccv: cvv
+            },
+            creditCardHolderInfo: {
+                name: nome_impresso,
+                email: fat.email,
+                cpfCnpj: cpf_titular || fat.cpf,
+                postalCode: cep_titular || '01001000',
+                addressNumber: numero_endereco || 'S/N',
+                phone: telefone_titular || fat.telefone_whatsapp
+            },
+            remoteIp: req.ip
+        });
+
+        const cardBrand = cobranca.creditCard?.creditCardBrand || asaasService.detectCardBrand(numero_cartao);
+        const last4 = cobranca.creditCard?.creditCardNumber || String(numero_cartao).replace(/\D/g, '').slice(-4);
+
+        // 3. Persiste a quitação no banco de dados com segurança
+        await pool.query(`
+            UPDATE faturas SET
+                status = 'pago',
+                data_pagamento = NOW(),
+                metodo_pagamento = 'cartao_credito',
+                valor_pago = valor_original,
+                asaas_customer_id = COALESCE(asaas_customer_id, ?),
+                asaas_payment_id = ?,
+                asaas_status = 'CONFIRMED'
+            WHERE id = ?
+        `, [
+            customerId,
+            cobranca.id || fat.asaas_payment_id,
+            fat.id
+        ]);
+
+        return res.json({
+            success: true,
+            pago: true,
+            message: 'Pagamento aprovado com sucesso no cartão de crédito!',
+            detalhes: {
+                fatura_id: fat.id,
+                bandeira: cardBrand,
+                ultimos4: last4,
+                valor: Number(fat.valor_original),
+                data_pagamento: new Date().toISOString()
+            }
+        });
+
+    } catch (err) {
+        console.error('Erro ao pagar fatura com cartão:', err);
+        return res.status(400).json({
+            success: false,
+            error: err.message || 'Falha ao processar pagamento com cartão de crédito.'
+        });
+    }
+});
+
 module.exports = router;
 

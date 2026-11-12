@@ -1109,6 +1109,137 @@ router.post('/exames/:conviteId/simular-pagamento', optionalAuth, async (req, re
     }
 });
 
+/**
+ * POST /api/aluno/exames/:conviteId/pagar-cartao
+ * Processa pagamento direto com cartão de crédito da taxa de exame de graduação
+ */
+router.post('/exames/:conviteId/pagar-cartao', optionalAuth, async (req, res) => {
+    try {
+        let alunoId = req.user ? (req.user.aluno_id || req.user.id) : null;
+        if (!alunoId && req.body.aluno_id) alunoId = parseInt(req.body.aluno_id, 10);
+        if (!alunoId) alunoId = 1;
+
+        const conviteId = parseInt(req.params.conviteId, 10);
+        const {
+            numero_cartao,
+            nome_impresso,
+            mes_validade,
+            ano_validade,
+            cvv,
+            cpf_titular,
+            cep_titular,
+            numero_endereco,
+            telefone_titular
+        } = req.body;
+
+        if (!numero_cartao || !nome_impresso || !mes_validade || !ano_validade || !cvv) {
+            return res.status(400).json({
+                success: false,
+                error: 'Informe todos os dados do cartão de crédito (número, titular, validade e CVV).'
+            });
+        }
+
+        const [conviteRows] = await pool.query(`
+            SELECT c.*, eg.titulo AS evento_titulo, eg.data_evento,
+                   a.nome_completo, a.email, a.cpf, a.telefone_whatsapp,
+                   gn_pret.nome AS graduacao_pretendida_nome
+            FROM evento_graduacao_convites c
+            JOIN eventos_graduacao eg ON eg.id = c.evento_id
+            JOIN alunos a ON a.id = c.aluno_id
+            JOIN graduacoes_niveis gn_pret ON gn_pret.id = c.graduacao_pretendida_id
+            WHERE c.id = ? AND c.aluno_id = ?
+        `, [conviteId, alunoId]);
+
+        if (conviteRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Convite de exame não encontrado.' });
+        }
+
+        const convite = conviteRows[0];
+
+        if (convite.status === 'pago') {
+            return res.status(400).json({ success: false, error: 'A taxa deste exame já se encontra paga.' });
+        }
+
+        // 1. Obtém ou cria cliente no gateway
+        let customerId = convite.asaas_customer_id;
+        if (!customerId) {
+            const customer = await asaasService.criarOuBuscarCliente({
+                nome: convite.nome_completo,
+                email: convite.email,
+                cpfCnpj: convite.cpf,
+                telefone: convite.telefone_whatsapp,
+                alunoId: convite.aluno_id
+            });
+            customerId = customer.id;
+        }
+
+        // 2. Processa cobrança de cartão
+        const cobranca = await asaasService.pagarComCartao({
+            paymentId: convite.asaas_payment_id,
+            customerId: customerId,
+            valor: Number(convite.valor),
+            descricao: `Taxa de Exame: ${convite.evento_titulo} - ${convite.graduacao_pretendida_nome}`,
+            externalReference: `convite_${convite.id}_aluno_${convite.aluno_id}`,
+            creditCard: {
+                holderName: nome_impresso,
+                number: numero_cartao,
+                expiryMonth: mes_validade,
+                expiryYear: ano_validade,
+                ccv: cvv
+            },
+            creditCardHolderInfo: {
+                name: nome_impresso,
+                email: convite.email,
+                cpfCnpj: cpf_titular || convite.cpf,
+                postalCode: cep_titular || '01001000',
+                addressNumber: numero_endereco || 'S/N',
+                phone: telefone_titular || convite.telefone_whatsapp
+            },
+            remoteIp: req.ip
+        });
+
+        const cardBrand = cobranca.creditCard?.creditCardBrand || asaasService.detectCardBrand(numero_cartao);
+        const last4 = cobranca.creditCard?.creditCardNumber || String(numero_cartao).replace(/\D/g, '').slice(-4);
+
+        // 3. Atualiza o convite para pago
+        await pool.query(`
+            UPDATE evento_graduacao_convites SET
+                status = 'pago',
+                data_resposta = NOW(),
+                data_pagamento = NOW(),
+                asaas_customer_id = COALESCE(asaas_customer_id, ?),
+                asaas_payment_id = ?,
+                asaas_billing_type = 'CREDIT_CARD',
+                asaas_status = 'CONFIRMED'
+            WHERE id = ?
+        `, [
+            customerId,
+            cobranca.id || convite.asaas_payment_id,
+            convite.id
+        ]);
+
+        return res.json({
+            success: true,
+            pago: true,
+            message: 'Taxa de exame paga com sucesso no cartão de crédito! Sua vaga está confirmada.',
+            detalhes: {
+                convite_id: convite.id,
+                bandeira: cardBrand,
+                ultimos4: last4,
+                valor: Number(convite.valor),
+                data_pagamento: new Date().toISOString()
+            }
+        });
+
+    } catch (err) {
+        console.error('Erro ao pagar taxa de exame com cartão:', err);
+        return res.status(400).json({
+            success: false,
+            error: err.message || 'Falha ao processar pagamento com cartão de crédito.'
+        });
+    }
+});
+
 // ============================================================================
 // 3. WEBHOOK ASAAS - NOTIFICAÇÃO AUTOMÁTICA DE LIQUIDAÇÃO
 // ============================================================================

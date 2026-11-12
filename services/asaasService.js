@@ -245,6 +245,136 @@ class AsaasService {
     }
 
     /**
+     * Detecta a bandeira do cartão a partir dos primeiros dígitos
+     */
+    detectCardBrand(number) {
+        const clean = String(number || '').replace(/\D/g, '');
+        if (/^4/.test(clean)) return 'VISA';
+        if (/^(5[1-5]|222[1-9]|22[3-9]|2[3-6]|27[0-1]|2720)/.test(clean)) return 'MASTERCARD';
+        if (/^(4011|4312|4389|4514|4576|5041|5066|5067|5090|6277|6362|6363|6504|6505|6506|6507|6509|6516|6550)/.test(clean)) return 'ELO';
+        if (/^3[47]/.test(clean)) return 'AMEX';
+        if (/^(606282|3841)/.test(clean)) return 'HIPERCARD';
+        return 'DESCONHECIDA';
+    }
+
+    /**
+     * Processa pagamento direto com cartão de crédito via Asaas
+     */
+    async pagarComCartao({ paymentId, customerId, valor, vencimento, descricao, externalReference, creditCard, creditCardHolderInfo, remoteIp }) {
+        if (!creditCard || !creditCard.number || !creditCard.holderName || !creditCard.expiryMonth || !creditCard.expiryYear || !creditCard.ccv) {
+            throw new Error('Todos os dados do cartão de crédito são obrigatórios (número, titular, validade e CVV).');
+        }
+
+        const cleanCardNumber = this.cleanDigits(creditCard.number);
+        if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
+            throw new Error('Número de cartão de crédito inválido.');
+        }
+
+        const cleanCcv = this.cleanDigits(creditCard.ccv);
+        if (cleanCcv.length < 3 || cleanCcv.length > 4) {
+            throw new Error('Código de segurança (CVV) inválido.');
+        }
+
+        let expMonth = String(creditCard.expiryMonth).padStart(2, '0');
+        let expYear = String(creditCard.expiryYear);
+        if (expYear.length === 2) expYear = '20' + expYear;
+
+        const valNum = parseFloat(valor);
+        const cardBrand = this.detectCardBrand(cleanCardNumber);
+        const last4 = cleanCardNumber.slice(-4);
+
+        if (!this.isConfigured() || (paymentId && String(paymentId).startsWith('pay_mock_'))) {
+            const mockId = paymentId || `pay_mock_card_${Date.now()}`;
+            return {
+                id: mockId,
+                status: 'CONFIRMED',
+                billingType: 'CREDIT_CARD',
+                value: valNum || 100,
+                netValue: valNum || 100,
+                creditCard: {
+                    creditCardNumber: last4,
+                    creditCardBrand: cardBrand !== 'DESCONHECIDA' ? cardBrand : 'MASTERCARD'
+                },
+                is_mock: true
+            };
+        }
+
+        try {
+            const cardPayload = {
+                holderName: creditCard.holderName.trim().toUpperCase(),
+                number: cleanCardNumber,
+                expiryMonth: expMonth,
+                expiryYear: expYear,
+                ccv: cleanCcv
+            };
+
+            const holderPayload = {
+                name: (creditCardHolderInfo?.name || creditCard.holderName).trim(),
+                email: creditCardHolderInfo?.email || 'financeiro@aluno.com',
+                cpfCnpj: this.cleanDigits(creditCardHolderInfo?.cpfCnpj || '00000000000'),
+                postalCode: this.cleanDigits(creditCardHolderInfo?.postalCode || '01001000'),
+                addressNumber: creditCardHolderInfo?.addressNumber || 'S/N',
+                addressComplement: creditCardHolderInfo?.addressComplement || null,
+                phone: this.cleanDigits(creditCardHolderInfo?.phone || '11999999999'),
+                mobilePhone: this.cleanDigits(creditCardHolderInfo?.phone || '11999999999')
+            };
+
+            // Se já tiver um paymentId existente no Asaas
+            if (paymentId && !String(paymentId).startsWith('pay_mock_')) {
+                const payRes = await fetch(`${this.baseUrl}/payments/${paymentId}/payWithCreditCard`, {
+                    method: 'POST',
+                    headers: this.getHeaders(),
+                    body: JSON.stringify({
+                        creditCard: cardPayload,
+                        creditCardHolderInfo: holderPayload
+                    })
+                });
+
+                const payData = await payRes.json();
+                if (payRes.ok && (payData.status === 'CONFIRMED' || payData.status === 'RECEIVED')) {
+                    return payData;
+                } else if (!payRes.ok) {
+                    const msg = payData.errors ? payData.errors.map(e => e.description).join('; ') : 'Erro ao processar pagamento com cartão';
+                    throw new Error(msg);
+                }
+            }
+
+            // Caso não tenha paymentId ou precise criar nova cobrança de cartão
+            let dueDate = vencimento;
+            if (!dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+                dueDate = new Date().toISOString().split('T')[0];
+            }
+
+            const createRes = await fetch(`${this.baseUrl}/payments`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify({
+                    customer: customerId,
+                    billingType: 'CREDIT_CARD',
+                    value: valNum,
+                    dueDate: dueDate,
+                    description: descricao || 'Pagamento com Cartão de Crédito - Kaizen CT PRO',
+                    externalReference: externalReference || undefined,
+                    creditCard: cardPayload,
+                    creditCardHolderInfo: holderPayload,
+                    remoteIp: remoteIp || undefined
+                })
+            });
+
+            const createData = await createRes.json();
+            if (!createRes.ok) {
+                const msg = createData.errors ? createData.errors.map(e => e.description).join('; ') : 'Erro ao processar cobrança no cartão';
+                throw new Error(msg);
+            }
+
+            return createData;
+        } catch (err) {
+            console.error('[AsaasService] Falha ao processar pagamento por cartão:', err.message);
+            throw err;
+        }
+    }
+
+    /**
      * Consulta o status atualizado de uma cobrança no Asaas
      */
     async consultarCobranca(paymentId) {
