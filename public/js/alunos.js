@@ -67,6 +67,22 @@ const AlunosModule = {
             formAluno.addEventListener('submit', (e) => this.handleSubmitAluno(e));
         }
 
+        // Formulário de Redefinição de Senha do Aluno
+        const formReset = document.getElementById('form-reset-senha-aluno');
+        if (formReset) {
+            formReset.addEventListener('submit', (e) => this.submitResetSenha(e));
+        }
+
+        const btnGerarSenha = document.getElementById('btn-gerar-senha-aluno');
+        if (btnGerarSenha) {
+            btnGerarSenha.addEventListener('click', () => this.gerarSenhaAleatoria());
+        }
+
+        const btnCopiarSenha = document.getElementById('btn-copiar-nova-senha');
+        if (btnCopiarSenha) {
+            btnCopiarSenha.addEventListener('click', () => this.copiarNovaSenha());
+        }
+
         // Upload de Foto de Perfil
         const btnUploadFoto = document.getElementById('btn-upload-foto');
         const fileInputFoto = document.getElementById('aluno-foto-input');
@@ -332,13 +348,16 @@ const AlunosModule = {
                                 <button class="btn-icon" title="Registrar Check-in" onclick="CheckinsModule.quickCheckin(${safeId})">
                                     <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
                                 </button>
+                                <button class="btn-icon" style="color: #f59e0b;" title="Resetar Senha do Aluno" onclick="AlunosModule.openResetSenhaModal(${safeId}, '${encodedNome}')">
+                                    <svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l2 2"/></svg>
+                                </button>
                                 ${(!window.AuthModule || AuthModule.can('manage_alunos')) ? `
                                     <button class="btn-icon" title="Editar Dados" onclick="AlunosModule.openEditModal(${safeId})">
                                         <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                                     </button>
                                 ` : ''}
                                 ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
-                                    <button class="btn-icon" style="color: #ef4444;" title="Inativar Aluno (Exclusivo Admin)" onclick="AlunosModule.inativarAluno(${safeId}, '${encodedNome}')">
+                                    <button class="btn-icon" style="color: #ef4444;" title="Excluir Aluno Permanentemente" onclick="AlunosModule.deleteAluno(${safeId}, '${encodedNome}')">
                                         <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     </button>
                                 ` : ''}
@@ -553,25 +572,107 @@ const AlunosModule = {
         }
     },
 
-    async inativarAluno(alunoId, alunoNome) {
+    // ==========================================
+    // REDEFINIÇÃO DE SENHA DO ALUNO
+    // ==========================================
+    openResetSenhaModal(alunoId, alunoNome) {
+        const nome = decodeURIComponent(alunoNome);
+        const aluno = this.alunosList.find(a => String(a.id) === String(alunoId));
+        const email = aluno ? (aluno.email || 'Sem e-mail cadastrado') : 'Consultando...';
+
+        document.getElementById('reset-senha-aluno-id').value = alunoId;
+        document.getElementById('reset-senha-aluno-nome').textContent = nome;
+        document.getElementById('reset-senha-aluno-email').textContent = `Login / E-mail: ${email}`;
+
+        this.gerarSenhaAleatoria();
+        UI.openModal('modal-reset-senha-aluno');
+    },
+
+    gerarSenhaAleatoria() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+        let pass = 'Kz@';
+        for (let i = 0; i < 5; i++) {
+            pass += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        const input = document.getElementById('reset-nova-senha');
+        if (input) input.value = pass;
+    },
+
+    async copiarNovaSenha() {
+        const input = document.getElementById('reset-nova-senha');
+        if (!input || !input.value) return;
+        try {
+            await navigator.clipboard.writeText(input.value);
+            UI.showToast('Senha copiada para a área de transferência!', 'success');
+        } catch {
+            input.select();
+            document.execCommand('copy');
+            UI.showToast('Senha copiada!', 'success');
+        }
+    },
+
+    async submitResetSenha(e) {
+        e.preventDefault();
+        const alunoId = document.getElementById('reset-senha-aluno-id').value;
+        const nova_senha = document.getElementById('reset-nova-senha').value.trim();
+        const btn = document.getElementById('btn-salvar-nova-senha');
+
+        if (!nova_senha || nova_senha.length < 6) {
+            UI.showToast('A senha deve ter no mínimo 6 caracteres.', 'warning');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div> Salvando...`;
+        }
+
+        try {
+            const res = await API.post(`/alunos/${alunoId}/resetar-senha`, { nova_senha });
+            if (!res.success) throw new Error(res.error || 'Erro ao redefinir senha.');
+
+            await this.copiarNovaSenha();
+            UI.showToast(`Senha redefinida com sucesso para "${nova_senha}" (copiada)!`, 'success');
+            UI.closeModal('modal-reset-senha-aluno');
+        } catch (err) {
+            UI.showToast('Erro ao redefinir senha: ' + err.message, 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = `💾 Salvar Nova Senha`;
+            }
+        }
+    },
+
+    // ==========================================
+    // EXCLUSÃO PERMANENTE DO ALUNO
+    // ==========================================
+    async deleteAluno(alunoId, alunoNome) {
         if (window.AuthModule && !AuthModule.can('delete_alunos')) {
-            UI.showToast('Apenas Administradores podem inativar alunos.', 'warning');
+            UI.showToast('Apenas Administradores podem excluir alunos.', 'warning');
             return;
         }
 
         const nome = decodeURIComponent(alunoNome);
-        if (!confirm(`Deseja realmente inativar o cadastro do aluno "${nome}"?`)) {
+        const confirmMsg = `ATENÇÃO: Deseja realmente EXCLUIR permanentemente o aluno "${nome}" e todos os seus registros (faturas, graduações, histórico)?\n\nEsta ação é definitiva e removerá o aluno do banco de dados.`;
+        if (!confirm(confirmMsg)) {
             return;
         }
 
         try {
-            await API.delete(`/alunos/${alunoId}`);
-            UI.showToast(`Aluno ${nome} inativado com sucesso.`, 'success');
+            const res = await API.delete(`/alunos/${alunoId}`);
+            if (!res.success) throw new Error(res.error || 'Erro ao excluir aluno.');
+
+            UI.showToast(`Aluno "${nome}" foi excluído permanentemente com sucesso.`, 'success');
             await this.loadAlunos();
             if (window.DashboardModule) DashboardModule.loadDashboard();
         } catch (err) {
-            UI.showToast('Erro ao inativar aluno: ' + err.message, 'error');
+            UI.showToast('Erro ao excluir aluno: ' + err.message, 'error');
         }
+    },
+
+    inativarAluno(alunoId, alunoNome) {
+        return this.deleteAluno(alunoId, alunoNome);
     }
 };
 

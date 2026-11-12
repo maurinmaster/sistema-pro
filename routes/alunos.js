@@ -988,21 +988,133 @@ router.post('/:id/aprovar-promocao', authenticateToken, authorizeRoles('admin', 
     }
 });
 
-// DELETE /api/alunos/:id - Exclusão/Inativação de aluno (exclusivo admin)
-router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+// POST /api/alunos/:id/resetar-senha - Redefinição administrativa de senha do aluno
+router.post('/:id/resetar-senha', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
     try {
-        const { id } = req.params;
-        // Muda para inativo para preservar integridade de faturas e histórico
-        const [result] = await pool.query("UPDATE alunos SET status = 'inativo' WHERE id = ?", [id]);
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        const alunoId = parseInt(req.params.id, 10);
+        if (isNaN(alunoId) || alunoId <= 0) {
+            return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
         }
 
-        res.json({ success: true, message: 'Aluno inativado com sucesso.' });
+        const [alunos] = await pool.query('SELECT id, nome_completo, email FROM alunos WHERE id = ?', [alunoId]);
+        if (alunos.length === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+        const aluno = alunos[0];
+
+        let { nova_senha } = req.body;
+        if (nova_senha && typeof nova_senha === 'string') {
+            nova_senha = nova_senha.trim();
+        }
+
+        // Se nenhuma senha foi fornecida, gera uma senha temporária segura e amigável
+        if (!nova_senha) {
+            const randomCode = Math.floor(1000 + Math.random() * 9000);
+            nova_senha = `Kz@${randomCode}`;
+        } else if (nova_senha.length < 6) {
+            return res.status(400).json({ success: false, error: 'A nova senha deve possuir no mínimo 6 caracteres.' });
+        }
+
+        const senhaHash = await bcrypt.hash(nova_senha, 10);
+        const alunoEmail = (aluno.email || `aluno${alunoId}@kaizen.local`).trim().toLowerCase();
+
+        // Atualiza a senha no registro do aluno
+        await pool.query('UPDATE alunos SET senha_app_hash = ? WHERE id = ?', [senhaHash, alunoId]);
+
+        // Sincroniza ou cria a conta de login na tabela relacional usuarios_alunos
+        await pool.query(`
+            INSERT INTO usuarios_alunos (aluno_id, email, senha_hash, status, email_verificado)
+            VALUES (?, ?, ?, 'ativo', 1)
+            ON DUPLICATE KEY UPDATE 
+                senha_hash = VALUES(senha_hash),
+                status = 'ativo',
+                email_verificado = 1,
+                email = VALUES(email)
+        `, [alunoId, alunoEmail, senhaHash]);
+
+        // Revoga sessões ativas anteriores do aluno por segurança
+        await pool.query(`
+            UPDATE sessoes_usuarios 
+            SET revogado = 1 
+            WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)
+        `, [alunoId]);
+
+        res.json({
+            success: true,
+            message: `Senha do aluno "${aluno.nome_completo}" redefinida com sucesso!`,
+            aluno_id: alunoId,
+            nome_completo: aluno.nome_completo,
+            email: aluno.email,
+            nova_senha: nova_senha
+        });
     } catch (err) {
-        console.error('Erro ao inativar aluno:', err);
-        res.status(500).json({ success: false, error: 'Erro ao inativar aluno.' });
+        console.error('Erro ao resetar senha do aluno:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao redefinir senha do aluno.' });
+    }
+});
+
+// DELETE /api/alunos/:id - Exclusão permanente do aluno e de seus dados vinculados (exclusivo admin)
+router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    const alunoId = parseInt(req.params.id, 10);
+    if (isNaN(alunoId) || alunoId <= 0) {
+        return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
+    }
+
+    const conn = await pool.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Verifica se o aluno existe
+        const [alunoRows] = await conn.query('SELECT id, nome_completo, foto_perfil_url FROM alunos WHERE id = ?', [alunoId]);
+        if (alunoRows.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+        const aluno = alunoRows[0];
+
+        // 2. Exclusão ordenada de registros dependentes (evitando conflito com foreign keys RESTRICT)
+        await conn.query('DELETE FROM faturas WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM matriculas WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM evento_graduacao_convites WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM aluno_avaliacoes_desempenho WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM aluno_avaliacoes_graduacao WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM aluno_conquistas WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM aluno_golpes_progresso WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM aluno_historico_medidas WHERE aluno_id = ?', [alunoId]);
+        await conn.query('DELETE FROM checkins WHERE aluno_id = ?', [alunoId]);
+
+        // 3. Exclui sessões, redefinições, verificações de e-mail e conta de usuário
+        await conn.query('DELETE FROM sessoes_usuarios WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
+        await conn.query('DELETE FROM redefinicoes_senha WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
+        await conn.query('DELETE FROM verificacoes_email WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)', [alunoId]);
+        await conn.query('DELETE FROM usuarios_alunos WHERE aluno_id = ?', [alunoId]);
+
+        // 4. Exclui o registro principal do aluno
+        await conn.query('DELETE FROM alunos WHERE id = ?', [alunoId]);
+
+        await conn.commit();
+
+        // 5. Limpa arquivo físico de foto se for upload local do sistema
+        if (aluno.foto_perfil_url && aluno.foto_perfil_url.startsWith('/uploads/alunos/')) {
+            const filePath = path.join(__dirname, '..', 'public', aluno.foto_perfil_url);
+            try {
+                if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+            } catch {
+                // Silencioso se o arquivo já não existir
+            }
+        }
+
+        res.json({
+            success: true,
+            message: `Aluno "${aluno.nome_completo}" excluído permanentemente com sucesso.`
+        });
+    } catch (err) {
+        await conn.rollback();
+        console.error('Erro ao excluir aluno permanentemente:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao excluir aluno do banco de dados.' });
+    } finally {
+        conn.release();
     }
 });
 

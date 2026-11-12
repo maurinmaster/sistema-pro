@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 const {
     calculateAge,
@@ -1037,6 +1038,120 @@ test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exi
     } finally {
         if (avaliacaoId) {
             await pool.query('DELETE FROM aluno_avaliacoes_desempenho WHERE id = ?', [avaliacaoId]).catch(() => {});
+        }
+        server.close();
+    }
+});
+
+// ============================================================================
+// 13. GESTÃO DE ALUNOS: REDEFINIÇÃO DE SENHA E EXCLUSÃO PERMANENTE
+// ============================================================================
+test('Gestão de Alunos: Redefinição Administrativa de Senha e Exclusão Permanente com Limpeza Relacional', async () => {
+    const server = app.listen(0);
+    const addr = server.address();
+    const port = typeof addr === 'object' && addr ? addr.port : 0;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    let alunoCriadoId = null;
+
+    try {
+        const adminToken = jwt.sign(
+            { id: 1, cargo: 'admin', nome: 'Admin Master' },
+            JWT_SECRET,
+            { expiresIn: '1h', algorithm: 'HS256' }
+        );
+
+        // 1. Cria aluno temporário completo com registros associados
+        const [alunoIns] = await pool.query(`
+            INSERT INTO alunos (nome_completo, cpf, data_nascimento, genero, email, telefone_whatsapp, status)
+            VALUES ('Aluno Teste Exclusao', '99988877700', '1995-05-10', 'M', 'aluno.delete.test@exemplo.com', '11988887777', 'ativo')
+        `);
+        alunoCriadoId = alunoIns.insertId;
+
+        // Cria usuário de login
+        const defaultHash = await bcrypt.hash('SenhaAntiga@123', 10);
+        await pool.query(`
+            INSERT INTO usuarios_alunos (aluno_id, email, senha_hash, status, email_verificado)
+            VALUES (?, 'aluno.delete.test@exemplo.com', ?, 'ativo', 1)
+        `, [alunoCriadoId, defaultHash]);
+
+        // Cria matrícula e fatura vinculadas
+        const [planos] = await pool.query('SELECT id FROM planos LIMIT 1');
+        const planoId = planos[0].id;
+        const [matIns] = await pool.query(`
+            INSERT INTO matriculas (aluno_id, plano_id, data_inicio, data_fim, valor_acordado, status)
+            VALUES (?, ?, CURDATE(), DATE_ADD(CURDATE(), INTERVAL 1 MONTH), 199.90, 'ativa')
+        `, [alunoCriadoId, planoId]);
+        const matId = matIns.insertId;
+
+        await pool.query(`
+            INSERT INTO faturas (matricula_id, aluno_id, competencia, valor_original, data_vencimento, status)
+            VALUES (?, ?, '2026-11', 199.90, CURDATE(), 'pendente')
+        `, [matId, alunoCriadoId]);
+
+        // 2. Testa Redefinição de Senha Administrativa (POST /api/alunos/:id/resetar-senha)
+        const novaSenhaTeste = 'Kaizen@Forte2026';
+        const resetRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}/resetar-senha`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ nova_senha: novaSenhaTeste })
+        });
+
+        assert.equal(resetRes.status, 200);
+        const resetBody = await resetRes.json();
+        assert.equal(resetBody.success, true);
+        assert.equal(resetBody.nova_senha, novaSenhaTeste);
+
+        // Valida que a nova senha foi persistida e valida com bcrypt
+        const [userRows] = await pool.query('SELECT senha_hash FROM usuarios_alunos WHERE aluno_id = ?', [alunoCriadoId]);
+        assert.ok(userRows.length > 0);
+        const passwordMatches = await bcrypt.compare(novaSenhaTeste, userRows[0].senha_hash);
+        assert.equal(passwordMatches, true, 'Nova senha deve ser autenticável com bcrypt');
+
+        // 3. Testa Exclusão Permanente (DELETE /api/alunos/:id)
+        const deleteRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+
+        assert.equal(deleteRes.status, 200);
+        const deleteBody = await deleteRes.json();
+        assert.equal(deleteBody.success, true);
+
+        // 4. Valida que o aluno NÃO existe mais no banco de dados (Hard Delete real)
+        const [checkAluno] = await pool.query('SELECT id FROM alunos WHERE id = ?', [alunoCriadoId]);
+        assert.equal(checkAluno.length, 0, 'Registro do aluno deve ter sido completamente removido da tabela alunos');
+
+        // Valida que registros dependentes foram excluídos em cascata
+        const [checkMat] = await pool.query('SELECT id FROM matriculas WHERE aluno_id = ?', [alunoCriadoId]);
+        assert.equal(checkMat.length, 0, 'Matrícula vinculada deve ter sido removida');
+
+        const [checkFat] = await pool.query('SELECT id FROM faturas WHERE aluno_id = ?', [alunoCriadoId]);
+        assert.equal(checkFat.length, 0, 'Fatura vinculada deve ter sido removida');
+
+        const [checkUser] = await pool.query('SELECT id FROM usuarios_alunos WHERE aluno_id = ?', [alunoCriadoId]);
+        assert.equal(checkUser.length, 0, 'Usuário de acesso deve ter sido removido');
+
+        // 5. Tentativa de deletar novamente deve retornar 404
+        const deleteAgainRes = await fetch(`${baseUrl}/api/alunos/${alunoCriadoId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        assert.equal(deleteAgainRes.status, 404);
+
+        alunoCriadoId = null; // Já excluído
+
+    } finally {
+        if (alunoCriadoId) {
+            await pool.query('DELETE FROM faturas WHERE aluno_id = ?', [alunoCriadoId]).catch(() => {});
+            await pool.query('DELETE FROM matriculas WHERE aluno_id = ?', [alunoCriadoId]).catch(() => {});
+            await pool.query('DELETE FROM usuarios_alunos WHERE aluno_id = ?', [alunoCriadoId]).catch(() => {});
+            await pool.query('DELETE FROM alunos WHERE id = ?', [alunoCriadoId]).catch(() => {});
         }
         server.close();
     }

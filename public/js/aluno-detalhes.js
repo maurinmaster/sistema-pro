@@ -176,6 +176,18 @@ const AlunoDetalhesModule = {
             <span>Idade: ${aluno.idade !== null ? Number(aluno.idade) + ' anos' : 'Não informada'} ${isMenor ? '<span class="minor-tag">Menor</span>' : ''}</span>
             <span>•</span>
             <span>Cadastrado em: ${UI.formatDate(aluno.created_at)}</span>
+            <span style="margin-left: 8px; display: inline-flex; gap: 6px; align-items: center;">
+                <button type="button" class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); padding: 2px 8px; font-size: 11px;"
+                    onclick="AlunosModule.openResetSenhaModal(${safeAlunoId}, '${encodedAlunoNome}')" title="Redefinir senha de acesso do aluno">
+                    🔑 Resetar Senha
+                </button>
+                ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
+                    <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.4); padding: 2px 8px; font-size: 11px;"
+                        onclick="UI.closeModal('modal-dossie'); AlunosModule.deleteAluno(${safeAlunoId}, '${encodedAlunoNome}')" title="Excluir aluno permanentemente">
+                        🗑️ Excluir
+                    </button>
+                ` : ''}
+            </span>
         `;
 
         // TAB 1: GERAL & SAÚDE
