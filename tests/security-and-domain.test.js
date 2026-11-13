@@ -1702,6 +1702,40 @@ test('Pagamento por Cartão de Crédito: Validações de segurança e quitação
     }
 });
 
+test('Deploy & PWA Mobile: Remoção de acessos rápidos de login, hardening e suporte Android/iOS', () => {
+    const fs = require('fs');
+    const path = require('path');
+
+    const rootDir = path.join(__dirname, '..');
+    const indexHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
+    const authJs = fs.readFileSync(path.join(rootDir, 'public', 'js', 'auth.js'), 'utf8');
+    const painelHtml = fs.readFileSync(path.join(rootDir, 'public', 'painel-aluno.html'), 'utf8');
+    const manifestPath = path.join(rootDir, 'public', 'manifest.json');
+    const swPath = path.join(rootDir, 'public', 'sw.js');
+    const appleIconPath = path.join(rootDir, 'public', 'assets', 'icons', 'apple-touch-icon.png');
+    const icon192Path = path.join(rootDir, 'public', 'assets', 'icons', 'icon-192.png');
+    const icon512Path = path.join(rootDir, 'public', 'assets', 'icons', 'icon-512.png');
+
+    assert.equal(indexHtml.includes('data-quick-login'), false, 'Login não deve conter botões de acesso rápido');
+    assert.equal(indexHtml.includes('Padrão: 123456'), false, 'Login não deve expor dica de senha padrão');
+    assert.equal(authJs.includes('data-quick-login'), false, 'auth.js não deve manter listener de acesso rápido');
+    assert.equal(authJs.includes('/aluno.html'), false, 'auth.js deve redirecionar aluno para /painel');
+
+    assert.ok(fs.existsSync(manifestPath), 'manifest.json deve existir');
+    assert.ok(fs.existsSync(swPath), 'sw.js deve existir');
+    assert.ok(fs.existsSync(appleIconPath) && hasValidImageSignature(appleIconPath), 'apple-touch-icon.png válido deve existir');
+    assert.ok(fs.existsSync(icon192Path) && hasValidImageSignature(icon192Path), 'icon-192.png válido deve existir');
+    assert.ok(fs.existsSync(icon512Path) && hasValidImageSignature(icon512Path), 'icon-512.png válido deve existir');
+
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    assert.equal(manifest.start_url, '/painel');
+    assert.equal(manifest.display, 'standalone');
+
+    assert.ok(painelHtml.includes('apple-mobile-web-app-capable'), 'painel-aluno.html deve suportar iOS standalone');
+    assert.ok(painelHtml.includes('rel="manifest" href="/manifest.json"'), 'painel-aluno.html deve referenciar manifest.json');
+    assert.ok(painelHtml.includes('viewport-fit=cover'), 'painel-aluno.html deve suportar safe-area viewport-fit=cover');
+});
+
 test.after(async () => {
     try {
         await pool.end();

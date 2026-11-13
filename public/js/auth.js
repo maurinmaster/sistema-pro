@@ -34,20 +34,6 @@ const AuthModule = {
                 }
             });
         }
-
-        // Botões de preenchimento rápido (Lei de Fitts / Redução de Esforço Cognitivo em Demo)
-        document.querySelectorAll('[data-quick-login]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const email = btn.getAttribute('data-quick-login');
-                const emailInput = document.getElementById('login-email');
-                const senhaInput = document.getElementById('login-senha');
-                if (emailInput) emailInput.value = email;
-                if (senhaInput) {
-                    senhaInput.value = '123456';
-                    senhaInput.focus();
-                }
-            });
-        });
     },
 
     async checkSession() {
@@ -62,7 +48,7 @@ const AuthModule = {
             const res = await API.get('/auth/me');
             this.currentUser = res.user;
             if (this.currentUser && this.currentUser.cargo === 'aluno') {
-                window.location.href = '/aluno.html';
+                window.location.href = '/painel';
                 return;
             }
             this.applyPermissions();
@@ -104,7 +90,7 @@ const AuthModule = {
 
             // Se o usuário autenticado for um Aluno, redireciona automaticamente para o Portal Mobile-First do Aluno
             if (this.currentUser && this.currentUser.cargo === 'aluno') {
-                window.location.href = '/aluno.html';
+                window.location.href = '/painel';
                 return;
             }
 

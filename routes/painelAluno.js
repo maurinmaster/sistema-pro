@@ -27,7 +27,7 @@ const CATALOGO_TITULOS = [
     { titulo: 'Lenda do Ringue', req_checkins: 50, descricao: 'Veterano consagrado da academia' }
 ];
 
-// Middleware opcional de autenticação: se tiver token válido decodifica, se estiver ausente ou expirado permite fallback/preview
+// Middleware opcional de autenticação: em produção exige token JWT válido; em dev/teste permite fallback/preview
 function optionalAuth(req, res, next) {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
@@ -38,6 +38,9 @@ function optionalAuth(req, res, next) {
         } catch {
             req.user = null;
         }
+    }
+    if (process.env.NODE_ENV === 'production' && !req.user) {
+        return res.status(401).json({ success: false, error: 'Autenticação obrigatória.' });
     }
     next();
 }
@@ -1814,7 +1817,7 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
         });
     } catch (err) {
         console.error('Erro ao gerar cobrança para fatura:', err);
-        res.status(500).json({ success: false, error: err.message || 'Erro ao comunicar com o serviço de cobrança.' });
+        res.status(500).json({ success: false, error: 'Erro interno ao comunicar com o serviço de cobrança.' });
     }
 });
 
@@ -1851,8 +1854,11 @@ router.post('/faturas/:id/verificar-asaas', optionalAuth, async (req, res) => {
             return res.status(400).json({ success: false, error: 'Nenhuma cobrança ativa gerada para esta fatura.' });
         }
 
-        // Se o frontend solicitar simulação de pagamento (ambiente sandbox / mock / teste)
+        // Se o frontend solicitar simulação de pagamento (apenas fora de produção e sem gateway real configurado)
         if (simular_confirmacao) {
+            if (process.env.NODE_ENV === 'production' || asaasService.isConfigured()) {
+                return res.status(403).json({ success: false, error: 'Simulação de pagamento indisponível em ambiente de produção.' });
+            }
             await pool.query(`
                 UPDATE faturas SET
                     status = 'pago',

@@ -872,7 +872,7 @@ router.post('/exames/:conviteId/aceitar', optionalAuth, async (req, res) => {
 
     } catch (err) {
         console.error('Erro ao aceitar convite de exame:', err);
-        res.status(500).json({ success: false, error: 'Erro ao processar aceite e cobrança: ' + err.message });
+        res.status(500).json({ success: false, error: 'Erro interno ao processar aceite e cobrança.' });
     }
 });
 
@@ -957,7 +957,7 @@ router.post('/exames/:eventoId/inscrever', optionalAuth, async (req, res) => {
 
     } catch (err) {
         console.error('Erro na inscrição do exame:', err);
-        res.status(500).json({ success: false, error: 'Erro ao processar inscrição: ' + err.message });
+        res.status(500).json({ success: false, error: 'Erro interno ao processar inscrição no exame.' });
     }
 });
 
@@ -1082,6 +1082,10 @@ router.post('/exames/:eventoId/recusar-evento', optionalAuth, async (req, res) =
  */
 router.post('/exames/:conviteId/simular-pagamento', optionalAuth, async (req, res) => {
     try {
+        if (process.env.NODE_ENV === 'production' || asaasService.isConfigured()) {
+            return res.status(403).json({ success: false, error: 'Recurso indisponível em ambiente de produção.' });
+        }
+
         const conviteId = parseInt(req.params.conviteId, 10);
         if (isNaN(conviteId)) {
             return res.status(400).json({ success: false, error: 'ID do convite inválido.' });
@@ -1250,6 +1254,11 @@ router.post('/exames/:conviteId/pagar-cartao', optionalAuth, async (req, res) =>
  */
 router.post('/webhook-asaas', async (req, res) => {
     try {
+        const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
+        if (expectedToken && req.headers['asaas-access-token'] !== expectedToken) {
+            return res.status(401).json({ success: false, error: 'Token de webhook inválido.' });
+        }
+
         const { event, payment } = req.body;
         console.log(`[Webhook Asaas] Evento recebido: ${event} para cobrança ${payment?.id}`);
 

@@ -16,6 +16,9 @@ const AuthApp = {
         this.bindDigitInputs('verify-digits-container', () => this.submitEmailVerification());
         this.bindDigitInputs('reset-digits-container');
         this.checkInitialRoute();
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
     },
 
     // =========================================================================

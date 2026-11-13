@@ -202,6 +202,11 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
 // POST /api/faturas/webhook-asaas - Webhook de recebimento de pagamentos do Asaas
 router.post('/webhook-asaas', async (req, res) => {
     try {
+        const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
+        if (expectedToken && req.headers['asaas-access-token'] !== expectedToken) {
+            return res.status(401).json({ success: false, error: 'Token de webhook inválido.' });
+        }
+
         const { event, payment } = req.body;
         console.log(`[Webhook Asaas Faturas] Evento recebido: ${event} para cobrança ${payment?.id}`);
 

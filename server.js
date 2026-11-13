@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 // Oculta assinatura da tecnologia do servidor
 app.disable('x-powered-by');
+app.set('trust proxy', 1);
 
 // Cabeçalhos de Segurança HTTP (equivalente ao Helmet)
 app.use((req, res, next) => {
@@ -18,12 +19,12 @@ app.use((req, res, next) => {
     res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
     res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://ui-avatars.com https://images.unsplash.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://ui-avatars.com https://images.unsplash.com; connect-src 'self'; manifest-src 'self'; worker-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     );
     next();
 });
 
-// Configuração de CORS (permite localhost, origens configuradas e rede local privada para testes mobile)
+// Configuração de CORS (permite localhost, origens configuradas e rede local privada apenas fora de produção)
 const allowedOrigins = (process.env.CORS_ORIGIN || `http://localhost:${PORT},http://127.0.0.1:${PORT}`)
     .split(',')
     .map(o => o.trim())
@@ -31,6 +32,7 @@ const allowedOrigins = (process.env.CORS_ORIGIN || `http://localhost:${PORT},htt
 
 const isLocalOrPrivateNetwork = (origin) => {
     if (!origin) return true;
+    if (process.env.NODE_ENV === 'production') return false;
     try {
         const url = new URL(origin);
         const host = url.hostname;

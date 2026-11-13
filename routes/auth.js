@@ -179,7 +179,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
                    a.nome_completo, a.telefone_whatsapp, a.genero, a.foto_perfil_url, a.status AS aluno_status
             FROM usuarios_alunos ua
             JOIN alunos a ON a.id = ua.aluno_id
-            WHERE ua.email = ? AND ua.status != 'inativo' AND a.status != 'inativo'
+            WHERE ua.email = ? AND ua.status != 'inativo' AND a.status != 'inativo' AND a.deleted_at IS NULL
         `, [normalizedEmail]);
 
         if (usuariosAlunos.length > 0) {
@@ -247,7 +247,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
         const [alunosLegacy] = await pool.query(`
             SELECT id, nome_completo, email, senha_app_hash, telefone_whatsapp, genero, foto_perfil_url, status
             FROM alunos
-            WHERE email = ? AND status != 'inativo'
+            WHERE email = ? AND status != 'inativo' AND deleted_at IS NULL
         `, [normalizedEmail]);
 
         if (alunosLegacy.length > 0 && alunosLegacy[0].senha_app_hash) {
@@ -322,7 +322,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 // ============================================================================
 // 2. POST /api/auth/upload-foto-perfil - Upload e verificação de foto da câmera / perfil
 // ============================================================================
-router.post(['/upload-foto-biometria', '/upload-foto-perfil'], (req, res) => {
+router.post(['/upload-foto-biometria', '/upload-foto-perfil'], cadastroRateLimiter, (req, res) => {
     uploadBiometria.single('foto')(req, res, (uploadErr) => {
         if (uploadErr) {
             return res.status(400).json({
@@ -549,7 +549,7 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
             aluno_id: alunoId,
             usuario_id: usuarioId,
             email: normalizedEmail,
-            codigo_verificacao_dev: codigoVerificacao // Disponibilizado para validação imediata em ambiente de desenvolvimento
+            ...(process.env.NODE_ENV !== 'production' ? { codigo_verificacao_dev: codigoVerificacao } : {})
         });
     } catch (err) {
         await conn.rollback();
@@ -686,7 +686,7 @@ router.post('/reenviar-codigo', emailVerificationLimiter, async (req, res) => {
         res.json({
             success: true,
             message: 'Novo código de verificação enviado para seu e-mail!',
-            codigo_verificacao_dev: novoCodigo
+            ...(process.env.NODE_ENV !== 'production' ? { codigo_verificacao_dev: novoCodigo } : {})
         });
     } catch (err) {
         console.error('Erro ao reenviar código:', err);
@@ -710,7 +710,7 @@ router.post('/esqueci-senha', createRateLimiter({ windowMs: 15 * 60 * 1000, max:
             SELECT ua.id, a.nome_completo 
             FROM usuarios_alunos ua
             JOIN alunos a ON a.id = ua.aluno_id
-            WHERE ua.email = ?
+            WHERE ua.email = ? AND a.deleted_at IS NULL
         `, [normalizedEmail]);
 
         // Responde de forma genérica para proteção contra enumeração de e-mails
@@ -742,7 +742,7 @@ router.post('/esqueci-senha', createRateLimiter({ windowMs: 15 * 60 * 1000, max:
         res.json({
             success: true,
             message: 'Código de recuperação gerado com sucesso! Confira seu e-mail.',
-            codigo_recuperacao_dev: codigoRecuperacao
+            ...(process.env.NODE_ENV !== 'production' ? { codigo_recuperacao_dev: codigoRecuperacao } : {})
         });
     } catch (err) {
         console.error('Erro no fluxo de esqueci-senha:', err);
@@ -827,7 +827,7 @@ router.get('/me', authenticateToken, async (req, res) => {
             const [alunos] = await pool.query(`
                 SELECT id, nome_completo AS nome, email, telefone_whatsapp AS telefone, genero, foto_perfil_url, status
                 FROM alunos
-                WHERE id = ? AND status != 'inativo'
+                WHERE id = ? AND status != 'inativo' AND deleted_at IS NULL
             `, [req.user.aluno_id || req.user.id]);
 
             if (alunos.length === 0) {

@@ -65,9 +65,57 @@ const PainelAlunoApp = {
     },
 
     init() {
-        this.authToken = localStorage.getItem('auth_token');
+        this.authToken = localStorage.getItem('auth_token') || localStorage.getItem('kaizen_token');
         this.bindEvents();
+        this.initPwaInstall();
         this.loadDashboardData();
+    },
+
+    initPwaInstall() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+
+        const btnInstall = document.getElementById('mobile-btn-install-app');
+        if (!btnInstall) return;
+
+        const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+        if (isStandalone) {
+            btnInstall.style.display = 'none';
+            return;
+        }
+
+        let deferredPrompt = null;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            btnInstall.style.display = 'inline-flex';
+        });
+
+        window.addEventListener('appinstalled', () => {
+            deferredPrompt = null;
+            btnInstall.style.display = 'none';
+        });
+
+        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+        if (isIos) {
+            btnInstall.style.display = 'inline-flex';
+        }
+
+        btnInstall.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                try {
+                    await deferredPrompt.userChoice;
+                } catch { /* ignore */ }
+                deferredPrompt = null;
+                btnInstall.style.display = 'none';
+            } else if (isIos) {
+                const modalIos = document.getElementById('modal-ios-install');
+                if (modalIos) modalIos.style.display = 'flex';
+            }
+        });
     },
 
     bindEvents() {
@@ -1898,16 +1946,23 @@ const PainelAlunoApp = {
 
         const avisos = this.alunoData.avisos_campanhas || [];
 
-        list.innerHTML = avisos.map(a => `
+        list.innerHTML = avisos.map(a => {
+            const tipoEsc = this.escapeHtml((a.tipo || 'aviso').toUpperCase());
+            const tagEsc = this.escapeHtml(a.tag_destaque || 'PRO COMBATE');
+            const tituloEsc = this.escapeHtml(a.titulo || '');
+            const descEsc = this.escapeHtml(a.descricao || '');
+            const dataEsc = a.data_evento ? this.escapeHtml(new Date(a.data_evento).toLocaleDateString('pt-BR')) : '';
+            return `
             <div style="background: #14171d; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${a.tipo.toUpperCase()} • ${a.tag_destaque || 'PRO COMBATE'}</span>
-                    ${a.data_evento ? `<span style="font-size: 11px; color: #94a3b8;">Data: ${new Date(a.data_evento).toLocaleDateString('pt-BR')}</span>` : ''}
+                    <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${tipoEsc} • ${tagEsc}</span>
+                    ${dataEsc ? `<span style="font-size: 11px; color: #94a3b8;">Data: ${dataEsc}</span>` : ''}
                 </div>
-                <h4 style="color: #ffffff; font-size: 15px; margin-bottom: 6px;">${a.titulo}</h4>
-                <p style="color: #cbd5e1; font-size: 13px; line-height: 1.45;">${a.descricao}</p>
+                <h4 style="color: #ffffff; font-size: 15px; margin-bottom: 6px;">${tituloEsc}</h4>
+                <p style="color: #cbd5e1; font-size: 13px; line-height: 1.45;">${descEsc}</p>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         modal.style.display = 'flex';
     },
@@ -2925,17 +2980,12 @@ const PainelAlunoApp = {
                         </div>
 
                         <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                            ${convite.asaas_invoice_url ? `
-                                <a href="${convite.asaas_invoice_url}" target="_blank" 
+                            ${this.sanitizeUrl(convite.asaas_invoice_url) ? `
+                                <a href="${this.sanitizeUrl(convite.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer"
                                    style="padding: 10px 16px; border-radius: 8px; background: #fff; border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
                                     <span>🔗 Abrir Fatura / Cartão</span>
                                 </a>
                             ` : ''}
-                            <button type="button" onclick="PainelAlunoApp.simularPagamentoExame(${convite.convite_id})"
-                                    style="padding: 10px 16px; border-radius: 8px; background: #16a34a; border: none; color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;"
-                                    title="Ambiente de Testes / Sandbox">
-                                <span>⚡ Confirmar Pagamento (Modo Teste)</span>
-                            </button>
                         </div>
                     </div>
 
@@ -3515,15 +3565,8 @@ const PainelAlunoApp = {
                             <span>Já paguei, verificar agora</span>
                         </button>
 
-                        ${fat.is_mock ? `
-                            <button type="button" onclick="PainelAlunoApp.simularPagamentoMensalidade(${fat.fatura_id})" 
-                                    style="width: 100%; padding: 10px 14px; border-radius: 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: #ffffff; font-weight: 800; font-size: 12.5px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);">
-                                <span>⚡ Confirmar Pagamento (Modo Teste)</span>
-                            </button>
-                        ` : ''}
-
-                        ${fat.asaas_invoice_url ? `
-                            <a href="${fat.asaas_invoice_url}" target="_blank" 
+                        ${this.sanitizeUrl(fat.asaas_invoice_url) ? `
+                            <a href="${this.sanitizeUrl(fat.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer"
                                style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: #cbd5e1; text-decoration: none; font-size: 12px; font-weight: 600;">
                                 <span>🔗 Pagar no Checkout Digital</span>
                             </a>

@@ -7,4 +7,6 @@ npm-debug.log*
 .DS_Store
 thumbs.db
 .agents/
+certs/*.pem
+certs/*.key
 

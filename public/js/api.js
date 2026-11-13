@@ -1,22 +1,26 @@
 // Cliente de API para comunicação com o backend Express com Autenticação JWT
 const API = {
     getToken() {
-        return localStorage.getItem('kaizen_token');
+        return localStorage.getItem('kaizen_token') || localStorage.getItem('auth_token');
     },
 
     setSession(token, user) {
         localStorage.setItem('kaizen_token', token);
         localStorage.setItem('kaizen_user', JSON.stringify(user));
+        localStorage.setItem('auth_token', token);
+        localStorage.setItem('user', JSON.stringify(user));
     },
 
     getUser() {
-        const user = localStorage.getItem('kaizen_user');
+        const user = localStorage.getItem('kaizen_user') || localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
     },
 
     clearSession() {
         localStorage.removeItem('kaizen_token');
         localStorage.removeItem('kaizen_user');
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('user');
     },
 
     getHeaders(extraHeaders = {}) {
