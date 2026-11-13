@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Serviço de E-mails Transacionais
+ * PRO COMBATE - Serviço de E-mails Transacionais
  * Envio de Códigos de Verificação e Redefinição de Senha via Nodemailer / SMTP
  */
 
@@ -51,7 +51,7 @@ class EmailService {
             return `"${displayName}" <${user}>`;
         }
 
-        return process.env.SMTP_FROM || `"KAIZEN CT PRO" <${user || 'contato@kaizenpro.com.br'}>`;
+        return process.env.SMTP_FROM || `"PRO COMBATE" <${user || 'procombatesanda@gmail.com'}>`;
     }
 
     /**
@@ -61,13 +61,13 @@ class EmailService {
         const from = this.getFromAddress();
         const nome = (nomeDestinatario || 'Atleta').split(' ')[0];
 
-        const subject = `${codigo} é o seu código de confirmação • KAIZEN CT PRO`;
+        const subject = `${codigo} é o seu código de confirmação • PRO COMBATE`;
 
         const textContent = `Olá, ${nome}!\n\n` +
-            `Seu código de verificação para ativar sua conta no KAIZEN CT PRO é:\n\n` +
+            `Seu código de verificação para ativar sua conta no PRO COMBATE é:\n\n` +
             `👉 ${codigo}\n\n` +
             `Este código expira em 24 horas. Se você não solicitou este cadastro, desconsidere este e-mail.\n\n` +
-            `Equipe KAIZEN CT PRO`;
+            `Equipe PRO COMBATE`;
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -89,7 +89,7 @@ class EmailService {
                                         🥋 Artes Marciais • CT PRO
                                     </div>
                                     <h1 style="margin: 14px 0 0 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
-                                        KAIZEN <span style="color: #38bdf8;">PORTAL</span>
+                                        PRO <span style="color: #38bdf8;">COMBATE</span>
                                     </h1>
                                 </td>
                             </tr>
@@ -101,7 +101,7 @@ class EmailService {
                                         Olá, ${nome}! 👋
                                     </h2>
                                     <p style="margin: 0 0 20px 0; color: #94a3b8; font-size: 14px; line-height: 1.5;">
-                                        Obrigado por se cadastrar no <strong>KAIZEN CT PRO</strong>. Para ativar seu acesso ao portal de treinos e graduações, utilize o código de segurança abaixo:
+                                        Obrigado por se cadastrar no <strong>PRO COMBATE</strong>. Para ativar seu acesso ao portal de treinos e graduações, utilize o código de segurança abaixo:
                                     </p>
 
                                     <!-- Caixa do Código -->
@@ -133,7 +133,7 @@ class EmailService {
                             <!-- Rodapé -->
                             <tr>
                                 <td style="padding: 16px 28px 24px 28px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.06); color: #64748b; font-size: 11px;">
-                                    © ${new Date().getFullYear()} KAIZEN CT PRO. Todos os direitos reservados.<br>
+                                    © ${new Date().getFullYear()} PRO COMBATE. Todos os direitos reservados.<br>
                                     Gestão Profissional de Artes Marciais & Atletas.
                                 </td>
                             </tr>
@@ -161,14 +161,14 @@ class EmailService {
         const from = this.getFromAddress();
         const nome = (nomeDestinatario || 'Atleta').split(' ')[0];
 
-        const subject = `${codigo} é o seu código para redefinir sua senha • KAIZEN CT PRO`;
+        const subject = `${codigo} é o seu código para redefinir sua senha • PRO COMBATE`;
 
         const textContent = `Olá, ${nome}!\n\n` +
-            `Recebemos uma solicitação para redefinir a senha da sua conta no KAIZEN CT PRO.\n\n` +
+            `Recebemos uma solicitação para redefinir a senha da sua conta no PRO COMBATE.\n\n` +
             `Seu código de recuperação é:\n\n` +
             `👉 ${codigo}\n\n` +
             `Este código expira em 1 hora. Se você não solicitou a troca de senha, sua conta continua segura e você pode ignorar este e-mail.\n\n` +
-            `Equipe KAIZEN CT PRO`;
+            `Equipe PRO COMBATE`;
 
         const htmlContent = `
         <!DOCTYPE html>
@@ -190,7 +190,7 @@ class EmailService {
                                         🔑 Redefinição de Senha
                                     </div>
                                     <h1 style="margin: 14px 0 0 0; color: #ffffff; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
-                                        KAIZEN <span style="color: #38bdf8;">PORTAL</span>
+                                        PRO <span style="color: #38bdf8;">COMBATE</span>
                                     </h1>
                                 </td>
                             </tr>
@@ -231,7 +231,7 @@ class EmailService {
                             <!-- Rodapé -->
                             <tr>
                                 <td style="padding: 16px 28px 24px 28px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.06); color: #64748b; font-size: 11px;">
-                                    © ${new Date().getFullYear()} KAIZEN CT PRO. Todos os direitos reservados.
+                                    © ${new Date().getFullYear()} PRO COMBATE. Todos os direitos reservados.
                                 </td>
                             </tr>
                         </table>

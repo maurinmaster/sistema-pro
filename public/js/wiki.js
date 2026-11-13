@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Módulo da Wiki de Golpes e Movimentos Técnicos
+ * PRO COMBATE - Módulo da Wiki de Golpes e Movimentos Técnicos
  * Gestão no Painel Administrativo: cadastro, passos com fotos, instruções e visualizador
  */
 

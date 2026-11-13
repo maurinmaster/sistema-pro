@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Serviço de Integração com Gateway de Pagamento Asaas (v3)
+ * PRO COMBATE - Serviço de Integração com Gateway de Pagamento Asaas (v3)
  * Criação de clientes, geração de cobranças (Pix/Boleto/Cartão) e consulta de pagamentos
  */
 
@@ -38,7 +38,7 @@ class AsaasService {
         return {
             'Content-Type': 'application/json',
             'access_token': this.apiKey,
-            'User-Agent': 'KaizenCTPro/1.0'
+            'User-Agent': 'ProCombate/1.0'
         };
     }
 
@@ -135,7 +135,7 @@ class AsaasService {
 
         if (!this.isConfigured()) {
             const mockPaymentId = `pay_mock_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-            const mockPixCopyPaste = `00020101021226840014br.gov.bcb.pix2562kaizen-ct-pro-exame-${mockPaymentId}520400005303986540${valNum.toFixed(2)}5802BR5916KAIZEN CT PRO6009SAO PAULO62070503***6304ABCD`;
+            const mockPixCopyPaste = `00020101021226840014br.gov.bcb.pix2562pro-combate-exame-${mockPaymentId}520400005303986540${valNum.toFixed(2)}5802BR5916PRO COMBATE6009SAO PAULO62070503***6304ABCD`;
             
             return {
                 id: mockPaymentId,
@@ -145,7 +145,7 @@ class AsaasService {
                 billingType: bType,
                 status: 'PENDING',
                 dueDate: dueDate,
-                description: descricao || 'Taxa de Exame de Graduação - Kaizen CT PRO',
+                description: descricao || 'Taxa de Exame de Graduação - PRO COMBATE',
                 invoiceUrl: `https://sandbox.asaas.com/i/${mockPaymentId}`,
                 bankSlipUrl: null,
                 pixQrCode: {
@@ -219,7 +219,7 @@ class AsaasService {
         if (!this.isConfigured() || String(paymentId).startsWith('pay_mock_')) {
             return {
                 encodedImage: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-                payload: `00020101021226840014br.gov.bcb.pix2562kaizen-ct-pro-pix-${paymentId}5204000053039865802BR5916KAIZEN CT PRO6009SAO PAULO62070503***6304ABCD`,
+                payload: `00020101021226840014br.gov.bcb.pix2562pro-combate-pix-${paymentId}5204000053039865802BR5916PRO COMBATE6009SAO PAULO62070503***6304ABCD`,
                 expirationDate: '2026-12-31 23:59:59',
                 is_mock: true
             };
@@ -353,7 +353,7 @@ class AsaasService {
                     billingType: 'CREDIT_CARD',
                     value: valNum,
                     dueDate: dueDate,
-                    description: descricao || 'Pagamento com Cartão de Crédito - Kaizen CT PRO',
+                    description: descricao || 'Pagamento com Cartão de Crédito - PRO COMBATE',
                     externalReference: externalReference || undefined,
                     creditCard: cardPayload,
                     creditCardHolderInfo: holderPayload,

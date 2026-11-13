@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Script do Painel do Aluno
+ * PRO COMBATE - Script do Painel do Aluno
  * Consumo de dados dinâmicos, cálculo de IMC, gráfico de atividade,
  * avatar do lutador, conquistas, avisos e campanhas
  */
@@ -1901,7 +1901,7 @@ const PainelAlunoApp = {
         list.innerHTML = avisos.map(a => `
             <div style="background: #14171d; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${a.tipo.toUpperCase()} • ${a.tag_destaque || 'KAIZEN'}</span>
+                    <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${a.tipo.toUpperCase()} • ${a.tag_destaque || 'PRO COMBATE'}</span>
                     ${a.data_evento ? `<span style="font-size: 11px; color: #94a3b8;">Data: ${new Date(a.data_evento).toLocaleDateString('pt-BR')}</span>` : ''}
                 </div>
                 <h4 style="color: #ffffff; font-size: 15px; margin-bottom: 6px;">${a.titulo}</h4>
@@ -2844,7 +2844,7 @@ const PainelAlunoApp = {
         document.getElementById('modal-exame-grad-pretendida').textContent = convite.graduacao_pretendida_nome;
         document.getElementById('modal-exame-data').textContent = dataFmt;
         document.getElementById('modal-exame-horario').textContent = convite.horario_inicio ? convite.horario_inicio.substring(0, 5) : '09:00';
-        document.getElementById('modal-exame-local').textContent = convite.local_evento || 'Dojo Central - Kaizen CT';
+        document.getElementById('modal-exame-local').textContent = convite.local_evento || 'Dojo Central - Pro Combate';
         document.getElementById('modal-exame-valor').textContent = `R$ ${valorFmt}`;
         document.getElementById('modal-exame-descricao').textContent = convite.evento_descricao || 'Comparecer com uniforme/kimono oficial e antecedência de 15 minutos.';
 
@@ -2880,7 +2880,7 @@ const PainelAlunoApp = {
         } else if (convite.convite_status === 'aceito' || (convite.asaas_payment_id && convite.convite_status !== 'recusado')) {
             // Já aceitou ou tem cobrança gerada no Asaas
             const pixQrCodeSrc = convite.asaas_pix_qrcode ? (convite.asaas_pix_qrcode.startsWith('data:') ? convite.asaas_pix_qrcode : `data:image/png;base64,${convite.asaas_pix_qrcode}`) : '';
-            const pixCopiaCola = convite.asaas_pix_copia_cola || '00020101021226840014br.gov.bcb.pix2562kaizen-ct-pro-graduacao';
+            const pixCopiaCola = convite.asaas_pix_copia_cola || '00020101021226840014br.gov.bcb.pix2562pro-combate-graduacao';
 
             cobrancaBox.innerHTML = `
                 <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 20px;">
@@ -3267,7 +3267,7 @@ const PainelAlunoApp = {
                 : exame.data_evento;
         }
         if (horaEl) horaEl.textContent = exame.horario_inicio ? exame.horario_inicio.substring(0, 5) : '10:00';
-        if (localEl) localEl.textContent = exame.local_evento || 'Tatame Central - CT Kaizen';
+        if (localEl) localEl.textContent = exame.local_evento || 'Tatame Central - Pro Combate';
 
         const valorTaxa = parseFloat(exame.convite_valor || exame.taxa_inscricao || 0);
         if (taxaEl) {

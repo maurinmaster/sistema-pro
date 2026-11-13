@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Rotas de Exames de Graduação e Integração Asaas
+ * PRO COMBATE - Rotas de Exames de Graduação e Integração Asaas
  * Gestão de eventos de graduação, identificação de alunos aptos,
  * envio de convites e processamento de pagamentos via Gateway Asaas
  */
@@ -199,7 +199,7 @@ router.post('/eventos', authenticateToken, authorizeRoles('admin', 'recepcao', '
         const cleanTitulo = titulo.trim().substring(0, 150);
         const cleanLocal = (local_evento && typeof local_evento === 'string') 
             ? local_evento.trim().substring(0, 200) 
-            : 'Dojo Central - Kaizen CT';
+            : 'Dojo Central - Pro Combate';
         const cleanHorario = (horario_inicio && /^\d{2}:\d{2}(:\d{2})?$/.test(horario_inicio)) 
             ? horario_inicio 
             : '09:00:00';

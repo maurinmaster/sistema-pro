@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Script da Página Dedicada da Wiki do Aluno
+ * PRO COMBATE - Script da Página Dedicada da Wiki do Aluno
  * Exibição explícita do currículo da faixa atual e graduações anteriores
  */
 

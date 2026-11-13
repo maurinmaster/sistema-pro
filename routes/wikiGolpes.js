@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Rotas da Wiki de Golpes e Movimentos Técnicos
+ * PRO COMBATE - Rotas da Wiki de Golpes e Movimentos Técnicos
  * Cadastro, listagem, passos com imagens e instruções detalhadas de execução
  */
 

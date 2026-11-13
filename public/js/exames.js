@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Módulo de Gestão de Exames de Graduação & Integração Asaas
+ * PRO COMBATE - Módulo de Gestão de Exames de Graduação & Integração Asaas
  * Criação de eventos de graduação, configuração de datas e valores,
  * identificação automática de alunos aptos e emissão de convites.
  */
@@ -238,7 +238,7 @@ const ExamesModule = {
             if (tituloEl) tituloEl.textContent = evento.titulo;
             if (dataEl) dataEl.textContent = `${this.formatarData(evento.data_evento)} às ${evento.horario_inicio ? evento.horario_inicio.substring(0, 5) : '09:00'}`;
             if (taxaEl) taxaEl.textContent = `R$ ${parseFloat(evento.taxa_inscricao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-            if (localEl) localEl.textContent = evento.local_evento || 'Tatame Principal - CT Kaizen';
+            if (localEl) localEl.textContent = evento.local_evento || 'Tatame Principal - Pro Combate';
             if (descEl) descEl.textContent = evento.descricao || 'Sem orientações complementares cadastradas.';
 
             this.renderListaConvites(evento.convites || []);
@@ -606,7 +606,7 @@ const ExamesModule = {
         document.getElementById('evento-data').value = dataStr;
         document.getElementById('evento-taxa').value = '150.00';
         document.getElementById('evento-horario').value = '09:00';
-        document.getElementById('evento-local').value = 'Dojo Central - Kaizen CT';
+        document.getElementById('evento-local').value = 'Dojo Central - Pro Combate';
 
         this.carregarModalidadesSelect('evento-modalidade');
         UI.openModal('modal-evento-exame');
@@ -622,7 +622,7 @@ const ExamesModule = {
         document.getElementById('evento-data').value = evento.data_evento ? evento.data_evento.split('T')[0] : '';
         document.getElementById('evento-horario').value = evento.horario_inicio ? evento.horario_inicio.substring(0, 5) : '09:00';
         document.getElementById('evento-data-limite').value = evento.data_limite_inscricao ? evento.data_limite_inscricao.split('T')[0] : '';
-        document.getElementById('evento-local').value = evento.local_evento || 'Dojo Central - Kaizen CT';
+        document.getElementById('evento-local').value = evento.local_evento || 'Dojo Central - Pro Combate';
         document.getElementById('evento-taxa').value = parseFloat(evento.taxa_inscricao || 150).toFixed(2);
         document.getElementById('evento-status').value = evento.status || 'aberto';
         document.getElementById('evento-descricao').value = evento.descricao || '';

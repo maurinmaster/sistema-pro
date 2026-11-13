@@ -1105,7 +1105,7 @@ router.post('/:id/resetar-senha', authenticateToken, authorizeRoles('admin', 'pr
         }
 
         const senhaHash = await bcrypt.hash(nova_senha, 10);
-        const alunoEmail = (aluno.email || `aluno${alunoId}@kaizen.local`).trim().toLowerCase();
+        const alunoEmail = (aluno.email || `aluno${alunoId}@procombate.local`).trim().toLowerCase();
 
         // Atualiza a senha no registro do aluno
         await pool.query('UPDATE alunos SET senha_app_hash = ? WHERE id = ?', [senhaHash, alunoId]);

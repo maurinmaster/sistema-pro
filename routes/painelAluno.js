@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Rotas do Painel do Aluno
+ * PRO COMBATE - Rotas do Painel do Aluno
  * Informações cadastrais, plano, frequência, graduações, avisos, campanhas e conquistas
  */
 
@@ -1767,7 +1767,7 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
             customerId: customer.id,
             valor: Number(fat.valor_original),
             vencimento: dueDate,
-            descricao: `Mensalidade ${fat.competencia} - ${fat.plano_nome} (Kaizen CT PRO)`,
+            descricao: `Mensalidade ${fat.competencia} - ${fat.plano_nome} (PRO COMBATE)`,
             externalReference: `fatura_${fat.id}_aluno_${fat.aluno_id}`,
             billingType: 'PIX'
         });
@@ -1969,7 +1969,7 @@ router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
             paymentId: fat.asaas_payment_id,
             customerId: customerId,
             valor: Number(fat.valor_original),
-            descricao: `Mensalidade ${fat.competencia || ''} - ${fat.plano_nome || 'Kaizen CT PRO'}`,
+            descricao: `Mensalidade ${fat.competencia || ''} - ${fat.plano_nome || 'PRO COMBATE'}`,
             externalReference: `fatura_${fat.id}_aluno_${fat.aluno_id}`,
             creditCard: {
                 holderName: nome_impresso,

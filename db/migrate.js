@@ -314,7 +314,7 @@ async function runMigrations() {
                 data_evento DATE NOT NULL,
                 horario_inicio TIME NULL DEFAULT '09:00:00',
                 data_limite_inscricao DATE NULL,
-                local_evento VARCHAR(200) NULL DEFAULT 'Dojo Central - Kaizen CT',
+                local_evento VARCHAR(200) NULL DEFAULT 'Dojo Central - Pro Combate',
                 taxa_inscricao DECIMAL(10,2) NOT NULL DEFAULT 150.00,
                 descricao TEXT NULL,
                 status ENUM('rascunho', 'aberto', 'em_andamento', 'concluido', 'cancelado') NOT NULL DEFAULT 'aberto',

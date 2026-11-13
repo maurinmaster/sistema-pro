@@ -1,5 +1,5 @@
 /**
- * KAIZEN CT PRO - Sistema Unificado de Autenticação
+ * PRO COMBATE - Sistema Unificado de Autenticação
  * Cadastro em Tela Única, Login e Recuperação de Senha
  */
 
@@ -93,7 +93,7 @@ const AuthApp = {
             window.location.hash = '#verificar';
         } else if (viewId === 'view-success') {
             pillsBar.style.display = 'none';
-            if (headerSub) headerSub.textContent = 'Bem-vindo(a) ao KAIZEN PRO!';
+            if (headerSub) headerSub.textContent = 'Bem-vindo(a) ao PRO COMBATE!';
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
