@@ -1,14 +1,21 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
-const rawHost = (process.env.DB_HOST || 'localhost').trim();
+const rawHost = (process.env.DB_HOST || '').trim();
+const isHostingerAccount = (
+    /^u\d+_/i.test(rawHost) ||
+    /^u\d+_/i.test(process.env.DB_USER || '') ||
+    /^u\d+_/i.test(process.env.DB_NAME || '')
+);
 const isInvalidHostName = (
     !rawHost ||
     rawHost === (process.env.DB_NAME || '').trim() ||
     rawHost === (process.env.DB_USER || '').trim() ||
     /^u\d+_/i.test(rawHost)
 );
-const dbHost = isInvalidHostName ? 'localhost' : rawHost;
+const dbHost = isInvalidHostName
+    ? (isHostingerAccount ? 'srv1081.hstgr.io' : 'localhost')
+    : rawHost;
 
 const pool = mysql.createPool({
     host: dbHost,
@@ -28,8 +35,8 @@ module.exports = pool;
 
 // Testa conexão inicial e garante schema sincronizado fora de ambiente de testes unitários
 if (process.env.NODE_ENV !== 'test') {
-    if (isInvalidHostName) {
-        console.warn("⚠️ [MySQL] DB_HOST continha identificador de banco/usuário; ajustado automaticamente para 'localhost'.");
+    if (isInvalidHostName && rawHost) {
+        console.warn(`⚠️ [MySQL] DB_HOST continha identificador de banco/usuário; ajustado automaticamente para '${dbHost}'.`);
     }
     (async () => {
         try {
@@ -39,7 +46,8 @@ if (process.env.NODE_ENV !== 'test') {
             const { runMigrations } = require('./migrate');
             await runMigrations();
         } catch (err) {
-            console.error('❌ [MySQL] Erro ao conectar ao banco de dados:', err.message);
+            const detail = err.message || err.code || (Array.isArray(err.errors) ? err.errors.map(e => e.message || e.code).join('; ') : String(err));
+            console.error('❌ [MySQL] Erro ao conectar ao banco de dados:', detail);
         }
     })();
 }
