@@ -25,10 +25,14 @@ app.use((req, res, next) => {
 });
 
 // Configuração de CORS (permite localhost, origens configuradas e rede local privada apenas fora de produção)
-const allowedOrigins = (process.env.CORS_ORIGIN || `http://localhost:${PORT},http://127.0.0.1:${PORT}`)
-    .split(',')
-    .map(o => o.trim())
-    .filter(Boolean);
+const allowedOrigins = Array.from(new Set([
+    ...(process.env.CORS_ORIGIN || `http://localhost:${PORT},http://127.0.0.1:${PORT}`)
+        .split(',')
+        .map(o => o.trim())
+        .filter(Boolean),
+    'https://gestor.procombate.com',
+    'https://www.gestor.procombate.com'
+]));
 
 const isLocalOrPrivateNetwork = (origin) => {
     if (!origin) return true;

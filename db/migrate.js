@@ -19,9 +19,244 @@ async function ensureColumn(tableName, columnName, columnDefinition) {
     }
 }
 
+async function ensureBaseTables() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS usuarios_equipe (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(120) NOT NULL,
+            email VARCHAR(120) NOT NULL UNIQUE,
+            senha_hash VARCHAR(255) NOT NULL,
+            cargo ENUM('admin', 'recepcao', 'professor') NOT NULL DEFAULT 'professor',
+            telefone VARCHAR(20) NULL,
+            ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS alunos (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            nome_completo VARCHAR(150) NOT NULL,
+            cpf VARCHAR(14) UNIQUE NULL,
+            data_nascimento DATE NOT NULL,
+            genero ENUM('M', 'F', 'Outro') NULL,
+            email VARCHAR(120) UNIQUE NULL,
+            senha_app_hash VARCHAR(255) NULL,
+            telefone_whatsapp VARCHAR(20) NOT NULL,
+            responsavel_nome VARCHAR(150) NULL,
+            responsavel_cpf VARCHAR(14) NULL,
+            responsavel_telefone VARCHAR(20) NULL,
+            contato_emergencia_nome VARCHAR(120) NULL,
+            contato_emergencia_fone VARCHAR(20) NULL,
+            tipo_sanguineo VARCHAR(5) NULL,
+            observacoes_medicas TEXT NULL,
+            foto_perfil_url VARCHAR(255) NULL,
+            face_foto_base_url VARCHAR(255) NULL,
+            face_descriptor JSON NULL,
+            consentimento_biometria_lgpd BOOLEAN NOT NULL DEFAULT FALSE,
+            status ENUM('ativo', 'inativo', 'trancado', 'bloqueado', 'experimental') NOT NULL DEFAULT 'ativo',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_alunos_status (status),
+            INDEX idx_alunos_nome (nome_completo)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS modalidades (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(60) NOT NULL,
+            descricao TEXT NULL,
+            sistema_graduacao VARCHAR(50) NULL,
+            ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS graduacoes_niveis (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            modalidade_id INT UNSIGNED NOT NULL,
+            nome VARCHAR(80) NOT NULL,
+            cor_hex_primaria VARCHAR(7) NULL,
+            cor_hex_secundaria VARCHAR(7) NULL,
+            graus INT UNSIGNED NOT NULL DEFAULT 0,
+            ordem_hierarquica INT UNSIGNED NOT NULL,
+            aulas_minimas_exigidas INT UNSIGNED NULL,
+            tempo_minimo_meses INT UNSIGNED NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_gradnivel_modalidade FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE CASCADE,
+            CONSTRAINT uq_modalidade_ordem UNIQUE (modalidade_id, ordem_hierarquica)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS aluno_graduacoes (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            aluno_id BIGINT UNSIGNED NOT NULL,
+            modalidade_id INT UNSIGNED NOT NULL,
+            graduacao_nivel_id INT UNSIGNED NOT NULL,
+            data_graduacao DATE NOT NULL,
+            professor_avaliador_id BIGINT UNSIGNED NULL,
+            certificado_url VARCHAR(255) NULL,
+            observacoes TEXT NULL,
+            atual BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            CONSTRAINT fk_agrad_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+            CONSTRAINT fk_agrad_modalidade FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_agrad_nivel FOREIGN KEY (graduacao_nivel_id) REFERENCES graduacoes_niveis(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_agrad_professor FOREIGN KEY (professor_avaliador_id) REFERENCES usuarios_equipe(id) ON DELETE SET NULL,
+            INDEX idx_aluno_grad_vigente (aluno_id, modalidade_id, atual)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS planos (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            nome VARCHAR(80) NOT NULL,
+            descricao TEXT NULL,
+            valor_mensal DECIMAL(10,2) NOT NULL,
+            periodicidade_meses INT UNSIGNED NOT NULL DEFAULT 1,
+            limite_checkins_semana TINYINT UNSIGNED NULL,
+            tolerancia_inadimplencia_dias TINYINT UNSIGNED NOT NULL DEFAULT 5,
+            ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS planos_modalidades (
+            plano_id INT UNSIGNED NOT NULL,
+            modalidade_id INT UNSIGNED NOT NULL,
+            PRIMARY KEY (plano_id, modalidade_id),
+            CONSTRAINT fk_pm_plano FOREIGN KEY (plano_id) REFERENCES planos(id) ON DELETE CASCADE,
+            CONSTRAINT fk_pm_modalidade FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS matriculas (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            aluno_id BIGINT UNSIGNED NOT NULL,
+            plano_id INT UNSIGNED NOT NULL,
+            data_inicio DATE NOT NULL,
+            data_fim DATE NULL,
+            dia_vencimento TINYINT UNSIGNED NOT NULL,
+            valor_acordado DECIMAL(10,2) NOT NULL,
+            desconto_motivo VARCHAR(100) NULL,
+            status ENUM('ativa', 'trancada', 'cancelada', 'vencida') NOT NULL DEFAULT 'ativa',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_mat_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_mat_plano FOREIGN KEY (plano_id) REFERENCES planos(id) ON DELETE RESTRICT,
+            INDEX idx_matricula_aluno_status (aluno_id, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS faturas (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            matricula_id BIGINT UNSIGNED NOT NULL,
+            aluno_id BIGINT UNSIGNED NOT NULL,
+            competencia CHAR(7) NOT NULL,
+            valor_original DECIMAL(10,2) NOT NULL,
+            valor_desconto DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            valor_juros_multa DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+            valor_pago DECIMAL(10,2) NULL,
+            data_vencimento DATE NOT NULL,
+            data_pagamento DATETIME NULL,
+            metodo_pagamento ENUM('pix', 'cartao_credito', 'cartao_debito', 'dinheiro', 'boleto') NULL,
+            status ENUM('pendente', 'pago', 'atrasado', 'cancelado', 'isento') NOT NULL DEFAULT 'pendente',
+            gateway_id_externo VARCHAR(120) NULL,
+            observacoes VARCHAR(255) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            CONSTRAINT fk_fat_matricula FOREIGN KEY (matricula_id) REFERENCES matriculas(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_fat_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE RESTRICT,
+            INDEX idx_faturas_vencimento_status (data_vencimento, status),
+            INDEX idx_faturas_aluno_status (aluno_id, status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS turmas (
+            id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            modalidade_id INT UNSIGNED NOT NULL,
+            professor_id BIGINT UNSIGNED NULL,
+            nome VARCHAR(80) NOT NULL,
+            dias_semana VARCHAR(30) NOT NULL,
+            horario_inicio TIME NOT NULL,
+            horario_fim TIME NOT NULL,
+            capacidade_maxima SMALLINT UNSIGNED NULL,
+            ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            CONSTRAINT fk_turma_modalidade FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE CASCADE,
+            CONSTRAINT fk_turma_professor FOREIGN KEY (professor_id) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS checkins (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            aluno_id BIGINT UNSIGNED NOT NULL,
+            modalidade_id INT UNSIGNED NOT NULL,
+            turma_id INT UNSIGNED NULL,
+            data_hora_checkin DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            metodo ENUM('app_aluno', 'manual_professor', 'reconhecimento_facial') NOT NULL,
+            foto_capturada_url VARCHAR(255) NULL,
+            face_match_score DECIMAL(5,2) NULL,
+            status ENUM('aprovado', 'pendente_confirmacao', 'bloqueado') NOT NULL DEFAULT 'aprovado',
+            motivo_bloqueio VARCHAR(120) NULL,
+            validado_por_usuario_id BIGINT UNSIGNED NULL,
+            CONSTRAINT fk_chk_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+            CONSTRAINT fk_chk_modalidade FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE RESTRICT,
+            CONSTRAINT fk_chk_turma FOREIGN KEY (turma_id) REFERENCES turmas(id) ON DELETE SET NULL,
+            CONSTRAINT fk_chk_validador FOREIGN KEY (validado_por_usuario_id) REFERENCES usuarios_equipe(id) ON DELETE SET NULL,
+            INDEX idx_checkins_aluno_data (aluno_id, data_hora_checkin),
+            INDEX idx_checkins_modalidade_data (modalidade_id, data_hora_checkin)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS avisos (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            autor_id BIGINT UNSIGNED NULL,
+            titulo VARCHAR(150) NOT NULL,
+            mensagem TEXT NOT NULL,
+            imagem_banner_url VARCHAR(255) NULL,
+            categoria ENUM('geral', 'exame_graduacao', 'seminario', 'feriado', 'financeiro') NOT NULL DEFAULT 'geral',
+            publico_alvo ENUM('todos', 'modalidade_especifica', 'turma_especifica', 'aluno_especifico') NOT NULL DEFAULT 'todos',
+            modalidade_alvo_id INT UNSIGNED NULL,
+            turma_alvo_id INT UNSIGNED NULL,
+            aluno_alvo_id BIGINT UNSIGNED NULL,
+            fixado_topo BOOLEAN NOT NULL DEFAULT FALSE,
+            data_publicacao DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            data_expiracao DATETIME NULL,
+            ativo BOOLEAN NOT NULL DEFAULT TRUE,
+            CONSTRAINT fk_aviso_autor FOREIGN KEY (autor_id) REFERENCES usuarios_equipe(id) ON DELETE SET NULL,
+            CONSTRAINT fk_aviso_modalidade FOREIGN KEY (modalidade_alvo_id) REFERENCES modalidades(id) ON DELETE CASCADE,
+            CONSTRAINT fk_aviso_turma FOREIGN KEY (turma_alvo_id) REFERENCES turmas(id) ON DELETE CASCADE,
+            CONSTRAINT fk_aviso_aluno FOREIGN KEY (aluno_alvo_id) REFERENCES alunos(id) ON DELETE CASCADE,
+            INDEX idx_avisos_ativos (ativo, data_expiracao, fixado_topo)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS avisos_lidos (
+            aviso_id BIGINT UNSIGNED NOT NULL,
+            aluno_id BIGINT UNSIGNED NOT NULL,
+            lido_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (aviso_id, aluno_id),
+            CONSTRAINT fk_alido_aviso FOREIGN KEY (aviso_id) REFERENCES avisos(id) ON DELETE CASCADE,
+            CONSTRAINT fk_alido_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+}
+
 async function runMigrations() {
     console.log('🔄 Verificando integridade e migrations do banco de dados...');
     try {
+        await ensureBaseTables();
         await ensureColumn('matriculas', 'motivo_cancelamento_trancamento', 'VARCHAR(255) NULL AFTER desconto_motivo');
         await ensureColumn('matriculas', 'data_retorno_prevista', 'DATE NULL AFTER motivo_cancelamento_trancamento');
 
@@ -414,6 +649,85 @@ async function runMigrations() {
                 }
             }
         }
+
+        // 21. Bootstrap idempotente de dados básicos caso o banco esteja recém-criado/vazio
+        const [eqCount] = await pool.query('SELECT COUNT(*) AS total FROM usuarios_equipe');
+        if (eqCount[0].total === 0) {
+            const bcrypt = require('bcryptjs');
+            const defaultHash = await bcrypt.hash('123456', 10);
+            await pool.query(`
+                INSERT IGNORE INTO usuarios_equipe (id, nome, email, senha_hash, cargo, telefone, ativo) VALUES
+                (1, 'Mestre Carlos Silva', 'carlos.mestre@ctpro.com.br', ?, 'admin', '(11) 98111-2233', 1),
+                (2, 'Profª. Camila Nakata (Kru)', 'camila.muay@ctpro.com.br', ?, 'professor', '(11) 98222-3344', 1),
+                (3, 'Prof. Marcos "Demolidor" Santos', 'marcos.muay@ctpro.com.br', ?, 'professor', '(11) 98333-4455', 1),
+                (4, 'Juliana Mendes', 'atendimento@ctpro.com.br', ?, 'recepcao', '(11) 98444-5566', 1),
+                (5, 'Administrador Pro Combate', 'procombatesanda@gmail.com', ?, 'admin', '(11) 99999-9999', 1)
+            `, [defaultHash, defaultHash, defaultHash, defaultHash, defaultHash]);
+            console.log('👤 [Bootstrap] Usuários iniciais da equipe criados.');
+        }
+
+        const [modCount] = await pool.query('SELECT COUNT(*) AS total FROM modalidades');
+        if (modCount[0].total === 0) {
+            await pool.query(`
+                INSERT IGNORE INTO modalidades (id, nome, descricao, sistema_graduacao, ativo) VALUES
+                (1, 'Muay Thai', 'A arte das oito armas: socos, cotoveladas, joelhadas e chutes potentes com clinch tailandês.', 'Prajied / Kruang', 1)
+            `);
+            await pool.query(`
+                INSERT IGNORE INTO graduacoes_niveis (id, modalidade_id, nome, cor_hex_primaria, cor_hex_secundaria, graus, ordem_hierarquica, aulas_minimas_exigidas, tempo_minimo_meses, requisitos_lista_json, total_itens, porcentagem_minima, prajied_icone_url) VALUES
+                (1, 1, 'Prajied Branco (Iniciante)', '#F8FAFC', '#94A3B8', 0, 1, 30, 3,
+                 '["Base e postura tradicional (Guarda e Teep)", "Jab e Direto com rotação do quadril", "Chute circular na coxa (Low Kick / Tei Kha)", "Defesa de bloqueio com a canela (Check)", "Clinch básico e joelhada frontal (Khao Tron)"]',
+                 5, 70.00, '/assets/prajied/prajied-1.png'),
+                (2, 1, 'Prajied Amarelo', '#EAB308', '#CA8A04', 0, 2, 50, 4,
+                 '["Combinações soco-chute fluidas", "Cotovelada frontal e diagonal (Sok Tad / Sok Ti)", "Saída de clinch e desequilíbrio lateral", "Chute circular nas costelas (Middle Kick / Tei Lam Tua)", "Sparring técnico controlado de 3 rounds"]',
+                 5, 75.00, '/assets/prajied/prajied-2.png'),
+                (3, 1, 'Prajied Amarelo e Branco', '#EAB308', '#FFFFFF', 0, 3, 60, 4,
+                 '["Contragolpe em cruzado e pêndulo", "Joelhada curvada (Khao Khong)", "Controle de nuca e giro no clinch", "Esquiva de chute e rasteira de apoio", "Resistência aeróbica em pao e saco pesado"]',
+                 5, 75.00, '/assets/prajied/prajied-3.png'),
+                (4, 1, 'Prajied Laranja', '#F97316', '#EA580C', 0, 4, 80, 6,
+                 '["Execução do Wai Kru Ram Muay", "Combinações de 4 golpes com cotovelada", "Defesa de clinch com contra-ataque de joelho", "Sparring com intensidade moderada a forte", "Condicionamento físico marcial (100 chutes contínuos)"]',
+                 5, 80.00, '/assets/prajied/prajied-4.png'),
+                (5, 1, 'Prajied Verde', '#22C55E', '#16A34A', 0, 5, 100, 6,
+                 '["Domínio completo das 8 armas em combate", "Clinch de competição com projeção e joelhadas", "Variações avançadas de cotovelo giratório (Sok Klab)", "Sparring avançado de 5 rounds", "Postura, respeito e liderança no dojo"]',
+                 5, 85.00, '/assets/prajied/prajied-5.png')
+            `);
+            await pool.query(`
+                INSERT IGNORE INTO planos (id, nome, descricao, valor_mensal, periodicidade_meses, limite_checkins_semana, tolerancia_inadimplencia_dias, ativo) VALUES
+                (1, 'Muay Thai Fitness & Fundamentos (2x/sem)', 'Ideal para condicionamento físico, queima calórica e defesa pessoal.', 159.90, 1, 2, 5, 1),
+                (2, 'Muay Thai Total Kombat (Livre)', 'Acesso ilimitado às aulas técnicas, sparring monitorado e clinch.', 199.90, 1, NULL, 5, 1),
+                (3, 'Muay Thai Black Belt Fighter (Anual)', 'Plano avançado anual com foco em graduação marcial contínua.', 139.90, 12, NULL, 5, 1)
+            `);
+            await pool.query(`
+                INSERT IGNORE INTO planos_modalidades (plano_id, modalidade_id) VALUES
+                (1, 1),
+                (2, 1),
+                (3, 1)
+            `);
+            await pool.query(`
+                INSERT IGNORE INTO turmas (id, modalidade_id, professor_id, nome, dias_semana, horario_inicio, horario_fim, capacidade_maxima, ativo) VALUES
+                (1, 1, 2, 'Muay Thai Matinal (Fundamentos)', 'SEG,QUA,SEX', '07:00:00', '08:15:00', 25, 1),
+                (2, 1, 3, 'Muay Thai Almoço Express', 'TER,QUI', '12:00:00', '13:15:00', 20, 1),
+                (3, 1, 2, 'Muay Thai Noturno Geral', 'SEG,TER,QUA,QUI', '19:00:00', '20:15:00', 30, 1),
+                (4, 1, 3, 'Muay Thai Sparring & Clinch Avançado', 'SEX', '19:30:00', '21:00:00', 20, 1)
+            `);
+            console.log('🥋 [Bootstrap] Modalidade, graduações, planos e turmas iniciais criados.');
+        }
+
+        const [conqCount] = await pool.query('SELECT COUNT(*) AS total FROM conquistas');
+        if (conqCount[0].total === 0) {
+            await pool.query(`
+                INSERT IGNORE INTO conquistas (id, codigo, titulo, descricao, icone, categoria, criterio_tipo, criterio_valor) VALUES
+                (1, 'primeiro_treino', 'Primeiro Passo', 'Completou seu primeiro treino oficial no tatame.', '🥋', 'Início', 'checkins', 1),
+                (2, 'guerreiro_10', 'Guerreiro Dedicado', 'Alcançou a marca de 10 treinos concluídos.', '🥊', 'Frequência', 'checkins', 10),
+                (3, 'disciplina_ouro', 'Disciplina de Ferro', 'Completou mais de 30 treinos com assiduidade exemplar.', '🔥', 'Frequência', 'checkins', 30),
+                (4, 'primeira_graduacao', 'Graduado de Honra', 'Aprovado na avaliação técnica e conquistou novo grau/faixa.', '🏆', 'Graduação', 'graduacao', 1),
+                (5, 'forma_marcial', 'Condicionamento Pro', 'Registrou medidas físicas e manteve IMC e peso na meta marcial.', '⚡', 'Saúde & Foco', 'medidas', 1),
+                (6, 'tatame_invicto', 'Constância Total', 'Manteve 100% de presença nas semanas do plano contratado.', '🥇', 'Constância', 'semanas', 4)
+            `);
+            console.log('🏆 [Bootstrap] Conquistas iniciais criadas.');
+        }
+
+        const { seedWiki } = require('./seed-wiki');
+        await seedWiki().catch(() => {});
 
         console.log('✅ Schema do banco de dados sincronizado com sucesso!');
     } catch (err) {
