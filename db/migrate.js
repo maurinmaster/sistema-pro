@@ -263,7 +263,6 @@ async function runMigrations() {
         // Colunas de especificações e requisitos em graduacoes_niveis
         await ensureColumn('graduacoes_niveis', 'requisitos_lista_json', 'JSON NULL');
         await ensureColumn('graduacoes_niveis', 'total_itens', 'INT UNSIGNED NOT NULL DEFAULT 0');
-        await ensureColumn('wiki_golpes', 'imagem_capa', 'VARCHAR(255) NULL AFTER descricao_geral');
         await ensureColumn('graduacoes_niveis', 'porcentagem_minima', 'DECIMAL(5,2) NOT NULL DEFAULT 70.00');
         await ensureColumn('graduacoes_niveis', 'prajied_icone_url', 'VARCHAR(255) NULL');
 
@@ -490,6 +489,8 @@ async function runMigrations() {
                 FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
+
+        await ensureColumn('wiki_golpes', 'imagem_capa', 'VARCHAR(255) NULL AFTER descricao_geral');
 
         await pool.query(`
             CREATE TABLE IF NOT EXISTS wiki_golpe_passos (
