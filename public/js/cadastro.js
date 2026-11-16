@@ -18,7 +18,7 @@ const AuthApp = {
         this.bindDigitInputs('reset-digits-container');
         this.checkInitialRoute();
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
+            navigator.serviceWorker.register('/sw.js?v=7').catch(() => {});
         }
     },
 

@@ -68,6 +68,17 @@ app.use(cors({
 app.use(express.json({ limit: '100kb' }));
 app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
+// Cache-Control no-cache para manifest, service worker, favicon e ícones PWA (evita cache antigo no CDN/navegador)
+app.use(['/manifest.json', '/sw.js', '/favicon.ico', '/assets/icons'], (req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    next();
+});
+
+app.get('/favicon.ico', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    res.sendFile(path.join(__dirname, 'public', 'assets', 'icons', 'icon-192.png'));
+});
+
 // Arquivos estáticos do frontend Vanilla
 app.use(express.static(path.join(__dirname, 'public')));
 

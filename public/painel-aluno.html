@@ -7,14 +7,15 @@
     <title>PRO COMBATE • Painel do Atleta</title>
     <meta name="description"
         content="Painel do aluno PRO COMBATE: acompanhe seu plano, frequência, graduações, medidas físicas, avisos e conquistas marciais.">
-    <meta name="theme-color" content="#090d16">
+    <meta name="theme-color" content="#040404">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="PRO COMBATE">
-    <link rel="manifest" href="/manifest.json">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png">
+    <link rel="manifest" href="/manifest.json?v=7">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/icons/apple-touch-icon.png?v=7">
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/icon-192.png?v=7">
+    <link rel="shortcut icon" href="/assets/icons/icon-192.png?v=7">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -43,14 +44,7 @@
         <aside class="sidebar-dock">
             <div class="dock-top">
                 <a href="/painel" class="dock-logo" title="PRO COMBATE">
-                    <div class="logo-circle">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 2L3 7v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-9-5z" />
-                            <path d="M12 8v8" />
-                            <path d="M8 12h8" />
-                        </svg>
-                    </div>
+                    <img src="/assets/icons/icon-192.png?v=7" alt="PRO COMBATE" style="width: 46px; height: 46px; border-radius: 12px; object-fit: cover; display: block; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);">
                 </a>
 
                 <nav class="dock-nav">
@@ -145,6 +139,7 @@
                 <!-- Banner de Instalação do Aplicativo (Desktop) -->
                 <div class="pwa-install-banner pwa-install-banner-desktop" id="pwa-install-banner" data-pwa-banner>
                     <div class="pwa-banner-info">
+                        <img src="/assets/icons/icon-192.png?v=7" alt="PRO COMBATE" style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; flex-shrink: 0;">
                         <span class="pwa-banner-badge">📲 APP</span>
                         <div>
                             <strong>Instale o Aplicativo PRO COMBATE</strong>
@@ -603,6 +598,7 @@
             <!-- Banner de Instalação do Aplicativo (Mobile Android / iPhone) -->
             <div class="pwa-install-banner pwa-install-banner-mobile" id="mobile-pwa-install-banner" data-pwa-banner>
                 <div class="pwa-banner-info">
+                    <img src="/assets/icons/icon-192.png?v=7" alt="PRO COMBATE" style="width: 38px; height: 38px; border-radius: 10px; object-fit: cover; flex-shrink: 0;">
                     <span class="pwa-banner-badge">📲 APP PRO COMBATE</span>
                     <div>
                         <strong>Instale como Aplicativo no celular</strong>
@@ -1845,7 +1841,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=4.4"></script>
+    <script src="/js/painel-aluno.js?v=4.5"></script>
 </body>
 
 </html>

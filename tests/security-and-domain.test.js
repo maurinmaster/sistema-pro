@@ -1751,7 +1751,7 @@ test('Deploy & PWA Mobile: Remoção de acessos rápidos de login, hardening e s
     assert.equal(manifest.display, 'standalone');
 
     assert.ok(painelHtml.includes('apple-mobile-web-app-capable'), 'painel-aluno.html deve suportar iOS standalone');
-    assert.ok(painelHtml.includes('rel="manifest" href="/manifest.json"'), 'painel-aluno.html deve referenciar manifest.json');
+    assert.ok(painelHtml.includes('rel="manifest" href="/manifest.json'), 'painel-aluno.html deve referenciar manifest.json');
     assert.ok(painelHtml.includes('viewport-fit=cover'), 'painel-aluno.html deve suportar safe-area viewport-fit=cover');
 });
 

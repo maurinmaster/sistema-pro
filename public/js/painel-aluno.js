@@ -73,7 +73,7 @@ const PainelAlunoApp = {
 
     initPwaInstall() {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
+            navigator.serviceWorker.register('/sw.js?v=7').catch(() => {});
         }
 
         const banners = Array.from(document.querySelectorAll('[data-pwa-banner]'));
