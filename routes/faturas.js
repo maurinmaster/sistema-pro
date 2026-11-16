@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/connection');
+const asaasService = require('../services/asaasService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 // GET /api/faturas - Listagem geral de faturas com filtros (admin e recepcao)
@@ -202,8 +203,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
 // POST /api/faturas/webhook-asaas - Webhook de recebimento de pagamentos do Asaas
 router.post('/webhook-asaas', async (req, res) => {
     try {
-        const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
-        if (expectedToken && req.headers['asaas-access-token'] !== expectedToken) {
+        if (!asaasService.isValidWebhookToken(req.headers['asaas-access-token'])) {
             return res.status(401).json({ success: false, error: 'Token de webhook inválido.' });
         }
 

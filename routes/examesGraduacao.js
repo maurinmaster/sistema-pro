@@ -1254,8 +1254,7 @@ router.post('/exames/:conviteId/pagar-cartao', optionalAuth, async (req, res) =>
  */
 router.post('/webhook-asaas', async (req, res) => {
     try {
-        const expectedToken = process.env.ASAAS_WEBHOOK_TOKEN;
-        if (expectedToken && req.headers['asaas-access-token'] !== expectedToken) {
+        if (!asaasService.isValidWebhookToken(req.headers['asaas-access-token'])) {
             return res.status(401).json({ success: false, error: 'Token de webhook inválido.' });
         }
 

@@ -3,6 +3,8 @@
  * Criação de clientes, geração de cobranças (Pix/Boleto/Cartão) e consulta de pagamentos
  */
 
+const crypto = require('crypto');
+
 class AsaasService {
     constructor() {
         this.apiKey = (process.env.ASAAS_API_KEY || '').trim();
@@ -11,6 +13,26 @@ class AsaasService {
             baseUrl = 'https://api.asaas.com/v3';
         }
         this.baseUrl = baseUrl;
+    }
+
+    /**
+     * Valida o token recebido no cabeçalho asaas-access-token contra um ou mais tokens
+     * configurados em ASAAS_WEBHOOK_TOKEN (separados por vírgula) usando comparação timing-safe.
+     */
+    isValidWebhookToken(receivedToken) {
+        const raw = (process.env.ASAAS_WEBHOOK_TOKEN || '').trim();
+        if (!raw) return true;
+        if (!receivedToken || typeof receivedToken !== 'string') return false;
+
+        const expectedTokens = raw.split(',').map(t => t.trim()).filter(Boolean);
+        if (expectedTokens.length === 0) return true;
+
+        const receivedBuf = Buffer.from(receivedToken.trim(), 'utf8');
+        return expectedTokens.some((expected) => {
+            const expectedBuf = Buffer.from(expected, 'utf8');
+            if (receivedBuf.length !== expectedBuf.length) return false;
+            return crypto.timingSafeEqual(receivedBuf, expectedBuf);
+        });
     }
 
     /**
