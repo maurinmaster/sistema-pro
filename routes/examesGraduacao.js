@@ -1117,7 +1117,7 @@ router.post('/exames/:conviteId/simular-pagamento', optionalAuth, async (req, re
  * POST /api/aluno/exames/:conviteId/pagar-cartao
  * Processa pagamento direto com cartão de crédito da taxa de exame de graduação
  */
-router.post('/exames/:conviteId/pagar-cartao', optionalAuth, async (req, res) => {
+router.post(['/exames/:conviteId/pagar-cartao', '/exames/convites/:conviteId/pagar-cartao'], optionalAuth, async (req, res) => {
     try {
         let alunoId = req.user ? (req.user.aluno_id || req.user.id) : null;
         if (!alunoId && req.body.aluno_id) alunoId = parseInt(req.body.aluno_id, 10);

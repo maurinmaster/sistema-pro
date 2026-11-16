@@ -50,6 +50,10 @@ const PainelAlunoApp = {
         return fallback;
     },
 
+    getAuthToken() {
+        return this.authToken || localStorage.getItem('auth_token') || localStorage.getItem('kaizen_token') || localStorage.getItem('token') || null;
+    },
+
     updateHairElement(element, cabeloFile, modeloFile) {
         if (!element) return;
         element.src = `/assets/avatar/${cabeloFile}`;
@@ -3660,7 +3664,7 @@ const PainelAlunoApp = {
         `;
 
         try {
-            const token = localStorage.getItem('token');
+            const token = this.getAuthToken();
             const res = await fetch(`/api/aluno/faturas/${targetFatId}/gerar-asaas`, {
                 method: 'POST',
                 headers: {
@@ -3872,7 +3876,7 @@ const PainelAlunoApp = {
 
     async verificarPagamentoMensalidade(faturaId, isSimular = false) {
         try {
-            const token = localStorage.getItem('token');
+            const token = this.getAuthToken();
             const res = await fetch(`/api/aluno/faturas/${faturaId}/verificar-asaas`, {
                 method: 'POST',
                 headers: {
@@ -3939,7 +3943,7 @@ const PainelAlunoApp = {
         }
 
         try {
-            const token = localStorage.getItem('token');
+            const token = this.getAuthToken();
             const urlParams = new URLSearchParams(window.location.search);
             const queryAlunoId = urlParams.get('aluno_id') || this.currentAlunoId || (this.alunoData?.aluno?.id);
             const qs = queryAlunoId ? `?aluno_id=${encodeURIComponent(queryAlunoId)}` : '';
@@ -4381,7 +4385,7 @@ const PainelAlunoApp = {
                 `;
             }
 
-            const token = localStorage.getItem('token');
+            const token = this.getAuthToken();
             const res = await fetch(`/api/aluno/faturas/${faturaId}/pagar-cartao`, {
                 method: 'POST',
                 headers: {
@@ -4490,7 +4494,7 @@ const PainelAlunoApp = {
                 `;
             }
 
-            const token = localStorage.getItem('token');
+            const token = this.getAuthToken();
             const res = await fetch(`/api/aluno/exames/convites/${conviteId}/pagar-cartao`, {
                 method: 'POST',
                 headers: {
