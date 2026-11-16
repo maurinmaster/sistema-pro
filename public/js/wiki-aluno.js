@@ -154,8 +154,7 @@ const WikiAlunoApp = {
         const avatarEl = document.getElementById('header-avatar-img');
         const descEl = document.getElementById('wiki-page-desc');
 
-        const fallbackName = this.alunoData.primeiro_nome || this.alunoData.nome_completo || 'Atleta';
-        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName)}&background=dc2626&color=fff`;
+        const fallbackAvatar = '/assets/avatar/homem-branco.png';
         const safeAvatar = this.sanitizeUrl(this.alunoData.foto_perfil_url);
 
         if (nameEl) nameEl.textContent = this.alunoData.primeiro_nome || this.alunoData.nome_completo;

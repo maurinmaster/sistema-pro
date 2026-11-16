@@ -633,6 +633,7 @@ const PainelAlunoApp = {
                 }
             }
         }
+        this.updateNoticesBadgeState();
 
         // 5. Card Residencial do Atleta: Cabeçalho, Avatar, Métricas Corporais & Status
         const cardAthleteName = document.getElementById('card-athlete-name');
@@ -892,6 +893,7 @@ const PainelAlunoApp = {
             };
             cardHeaderAvatar.src = safeFotoUrl || avatarFallbackSrc;
         }
+        this.applyProfilePhotoUrl(aluno.foto_perfil_url, aluno.nome_completo || aluno.primeiro_nome);
 
         if (avatarHair) {
             this.updateHairElement(avatarHair, cabeloFile, modeloFile);
@@ -1990,30 +1992,66 @@ const PainelAlunoApp = {
     // -------------------------------------------------------------------------
     // MODAL AVISOS E CAMPANHAS
     // -------------------------------------------------------------------------
+    getAvisosSignature(avisos) {
+        if (!Array.isArray(avisos) || avisos.length === 0) return '';
+        return avisos.map(a => `${a.id || ''}:${a.titulo || ''}:${a.data_evento || ''}`).join('|');
+    },
+
+    updateNoticesBadgeState() {
+        const avisos = this.alunoData?.avisos_campanhas || [];
+        const sig = this.getAvisosSignature(avisos);
+        let readSig = '';
+        try {
+            readSig = localStorage.getItem('pro_combate_avisos_lidos_sig') || '';
+        } catch {
+            readSig = '';
+        }
+        const hasUnread = avisos.length > 0 && sig !== readSig;
+        document.querySelectorAll('.mobile-badge-dot, .notification-badge').forEach(dot => {
+            dot.style.display = hasUnread ? 'block' : 'none';
+        });
+    },
+
     openAvisosModal() {
         const modal = document.getElementById('modal-avisos');
         const list = document.getElementById('avisos-full-list');
-        if (!modal || !list || !this.alunoData) return;
+        if (!modal || !list) return;
 
-        const avisos = this.alunoData.avisos_campanhas || [];
+        const avisos = this.alunoData?.avisos_campanhas || [];
 
-        list.innerHTML = avisos.map(a => {
-            const tipoEsc = this.escapeHtml((a.tipo || 'aviso').toUpperCase());
-            const tagEsc = this.escapeHtml(a.tag_destaque || 'PRO COMBATE');
-            const tituloEsc = this.escapeHtml(a.titulo || '');
-            const descEsc = this.escapeHtml(a.descricao || '');
-            const dataEsc = a.data_evento ? this.escapeHtml(new Date(a.data_evento).toLocaleDateString('pt-BR')) : '';
-            return `
-            <div style="background: #14171d; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                    <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${tipoEsc} • ${tagEsc}</span>
-                    ${dataEsc ? `<span style="font-size: 11px; color: #94a3b8;">Data: ${dataEsc}</span>` : ''}
+        // Apaga o ponto vermelho de notificação imediatamente e persiste leitura
+        document.querySelectorAll('.mobile-badge-dot, .notification-badge').forEach(dot => {
+            dot.style.display = 'none';
+        });
+        try {
+            localStorage.setItem('pro_combate_avisos_lidos_sig', this.getAvisosSignature(avisos));
+        } catch { /* ignore */ }
+
+        if (avisos.length === 0) {
+            list.innerHTML = `
+                <div style="text-align: center; padding: 28px 16px; color: #94a3b8; font-size: 13px;">
+                    Nenhum aviso ou comunicado recente no momento.
                 </div>
-                <h4 style="color: #ffffff; font-size: 15px; margin-bottom: 6px;">${tituloEsc}</h4>
-                <p style="color: #cbd5e1; font-size: 13px; line-height: 1.45;">${descEsc}</p>
-            </div>
-        `;
-        }).join('');
+            `;
+        } else {
+            list.innerHTML = avisos.map(a => {
+                const tipoEsc = this.escapeHtml((a.tipo || 'aviso').toUpperCase());
+                const tagEsc = this.escapeHtml(a.tag_destaque || 'PRO COMBATE');
+                const tituloEsc = this.escapeHtml(a.titulo || '');
+                const descEsc = this.escapeHtml(a.descricao || '');
+                const dataEsc = a.data_evento ? this.escapeHtml(new Date(a.data_evento).toLocaleDateString('pt-BR')) : '';
+                return `
+                <div style="background: #14171d; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${tipoEsc} • ${tagEsc}</span>
+                        ${dataEsc ? `<span style="font-size: 11px; color: #94a3b8;">Data: ${dataEsc}</span>` : ''}
+                    </div>
+                    <h4 style="color: #ffffff; font-size: 15px; margin-bottom: 6px;">${tituloEsc}</h4>
+                    <p style="color: #cbd5e1; font-size: 13px; line-height: 1.45;">${descEsc}</p>
+                </div>
+            `;
+            }).join('');
+        }
 
         modal.style.display = 'flex';
     },
@@ -2023,26 +2061,27 @@ const PainelAlunoApp = {
     // -------------------------------------------------------------------------
     applyProfilePhotoUrl(fotoUrl, fallbackName = 'Atleta') {
         const cleanUrl = this.sanitizeUrl(fotoUrl);
-        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName || 'Atleta')}&background=dc2626&color=fff`;
+        const defaultCardAvatar = document.getElementById('avatar-body-img')?.getAttribute('src') || '/assets/avatar/homem-branco.png';
+        const fallbackUrl = defaultCardAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName || 'Atleta')}&background=dc2626&color=fff`;
         const resolvedUrl = cleanUrl || fallbackUrl;
 
-        [
+        const pillImages = new Set([
             'header-avatar-img',
             'wiki-header-avatar-img',
             'faturas-header-avatar-img',
             'graduacoes-header-avatar-img'
-        ].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.onerror = () => {
-                    el.onerror = null;
-                    el.src = fallbackUrl;
-                };
-                el.src = resolvedUrl;
-            }
+        ].map(id => document.getElementById(id)).filter(Boolean));
+
+        document.querySelectorAll('.student-profile-pill img').forEach(img => pillImages.add(img));
+
+        pillImages.forEach(el => {
+            el.onerror = () => {
+                el.onerror = null;
+                el.src = fallbackUrl;
+            };
+            el.src = resolvedUrl;
         });
 
-        const defaultCardAvatar = document.getElementById('avatar-body-img')?.getAttribute('src') || '/assets/avatar/homem-branco.png';
         const cardHeaderAvatar = document.getElementById('card-header-avatar-img');
         if (cardHeaderAvatar) {
             cardHeaderAvatar.onerror = () => {
@@ -2054,12 +2093,11 @@ const PainelAlunoApp = {
 
         const modalContaAvatar = document.getElementById('modal-conta-avatar-img');
         if (modalContaAvatar) {
-            const modalFallback = defaultCardAvatar || fallbackUrl;
             modalContaAvatar.onerror = () => {
                 modalContaAvatar.onerror = null;
-                modalContaAvatar.src = modalFallback;
+                modalContaAvatar.src = fallbackUrl;
             };
-            modalContaAvatar.src = cleanUrl || modalFallback;
+            modalContaAvatar.src = cleanUrl || fallbackUrl;
         }
     },
 
