@@ -443,16 +443,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
 // POST /api/alunos - Criar novo aluno (admin e recepcao)
 router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
-    const conn = await pool.getConnection();
+    let conn = null;
     try {
-        await conn.beginTransaction();
-
         const {
             nome_completo,
             cpf,
             data_nascimento,
             genero,
             email,
+            senha,
             telefone_whatsapp,
             responsavel_nome,
             responsavel_cpf,
@@ -471,24 +470,58 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
         } = req.body;
 
         if (!nome_completo || !data_nascimento || !telefone_whatsapp) {
-            await conn.rollback();
             return res.status(400).json({
                 success: false,
                 error: 'Nome completo, data de nascimento e WhatsApp são campos obrigatórios.'
             });
         }
 
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            return res.status(400).json({
+                success: false,
+                error: 'O e-mail do aluno é obrigatório e deve ser válido.'
+            });
+        }
+
+        const rawSenha = typeof senha === 'string' ? senha.trim() : '';
+        if (rawSenha.length < 6 || rawSenha.length > 128) {
+            return res.status(400).json({
+                success: false,
+                error: 'A senha de acesso é obrigatória e deve ter entre 6 e 128 caracteres.'
+            });
+        }
+
         // Validação de Menor de Idade via regra de domínio centralizada
         const minorCheck = validateMinorGuardian(data_nascimento, responsavel_nome, responsavel_telefone);
         if (!minorCheck.valid) {
-            await conn.rollback();
             return res.status(400).json({
                 success: false,
                 error: minorCheck.error
             });
         }
 
-        const defaultPasswordHash = await bcrypt.hash('123456', 10);
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        // Verifica duplicidade de e-mail em alunos ativos ou usuários de alunos
+        const [dupEmail] = await conn.query(
+            'SELECT id FROM alunos WHERE email = ? AND deleted_at IS NULL LIMIT 1',
+            [normalizedEmail]
+        );
+        const [dupUsuario] = await conn.query(
+            'SELECT id FROM usuarios_alunos WHERE email = ? LIMIT 1',
+            [normalizedEmail]
+        );
+        if (dupEmail.length > 0 || dupUsuario.length > 0) {
+            await conn.rollback();
+            return res.status(409).json({
+                success: false,
+                error: 'Este e-mail já está cadastrado para outro aluno.'
+            });
+        }
+
+        const passwordHash = await bcrypt.hash(rawSenha, 10);
 
         // Insere aluno
         const [result] = await conn.query(`
@@ -503,8 +536,8 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
             cpf ? cpf.trim() : null,
             data_nascimento,
             genero || 'Outro',
-            email ? email.trim().toLowerCase() : null,
-            defaultPasswordHash,
+            normalizedEmail,
+            passwordHash,
             telefone_whatsapp.trim(),
             responsavel_nome ? responsavel_nome.trim() : null,
             responsavel_cpf ? responsavel_cpf.trim() : null,
@@ -518,6 +551,12 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
         ]);
 
         const alunoId = result.insertId;
+
+        // Cria credencial de acesso no Portal do Aluno para login imediato
+        await conn.query(`
+            INSERT INTO usuarios_alunos (aluno_id, email, senha_hash, status, email_verificado)
+            VALUES (?, ?, ?, 'ativo', 1)
+        `, [alunoId, normalizedEmail, passwordHash]);
 
         // Garante que todo atleta cadastrado já inicie com a primeira graduação
         let finalModalidadeId = modalidade_id ? parseInt(modalidade_id, 10) : null;
@@ -566,14 +605,14 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
         await conn.commit();
         res.status(201).json({ success: true, message: 'Aluno cadastrado com sucesso!', id: alunoId });
     } catch (err) {
-        await conn.rollback();
+        if (conn) await conn.rollback().catch(() => {});
         console.error('Erro ao cadastrar aluno:', err);
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(409).json({ success: false, error: 'CPF ou E-mail já cadastrado para outro aluno.' });
         }
         res.status(500).json({ success: false, error: 'Erro interno ao cadastrar aluno.' });
     } finally {
-        conn.release();
+        if (conn) conn.release();
     }
 });
 
@@ -587,6 +626,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             data_nascimento,
             genero,
             email,
+            senha,
             telefone_whatsapp,
             responsavel_nome,
             responsavel_cpf,
@@ -603,6 +643,14 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             return res.status(400).json({
                 success: false,
                 error: 'Nome completo, data de nascimento e WhatsApp são campos obrigatórios.'
+            });
+        }
+
+        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+        if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+            return res.status(400).json({
+                success: false,
+                error: 'O e-mail do aluno é obrigatório e deve ser válido.'
             });
         }
 
@@ -629,7 +677,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             cpf ? cpf.trim() : null,
             data_nascimento,
             genero || 'Outro',
-            email ? email.trim() : null,
+            normalizedEmail,
             telefone_whatsapp.trim(),
             responsavel_nome ? responsavel_nome.trim() : null,
             responsavel_cpf ? responsavel_cpf.trim() : null,
@@ -646,6 +694,8 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
         if (result.affectedRows === 0) {
             return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
         }
+
+        await pool.query('UPDATE usuarios_alunos SET email = ? WHERE aluno_id = ?', [normalizedEmail, id]);
 
         res.json({ success: true, message: 'Dados do aluno atualizados com sucesso!' });
     } catch (err) {

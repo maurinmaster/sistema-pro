@@ -1259,6 +1259,7 @@ test('Painel do Aluno: Aluno recém-cadastrado deve iniciar com a 1ª graduaçã
                 data_nascimento: '2000-01-01',
                 genero: 'M',
                 email: 'iniciante.auto@exemplo.com',
+                senha: 'Senha@123',
                 telefone_whatsapp: '11999998888',
                 status: 'ativo'
             })

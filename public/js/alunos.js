@@ -415,6 +415,14 @@ const AlunosModule = {
         document.getElementById('aluno-id').value = '';
         document.getElementById('aluno-foto').value = '';
 
+        const senhaGroup = document.getElementById('aluno-senha-group');
+        const senhaInput = document.getElementById('aluno-senha');
+        if (senhaGroup) senhaGroup.style.display = '';
+        if (senhaInput) {
+            senhaInput.value = '';
+            senhaInput.required = true;
+        }
+
         // Reseta preview de foto
         const imgPreview = document.getElementById('aluno-foto-preview');
         const placeholder = document.getElementById('aluno-foto-placeholder');
@@ -458,6 +466,14 @@ const AlunosModule = {
             document.getElementById('aluno-email').value = aluno.email || '';
             document.getElementById('aluno-status').value = aluno.status || 'ativo';
             document.getElementById('aluno-foto').value = aluno.foto_perfil_url || '';
+
+            const senhaGroup = document.getElementById('aluno-senha-group');
+            const senhaInput = document.getElementById('aluno-senha');
+            if (senhaGroup) senhaGroup.style.display = 'none';
+            if (senhaInput) {
+                senhaInput.value = '';
+                senhaInput.required = false;
+            }
 
             // Atualiza preview da foto
             const imgPreview = document.getElementById('aluno-foto-preview');
@@ -524,6 +540,20 @@ const AlunosModule = {
         e.preventDefault();
         const id = document.getElementById('aluno-id').value;
         const fotoUrl = document.getElementById('aluno-foto').value || null;
+        const email = (document.getElementById('aluno-email').value || '').trim();
+        const senha = (document.getElementById('aluno-senha')?.value || '').trim();
+
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            UI.showToast('Informe um e-mail válido para o acesso do aluno.', 'warning');
+            document.getElementById('aluno-email')?.focus();
+            return;
+        }
+
+        if (!id && senha.length < 6) {
+            UI.showToast('A senha de acesso é obrigatória e deve ter no mínimo 6 caracteres.', 'warning');
+            document.getElementById('aluno-senha')?.focus();
+            return;
+        }
 
         if (!id && !fotoUrl) {
             UI.showToast('A foto de perfil é obrigatória no momento do cadastro.', 'warning');
@@ -540,7 +570,8 @@ const AlunosModule = {
             data_nascimento: document.getElementById('aluno-nascimento').value,
             genero: document.getElementById('aluno-genero').value,
             telefone_whatsapp: document.getElementById('aluno-whatsapp').value,
-            email: document.getElementById('aluno-email').value || null,
+            email,
+            ...(id ? {} : { senha }),
             status: document.getElementById('aluno-status').value,
             foto_perfil_url: fotoUrl,
             responsavel_nome: document.getElementById('aluno-resp-nome').value || null,
