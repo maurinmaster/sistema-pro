@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pro-combate-v4';
+const CACHE_NAME = 'pro-combate-v5';
 const APP_SHELL_ASSETS = [
     '/painel',
     '/cadastro',
