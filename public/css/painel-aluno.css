@@ -5481,11 +5481,48 @@ body {
 /* ========================================================================== */
 .athlete-bio-showcase-row {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin: 16px 0 10px 0;
+    gap: 14px;
+    margin: 18px 0 12px 0;
     width: 100%;
+}
+
+.bio-summary-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    background: rgba(14, 19, 31, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
+    box-sizing: border-box;
+}
+
+.bio-summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 2px 4px;
+    min-width: 0;
+}
+
+.bio-summary-item + .bio-summary-item {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.athlete-eval-drawer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+    animation: fadeInOverdue 0.25s ease;
+}
+
+.stat-mini-sparkline {
+    display: none !important;
 }
 
 .athlete-flank-col {
@@ -5581,11 +5618,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
     padding: 8px 12px;
     background: rgba(15, 23, 42, 0.45);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 18px;
     gap: 8px;
 }
 

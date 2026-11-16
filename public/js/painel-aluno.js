@@ -346,6 +346,17 @@ const PainelAlunoApp = {
         });
 
         // Abertura da Área de Pagamento da Mensalidade (Asaas) e Faturas
+        document.getElementById('btn-toggle-eval-details')?.addEventListener('click', () => {
+            const drawer = document.getElementById('athlete-eval-drawer');
+            const btn = document.getElementById('btn-toggle-eval-details');
+            if (!drawer || !btn) return;
+            const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+            drawer.style.display = isHidden ? 'grid' : 'none';
+            btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            const span = btn.querySelector('span');
+            if (span) span.textContent = isHidden ? 'Ocultar Notas ↑' : 'Notas Técnicas ↓';
+        });
+
         document.getElementById('btn-open-plan-payment')?.addEventListener('click', () => {
             this.openModalPagamentoMensalidade();
         });

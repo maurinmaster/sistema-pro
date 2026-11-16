@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=4.8">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=4.9">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -699,64 +699,8 @@
                     </button>
                 </div>
 
-                <!-- Showcase do Avatar do Lutador Flanqueado por Métricas Corporais -->
+                <!-- Showcase Centralizado do Avatar + Resumo Biométrico Limpo -->
                 <div class="athlete-bio-showcase-row">
-                    <!-- Flanco Esquerdo: Peso, Altura, IMC -->
-                    <div class="athlete-flank-col flank-left">
-                        <!-- Peso -->
-                        <div class="bio-stat-card">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2">
-                                    <circle cx="12" cy="12" r="9" />
-                                    <circle cx="12" cy="12" r="3" />
-                                    <line x1="12" y1="3" x2="12" y2="5" />
-                                </svg>
-                                <span>Peso</span>
-                            </span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num" id="ruler-weight-val">--</span>
-                                <span class="stat-unit">kg</span>
-                            </div>
-                            <div class="chip-delta-sub" id="delta-peso-sub" style="display: none;">
-                                <span id="delta-peso-arrow">=</span>
-                                <span id="delta-peso-val">Sem variação</span>
-                            </div>
-                        </div>
-
-                        <!-- Altura -->
-                        <div class="bio-stat-card">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2">
-                                    <line x1="12" y1="2" x2="12" y2="22" />
-                                    <polyline points="8 6 12 2 16 6" />
-                                    <polyline points="8 18 12 22 16 18" />
-                                </svg>
-                                <span>Altura</span>
-                            </span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num" id="ruler-height-val">--</span>
-                                <span class="stat-unit">cm</span>
-                            </div>
-                            <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: --</span>
-                        </div>
-
-                        <!-- IMC -->
-                        <div class="bio-stat-card">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2">
-                                    <line x1="18" y1="20" x2="18" y2="10" />
-                                    <line x1="12" y1="20" x2="12" y2="4" />
-                                    <line x1="6" y1="20" x2="6" y2="14" />
-                                </svg>
-                                <span>IMC</span>
-                            </span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num" id="bmi-number">--</span>
-                            </div>
-                            <span class="chip-status-tag" id="bmi-status-pill">Não aferido</span>
-                        </div>
-                    </div>
-
                     <!-- Centro: Showcase do Avatar Multicamadas -->
                     <div class="fighter-avatar-showcase" id="fighter-avatar-container" title="Clique para personalizar seu avatar">
                         <div class="avatar-stage" id="avatar-main-stage">
@@ -782,90 +726,121 @@
                         </div>
                     </div>
 
-                    <!-- Flanco Direito: Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) -->
-                    <div class="athlete-flank-col flank-right technical-eval-flank">
-                        <!-- Clinch -->
-                        <div class="bio-stat-card eval-stat-card" title="Nota de Clinch">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3">
-                                    <path d="M18 20V10M12 20V4M6 20v-6" />
-                                </svg>
-                                <span>Clinch</span>
-                            </span>
+                    <!-- Faixa Limpa de Resumo Biométrico (Peso | Altura | IMC) -->
+                    <div class="bio-summary-strip">
+                        <div class="bio-summary-item">
+                            <span class="bio-stat-label">Peso</span>
                             <div class="bio-stat-val">
-                                <span class="stat-num eval-num" id="eval-score-clinch">--</span>
-                                <span class="stat-unit">/10</span>
+                                <span class="stat-num" id="ruler-weight-val">--</span>
+                                <span class="stat-unit">kg</span>
                             </div>
-                            <div class="eval-mini-bar-track">
-                                <div class="eval-mini-bar-fill bar-clinch" id="eval-bar-clinch" style="width: 0%;"></div>
+                            <div class="chip-delta-sub" id="delta-peso-sub" style="display: none;">
+                                <span id="delta-peso-arrow">=</span>
+                                <span id="delta-peso-val">Sem variação</span>
                             </div>
                         </div>
 
-                        <!-- Socos -->
-                        <div class="bio-stat-card eval-stat-card" title="Nota de Socos">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.3">
-                                    <circle cx="12" cy="12" r="9" />
-                                    <path d="M12 8v8M8 12h8" />
-                                </svg>
-                                <span>Socos</span>
-                            </span>
+                        <div class="bio-summary-item">
+                            <span class="bio-stat-label">Altura</span>
                             <div class="bio-stat-val">
-                                <span class="stat-num eval-num" id="eval-score-socos">--</span>
-                                <span class="stat-unit">/10</span>
+                                <span class="stat-num" id="ruler-height-val">--</span>
+                                <span class="stat-unit">cm</span>
                             </div>
-                            <div class="eval-mini-bar-track">
-                                <div class="eval-mini-bar-fill bar-socos" id="eval-bar-socos" style="width: 0%;"></div>
-                            </div>
+                            <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: --</span>
                         </div>
 
-                        <!-- Chutes -->
-                        <div class="bio-stat-card eval-stat-card" title="Nota de Chutes">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.3">
-                                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                                </svg>
-                                <span>Chutes</span>
-                            </span>
+                        <div class="bio-summary-item">
+                            <span class="bio-stat-label">IMC</span>
                             <div class="bio-stat-val">
-                                <span class="stat-num eval-num" id="eval-score-chutes">--</span>
-                                <span class="stat-unit">/10</span>
+                                <span class="stat-num" id="bmi-number">--</span>
                             </div>
-                            <div class="eval-mini-bar-track">
-                                <div class="eval-mini-bar-fill bar-chutes" id="eval-bar-chutes" style="width: 0%;"></div>
-                            </div>
-                        </div>
-
-                        <!-- Postura -->
-                        <div class="bio-stat-card eval-stat-card" title="Nota de Postura">
-                            <span class="bio-stat-label">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.3">
-                                    <circle cx="12" cy="7" r="4" />
-                                    <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
-                                </svg>
-                                <span>Postura</span>
-                            </span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num eval-num" id="eval-score-postura">--</span>
-                                <span class="stat-unit">/10</span>
-                            </div>
-                            <div class="eval-mini-bar-track">
-                                <div class="eval-mini-bar-fill bar-postura" id="eval-bar-postura" style="width: 0%;"></div>
-                            </div>
+                            <span class="chip-status-tag" id="bmi-status-pill">Não aferido</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Barra Inferior de Ações e Última Aferição das Medidas -->
+                <!-- Barra Inferior de Ações e Toggle de Notas Técnicas -->
                 <div class="athlete-bio-actions-bar">
                     <span class="metrics-head-date" id="measurements-last-check">Última checagem: ontem</span>
                     <div class="meas-quick-actions">
+                        <button type="button" class="btn-meas-action" id="btn-toggle-eval-details" aria-expanded="false" title="Ver Notas Técnicas do Professor">
+                            <span>Notas Técnicas ↓</span>
+                        </button>
                         <button type="button" class="btn-meas-action" id="btn-modal-medidas" title="Lançar Nova Medição">
                             <span>+ Medir</span>
                         </button>
                         <button type="button" class="btn-meas-action btn-meas-accent" id="btn-open-evolution" title="Histórico e Comparativo de Evolução">
                             <span>Evolução</span>
                         </button>
+                    </div>
+                </div>
+
+                <!-- Painel Recolhível de Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) -->
+                <div class="athlete-eval-drawer" id="athlete-eval-drawer" style="display: none;">
+                    <div class="bio-stat-card eval-stat-card" title="Nota de Clinch">
+                        <span class="bio-stat-label">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3">
+                                <path d="M18 20V10M12 20V4M6 20v-6" />
+                            </svg>
+                            <span>Clinch</span>
+                        </span>
+                        <div class="bio-stat-val">
+                            <span class="stat-num eval-num" id="eval-score-clinch">--</span>
+                            <span class="stat-unit">/10</span>
+                        </div>
+                        <div class="eval-mini-bar-track">
+                            <div class="eval-mini-bar-fill bar-clinch" id="eval-bar-clinch" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="bio-stat-card eval-stat-card" title="Nota de Socos">
+                        <span class="bio-stat-label">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.3">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 8v8M8 12h8" />
+                            </svg>
+                            <span>Socos</span>
+                        </span>
+                        <div class="bio-stat-val">
+                            <span class="stat-num eval-num" id="eval-score-socos">--</span>
+                            <span class="stat-unit">/10</span>
+                        </div>
+                        <div class="eval-mini-bar-track">
+                            <div class="eval-mini-bar-fill bar-socos" id="eval-bar-socos" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="bio-stat-card eval-stat-card" title="Nota de Chutes">
+                        <span class="bio-stat-label">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.3">
+                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                            </svg>
+                            <span>Chutes</span>
+                        </span>
+                        <div class="bio-stat-val">
+                            <span class="stat-num eval-num" id="eval-score-chutes">--</span>
+                            <span class="stat-unit">/10</span>
+                        </div>
+                        <div class="eval-mini-bar-track">
+                            <div class="eval-mini-bar-fill bar-chutes" id="eval-bar-chutes" style="width: 0%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="bio-stat-card eval-stat-card" title="Nota de Postura">
+                        <span class="bio-stat-label">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.3">
+                                <circle cx="12" cy="7" r="4" />
+                                <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
+                            </svg>
+                            <span>Postura</span>
+                        </span>
+                        <div class="bio-stat-val">
+                            <span class="stat-num eval-num" id="eval-score-postura">--</span>
+                            <span class="stat-unit">/10</span>
+                        </div>
+                        <div class="eval-mini-bar-track">
+                            <div class="eval-mini-bar-fill bar-postura" id="eval-bar-postura" style="width: 0%;"></div>
+                        </div>
                     </div>
                 </div>
 
@@ -1841,7 +1816,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=4.8"></script>
+    <script src="/js/painel-aluno.js?v=4.9"></script>
 </body>
 
 </html>
