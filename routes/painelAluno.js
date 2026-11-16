@@ -13,7 +13,19 @@ const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
-const { persistUploadedFile, removeUploadedFile } = require('../services/uploadStorage');
+const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
+
+/**
+ * Garante que foto_perfil_url local existente seja restaurada ou anulada se órfã de deploy antigo
+ */
+async function sanitizeAlunoPhotoUrl(aluno) {
+    if (aluno && aluno.foto_perfil_url && typeof aluno.foto_perfil_url === 'string' && aluno.foto_perfil_url.startsWith('/uploads/alunos/')) {
+        const resolvedFoto = await resolveOrRestoreUpload(aluno.foto_perfil_url);
+        if (!resolvedFoto) {
+            aluno.foto_perfil_url = null;
+        }
+    }
+}
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -211,6 +223,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
         }
 
         const aluno = alunos[0];
+        await sanitizeAlunoPhotoUrl(aluno);
 
         // Cálculo de Idade
         let idade = null;
@@ -1093,6 +1106,7 @@ router.get('/curriculo', optionalAuth, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Aluno não encontrado ou inativo.' });
         }
         const aluno = alunos[0];
+        await sanitizeAlunoPhotoUrl(aluno);
 
         // Graduação atual do aluno
         const [graduacoes] = await pool.query(`

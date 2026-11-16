@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=2.9">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=4.6">
     <style>
         /* =========================================================================
            WIKI MARCIAL - DESIGN BLACK (MODERNO, INTUITIVO & ULTRA-RESPONSIVO)
@@ -99,14 +99,18 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(22, 31, 46, 0.85);
+            background: #0f172a;
             backdrop-filter: blur(10px);
             padding: 5px 12px 5px 6px;
             border-radius: 9999px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #f1f5f9;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            color: #ffffff;
             font-size: 13px;
             font-weight: 700;
+        }
+
+        .student-profile-pill span {
+            color: #ffffff;
         }
 
         .student-profile-pill img {
@@ -217,9 +221,9 @@
             gap: 8px;
             padding: 8px 14px;
             border-radius: 9999px;
-            background: #141824;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            color: #94a3b8;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #f8fafc;
             font-size: 12px;
             font-weight: 700;
             cursor: pointer;
@@ -229,33 +233,33 @@
         }
 
         .belt-tab-btn:hover {
-            background: #1e2536;
+            background: #334155;
             color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.35);
         }
 
         .belt-tab-btn.active {
             color: #ffffff;
             border-color: #ef4444;
-            background: #ef4444;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
             box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
         }
 
         .belt-tab-btn.belt-tab-current {
-            border-color: rgba(245, 158, 11, 0.45);
-            background: rgba(245, 158, 11, 0.1);
-            color: #fbbf24;
+            border-color: rgba(245, 158, 11, 0.55);
+            background: rgba(245, 158, 11, 0.18);
+            color: #fde68a;
         }
 
         .belt-tab-btn.belt-tab-current:hover {
-            background: rgba(245, 158, 11, 0.2);
+            background: rgba(245, 158, 11, 0.28);
             color: #ffffff;
         }
 
         .belt-tab-btn.belt-tab-current.active {
-            border-color: #f59e0b;
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            color: #080C14;
+            border-color: #fbbf24;
+            background: linear-gradient(135deg, #d97706, #b45309);
+            color: #ffffff;
             font-weight: 800;
             box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
         }
@@ -266,27 +270,28 @@
             font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.3px;
+            color: #ffffff;
         }
 
         .belt-badge-current {
-            background: rgba(245, 158, 11, 0.25);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.4);
+            background: rgba(0, 0, 0, 0.38);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.22);
         }
 
         .belt-tab-btn.active .belt-badge-current {
-            background: rgba(0, 0, 0, 0.3);
-            color: #080C14;
-            border-color: transparent;
+            background: rgba(0, 0, 0, 0.38);
+            color: #ffffff;
+            border-color: rgba(255, 255, 255, 0.28);
         }
 
         .belt-badge-past {
-            background: rgba(255, 255, 255, 0.08);
-            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
         }
 
         .belt-tab-btn.active .belt-badge-past {
-            background: rgba(0, 0, 0, 0.25);
+            background: rgba(0, 0, 0, 0.32);
             color: #ffffff;
         }
 
@@ -1055,7 +1060,7 @@
     </div>
 
     <!-- Script da Página Dedicada da Wiki -->
-    <script src="/js/wiki-aluno.js?v=2.0"></script>
+    <script src="/js/wiki-aluno.js?v=3.0"></script>
 </body>
 
 </html>

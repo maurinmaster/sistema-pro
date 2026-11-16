@@ -154,8 +154,18 @@ const WikiAlunoApp = {
         const avatarEl = document.getElementById('header-avatar-img');
         const descEl = document.getElementById('wiki-page-desc');
 
+        const fallbackName = this.alunoData.primeiro_nome || this.alunoData.nome_completo || 'Atleta';
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName)}&background=dc2626&color=fff`;
+        const safeAvatar = this.sanitizeUrl(this.alunoData.foto_perfil_url);
+
         if (nameEl) nameEl.textContent = this.alunoData.primeiro_nome || this.alunoData.nome_completo;
-        if (avatarEl && this.alunoData.foto_perfil_url) avatarEl.src = this.alunoData.foto_perfil_url;
+        if (avatarEl) {
+            avatarEl.onerror = () => {
+                avatarEl.onerror = null;
+                avatarEl.src = fallbackAvatar;
+            };
+            avatarEl.src = safeAvatar || fallbackAvatar;
+        }
 
         if (descEl && this.faixaAtual) {
             descEl.innerHTML = `Currículo oficial de <strong>${this.escapeHtml(this.faixaAtual.nivel_nome)}</strong> (${this.escapeHtml(this.faixaAtual.modalidade_nome || 'Artes Marciais')}) e histórico de graduações anteriores.`;

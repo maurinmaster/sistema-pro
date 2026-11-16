@@ -884,11 +884,13 @@ const PainelAlunoApp = {
         }
 
         if (cardHeaderAvatar) {
-            if (aluno.foto_perfil_url) {
-                cardHeaderAvatar.src = aluno.foto_perfil_url;
-            } else {
-                cardHeaderAvatar.src = `/assets/avatar/${modeloFile}`;
-            }
+            const avatarFallbackSrc = `/assets/avatar/${modeloFile}`;
+            const safeFotoUrl = this.sanitizeUrl(aluno.foto_perfil_url);
+            cardHeaderAvatar.onerror = () => {
+                cardHeaderAvatar.onerror = null;
+                cardHeaderAvatar.src = avatarFallbackSrc;
+            };
+            cardHeaderAvatar.src = safeFotoUrl || avatarFallbackSrc;
         }
 
         if (avatarHair) {
@@ -2031,22 +2033,33 @@ const PainelAlunoApp = {
             'graduacoes-header-avatar-img'
         ].forEach(id => {
             const el = document.getElementById(id);
-            if (el) el.src = resolvedUrl;
+            if (el) {
+                el.onerror = () => {
+                    el.onerror = null;
+                    el.src = fallbackUrl;
+                };
+                el.src = resolvedUrl;
+            }
         });
 
+        const defaultCardAvatar = document.getElementById('avatar-body-img')?.getAttribute('src') || '/assets/avatar/homem-branco.png';
         const cardHeaderAvatar = document.getElementById('card-header-avatar-img');
-        if (cardHeaderAvatar && cleanUrl) {
-            cardHeaderAvatar.src = cleanUrl;
+        if (cardHeaderAvatar) {
+            cardHeaderAvatar.onerror = () => {
+                cardHeaderAvatar.onerror = null;
+                cardHeaderAvatar.src = defaultCardAvatar;
+            };
+            cardHeaderAvatar.src = cleanUrl || defaultCardAvatar;
         }
 
         const modalContaAvatar = document.getElementById('modal-conta-avatar-img');
         if (modalContaAvatar) {
-            if (cleanUrl) {
-                modalContaAvatar.src = cleanUrl;
-            } else {
-                const avatarBase = document.getElementById('avatar-body-img')?.getAttribute('src');
-                modalContaAvatar.src = avatarBase || fallbackUrl;
-            }
+            const modalFallback = defaultCardAvatar || fallbackUrl;
+            modalContaAvatar.onerror = () => {
+                modalContaAvatar.onerror = null;
+                modalContaAvatar.src = modalFallback;
+            };
+            modalContaAvatar.src = cleanUrl || modalFallback;
         }
     },
 
@@ -2484,9 +2497,8 @@ const PainelAlunoApp = {
     renderWikiSpaView() {
         const aluno = this.alunoData?.aluno;
         if (aluno) {
-            const wikiAvatar = document.getElementById('wiki-header-avatar-img');
             const wikiName = document.getElementById('wiki-header-student-name');
-            if (wikiAvatar && aluno.foto_perfil_url) wikiAvatar.src = aluno.foto_perfil_url;
+            this.applyProfilePhotoUrl(aluno.foto_perfil_url, aluno.nome_completo || aluno.primeiro_nome);
             if (wikiName && aluno.primeiro_nome) wikiName.textContent = aluno.primeiro_nome;
         }
 
@@ -3935,9 +3947,8 @@ const PainelAlunoApp = {
     renderFaturasView() {
         const aluno = this.alunoData?.aluno;
         if (aluno) {
-            const avatarEl = document.getElementById('faturas-header-avatar-img');
             const nameEl = document.getElementById('faturas-header-student-name');
-            if (avatarEl && aluno.foto_perfil_url) avatarEl.src = aluno.foto_perfil_url;
+            this.applyProfilePhotoUrl(aluno.foto_perfil_url, aluno.nome_completo || aluno.primeiro_nome);
             if (nameEl && (aluno.primeiro_nome || aluno.nome_completo)) {
                 nameEl.textContent = aluno.primeiro_nome || aluno.nome_completo;
             }
