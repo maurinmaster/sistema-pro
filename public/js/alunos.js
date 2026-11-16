@@ -311,9 +311,16 @@ const AlunosModule = {
                 const safeAvatar = UI.sanitizeUrl(a.foto_perfil_url, fallbackAvatar);
                 const isMenor = a.idade !== null && a.idade < 18;
                 const menorBadge = isMenor ? `<span class="minor-tag">Menor (${Number(a.idade)} anos)</span>` : '';
-                const atrasoIndicator = a.faturas_atrasadas > 0 
-                    ? `<span title="Possui mensalidade atrasada" style="color: #ef4444; font-weight: bold; cursor: help;">⚠️ Atrasado</span>` 
-                    : `<span style="color: #10b981;">Em dia</span>`;
+                let financeiroIndicator;
+                if (Number(a.faturas_atrasadas) > 0) {
+                    financeiroIndicator = `<span title="Possui mensalidade atrasada" style="color: #ef4444; font-weight: bold; cursor: help;">⚠️ Atrasado</span>`;
+                } else if (Number(a.faturas_pendentes) > 0) {
+                    financeiroIndicator = `<span title="Aguardando pagamento da mensalidade" style="color: #f59e0b; font-weight: 600; cursor: help;">⏳ Pendente</span>`;
+                } else if (!a.plano_nome && a.matricula_status !== 'ativa') {
+                    financeiroIndicator = `<span title="Aluno sem plano ativo contratado" style="color: #94a3b8;">Sem contrato</span>`;
+                } else {
+                    financeiroIndicator = `<span style="color: #10b981;">Em dia</span>`;
+                }
                 const encodedNome = encodeURIComponent(a.nome_completo || '').replace(/'/g, '%27');
 
                 return `
@@ -346,7 +353,7 @@ const AlunosModule = {
                         </td>
                         <td>
                             <div style="font-weight: 600;">${UI.escapeHtml(a.plano_nome || 'Sem plano')}</div>
-                            <div style="font-size: 11px;">${atrasoIndicator}</div>
+                            <div style="font-size: 11px;">${financeiroIndicator}</div>
                         </td>
                         <td>
                             <span style="font-weight: 700; color: var(--primary-light);">${Number(a.total_presencas) || 0}</span>

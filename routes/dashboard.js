@@ -31,9 +31,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
         // 3. Faturas e inadimplência
         const [financeiro] = await pool.query(`
             SELECT 
-                COUNT(DISTINCT CASE WHEN status = 'atrasado' THEN aluno_id END) AS alunos_inadimplentes,
+                COUNT(DISTINCT CASE WHEN status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()) THEN aluno_id END) AS alunos_inadimplentes,
                 SUM(CASE WHEN status = 'pago' AND competencia = DATE_FORMAT(CURDATE(), '%Y-%m') THEN valor_pago ELSE 0 END) AS receita_mes,
-                SUM(CASE WHEN status = 'atrasado' THEN valor_original ELSE 0 END) AS valor_em_atraso
+                SUM(CASE WHEN status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()) THEN valor_original ELSE 0 END) AS valor_em_atraso
             FROM faturas
         `);
 

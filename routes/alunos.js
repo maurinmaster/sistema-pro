@@ -119,12 +119,19 @@ router.get('/', authenticateToken, async (req, res) => {
                     FROM checkins chk 
                     WHERE chk.aluno_id = a.id AND chk.status = 'aprovado'
                 ) AS total_presencas,
-                -- Status financeiro (contagem exata de faturas atrasadas sem multiplicação por check-ins)
+                -- Status financeiro (atrasadas inclui pendentes vencidas; pendentes inclui a vencer)
                 (
                     SELECT COUNT(*) 
                     FROM faturas f 
-                    WHERE f.aluno_id = a.id AND f.status = 'atrasado'
-                ) AS faturas_atrasadas
+                    WHERE f.aluno_id = a.id 
+                      AND (f.status = 'atrasado' OR (f.status = 'pendente' AND f.data_vencimento < CURDATE()))
+                ) AS faturas_atrasadas,
+                (
+                    SELECT COUNT(*) 
+                    FROM faturas f 
+                    WHERE f.aluno_id = a.id 
+                      AND f.status = 'pendente' AND f.data_vencimento >= CURDATE()
+                ) AS faturas_pendentes
             FROM alunos a
             LEFT JOIN aluno_graduacoes ag ON ag.aluno_id = a.id AND ag.atual = 1
             LEFT JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id

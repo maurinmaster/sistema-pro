@@ -68,14 +68,14 @@ router.get('/resumo', authenticateToken, authorizeRoles('admin', 'recepcao'), as
             SELECT 
                 COALESCE(SUM(valor_original), 0) AS total_previsto,
                 COALESCE(SUM(CASE WHEN status = 'pago' THEN COALESCE(valor_pago, valor_original) ELSE 0 END), 0) AS total_recebido,
-                COALESCE(SUM(CASE WHEN status = 'pendente' THEN valor_original ELSE 0 END), 0) AS total_pendente,
-                COALESCE(SUM(CASE WHEN status = 'atrasado' THEN valor_original ELSE 0 END), 0) AS total_atrasado,
+                COALESCE(SUM(CASE WHEN status = 'pendente' AND data_vencimento >= CURDATE() THEN valor_original ELSE 0 END), 0) AS total_pendente,
+                COALESCE(SUM(CASE WHEN status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()) THEN valor_original ELSE 0 END), 0) AS total_atrasado,
                 COUNT(*) AS total_faturas,
                 SUM(CASE WHEN status = 'pago' THEN 1 ELSE 0 END) AS count_pagas,
-                SUM(CASE WHEN status = 'pendente' THEN 1 ELSE 0 END) AS count_pendentes,
-                SUM(CASE WHEN status = 'atrasado' THEN 1 ELSE 0 END) AS count_atrasadas
+                SUM(CASE WHEN status = 'pendente' AND data_vencimento >= CURDATE() THEN 1 ELSE 0 END) AS count_pendentes,
+                SUM(CASE WHEN status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()) THEN 1 ELSE 0 END) AS count_atrasadas
             FROM faturas
-            WHERE competencia = ?
+            WHERE competencia = ? AND status != 'cancelado'
         `, [comp]);
 
         const resumo = kpis[0] || {};
