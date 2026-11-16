@@ -6,6 +6,7 @@
 const AuthApp = {
     registeredEmail: null,
     resetEmail: null,
+    isUploadingPhoto: false,
 
     init() {
         this.bindViewNavigation();
@@ -211,6 +212,7 @@ const AuthApp = {
         }
 
         // Upload assíncrono para o backend com validação de magic bytes
+        this.isUploadingPhoto = true;
         try {
             this.showToast('Enviando foto...', 'default');
             const formData = new FormData();
@@ -227,10 +229,18 @@ const AuthApp = {
             }
 
             document.getElementById('cad-foto-url').value = data.url;
+            avatarWrap?.classList.remove('photo-error');
+            avatarWrap?.classList.add('has-photo');
             this.showToast('Foto registrada com sucesso!', 'success');
         } catch (err) {
             console.error('Falha no upload da foto:', err);
+            const cadFotoInput = document.getElementById('cad-foto-url');
+            if (cadFotoInput) cadFotoInput.value = '';
+            avatarWrap?.classList.remove('has-photo');
+            avatarWrap?.classList.add('photo-error');
             this.showToast(err.message || 'Erro ao enviar foto.', 'error');
+        } finally {
+            this.isUploadingPhoto = false;
         }
     },
 
@@ -375,6 +385,20 @@ const AuthApp = {
         const fotoUrl = document.getElementById('cad-foto-url')?.value || null;
 
         // Validações
+        if (this.isUploadingPhoto) {
+            this.showToast('Aguarde o término do envio da foto...', 'error');
+            return;
+        }
+
+        const avatarWrap = document.getElementById('avatar-wrap');
+        if (!fotoUrl || !fotoUrl.trim()) {
+            avatarWrap?.classList.add('photo-error');
+            avatarWrap?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            this.showToast('A foto de perfil é obrigatória no cadastro. Tire uma foto ou escolha da galeria.', 'error');
+            return;
+        }
+        avatarWrap?.classList.remove('photo-error');
+
         if (!nome || nome.length < 2) {
             this.showToast('Informe seu nome.', 'error');
             document.getElementById('cad-nome')?.focus();

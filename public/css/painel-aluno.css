@@ -7535,3 +7535,224 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* =========================================================================
+   TROCA DE FOTO DO PERFIL E INSTALACAO PWA (APP NO CELULAR/DESKTOP)
+   ========================================================================= */
+.photo-edit-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #dc2626;
+    color: #ffffff;
+    border: 2px solid #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 4;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    transition: transform 0.18s ease, background 0.18s ease;
+}
+
+.photo-edit-badge:hover {
+    transform: scale(1.1);
+    background: #b91c1c;
+}
+
+.modal-conta-profile-box {
+    background: rgba(14, 19, 31, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 14px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+}
+
+.modal-conta-profile-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.modal-conta-photo-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-conta-photo {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #f8fafc;
+    transition: var(--transition);
+}
+
+.btn-conta-photo:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.btn-conta-photo.primary {
+    background: #dc2626;
+    border-color: #dc2626;
+    color: #ffffff;
+}
+
+.btn-conta-photo.primary:hover {
+    background: #b91c1c;
+}
+
+.btn-conta-photo.is-uploading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.btn-header-install-app {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    border-radius: 9999px;
+    background: #dc2626;
+    border: none;
+    color: #ffffff;
+    font-family: var(--font-heading);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28);
+    transition: var(--transition);
+}
+
+.btn-header-install-app:hover {
+    background: #b91c1c;
+    transform: translateY(-1px);
+}
+
+.mobile-install-pill {
+    width: auto !important;
+    padding: 0 10px !important;
+    gap: 5px;
+    border-radius: 9999px !important;
+    background: rgba(220, 38, 38, 0.2) !important;
+    border-color: rgba(220, 38, 38, 0.55) !important;
+    color: #fecaca !important;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.pwa-install-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(220, 38, 38, 0.45);
+    border-radius: 16px;
+    padding: 12px 16px;
+    color: #ffffff;
+    margin-bottom: 18px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+}
+
+.pwa-install-banner.is-hidden {
+    display: none !important;
+}
+
+.pwa-install-banner-mobile {
+    display: none;
+}
+
+.pwa-banner-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.pwa-banner-info strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.pwa-banner-info p {
+    margin: 2px 0 0 0;
+    font-size: 12px;
+    color: #cbd5e1;
+}
+
+.pwa-banner-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    background: rgba(220, 38, 38, 0.2);
+    border: 1px solid rgba(220, 38, 38, 0.45);
+    color: #fca5a5;
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.pwa-banner-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btn-pwa-install {
+    background: #dc2626;
+    color: #ffffff;
+    border: none;
+    border-radius: 9999px;
+    padding: 8px 15px;
+    font-family: var(--font-heading);
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: var(--transition);
+}
+
+.btn-pwa-install:hover {
+    background: #b91c1c;
+}
+
+.btn-pwa-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+
+@media (max-width: 768px) {
+    .pwa-install-banner-desktop {
+        display: none !important;
+    }
+    .pwa-install-banner-mobile {
+        display: flex;
+        margin-bottom: 0;
+        padding: 10px 12px;
+    }
+    .pwa-banner-badge {
+        display: none;
+    }
+}

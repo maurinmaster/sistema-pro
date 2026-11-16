@@ -76,45 +76,79 @@ const PainelAlunoApp = {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
 
-        const btnInstall = document.getElementById('mobile-btn-install-app');
-        if (!btnInstall) return;
+        const banners = Array.from(document.querySelectorAll('[data-pwa-banner]'));
+        const triggers = Array.from(document.querySelectorAll('.pwa-install-trigger'));
+        const closeButtons = Array.from(document.querySelectorAll('[data-close-pwa-banner]'));
+
+        const setBannersHidden = (hidden) => {
+            banners.forEach(b => b.classList.toggle('is-hidden', hidden));
+        };
+        const setTriggersHidden = (hidden) => {
+            triggers.forEach(btn => {
+                btn.style.display = hidden ? 'none' : '';
+            });
+        };
 
         const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
         if (isStandalone) {
-            btnInstall.style.display = 'none';
+            setBannersHidden(true);
+            setTriggersHidden(true);
             return;
         }
 
-        let deferredPrompt = null;
+        setTriggersHidden(false);
+        if (sessionStorage.getItem('pwa_banner_closed') === '1') {
+            setBannersHidden(true);
+        } else {
+            setBannersHidden(false);
+        }
 
+        const handlePromptReady = () => {
+            if (!isStandalone && sessionStorage.getItem('pwa_banner_closed') !== '1') {
+                setBannersHidden(false);
+            }
+            setTriggersHidden(false);
+        };
+
+        window.addEventListener('pwa-prompt-ready', handlePromptReady);
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
-            deferredPrompt = e;
-            btnInstall.style.display = 'inline-flex';
+            window.__deferredPwaPrompt = e;
+            handlePromptReady();
         });
 
         window.addEventListener('appinstalled', () => {
-            deferredPrompt = null;
-            btnInstall.style.display = 'none';
+            window.__deferredPwaPrompt = null;
+            setBannersHidden(true);
+            setTriggersHidden(true);
+            this.showToast('Aplicativo PRO COMBATE instalado com sucesso!', 'success');
         });
 
-        const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
-        if (isIos) {
-            btnInstall.style.display = 'inline-flex';
-        }
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                sessionStorage.setItem('pwa_banner_closed', '1');
+                setBannersHidden(true);
+            });
+        });
 
-        btnInstall.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                try {
-                    await deferredPrompt.userChoice;
-                } catch { /* ignore */ }
-                deferredPrompt = null;
-                btnInstall.style.display = 'none';
-            } else if (isIos) {
-                const modalIos = document.getElementById('modal-ios-install');
-                if (modalIos) modalIos.style.display = 'flex';
-            }
+        triggers.forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const promptEvent = window.__deferredPwaPrompt;
+                if (promptEvent) {
+                    promptEvent.prompt();
+                    try {
+                        const choice = await promptEvent.userChoice;
+                        if (choice && choice.outcome === 'accepted') {
+                            setBannersHidden(true);
+                            setTriggersHidden(true);
+                        }
+                    } catch { /* ignore */ }
+                    window.__deferredPwaPrompt = null;
+                } else {
+                    const modalInstall = document.getElementById('modal-ios-install');
+                    if (modalInstall) modalInstall.style.display = 'flex';
+                }
+            });
         });
     },
 
@@ -271,6 +305,21 @@ const PainelAlunoApp = {
         // Botão de logout no modal de conta
         document.getElementById('btn-conta-logout')?.addEventListener('click', () => {
             this.handleLogout();
+        });
+        // Alteração de foto de perfil no card e no modal de conta
+        document.getElementById('btn-card-change-photo')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.getElementById('input-painel-foto-galeria')?.click();
+        });
+        document.getElementById('input-painel-foto-camera')?.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) this.uploadNovaFotoPerfil(file);
+            e.target.value = '';
+        });
+        document.getElementById('input-painel-foto-galeria')?.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) this.uploadNovaFotoPerfil(file);
+            e.target.value = '';
         });
 
         document.getElementById('mob-nav-inicio')?.addEventListener('click', () => {
@@ -485,7 +534,7 @@ const PainelAlunoApp = {
         if (headerName) headerName.textContent = aluno.primeiro_nome;
         const mobileStudentName = document.getElementById('mobile-student-name');
         if (mobileStudentName) mobileStudentName.textContent = aluno.primeiro_nome;
-        if (headerAvatar && aluno.foto_perfil_url) headerAvatar.src = aluno.foto_perfil_url;
+        this.applyProfilePhotoUrl(aluno.foto_perfil_url, aluno.nome_completo || aluno.primeiro_nome);
         if (headerAthleteTitle) headerAthleteTitle.textContent = tituloAtivo;
         if (bodyAthleteTitle) bodyAthleteTitle.textContent = tituloAtivo;
 
@@ -1968,8 +2017,103 @@ const PainelAlunoApp = {
     },
 
     // -------------------------------------------------------------------------
-    // MODAL AJUSTES DA CONTA DO ATLETA
+    // FOTO DE PERFIL E MODAL AJUSTES DA CONTA DO ATLETA
     // -------------------------------------------------------------------------
+    applyProfilePhotoUrl(fotoUrl, fallbackName = 'Atleta') {
+        const cleanUrl = this.sanitizeUrl(fotoUrl);
+        const fallbackUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fallbackName || 'Atleta')}&background=dc2626&color=fff`;
+        const resolvedUrl = cleanUrl || fallbackUrl;
+
+        [
+            'header-avatar-img',
+            'wiki-header-avatar-img',
+            'faturas-header-avatar-img',
+            'graduacoes-header-avatar-img'
+        ].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.src = resolvedUrl;
+        });
+
+        const cardHeaderAvatar = document.getElementById('card-header-avatar-img');
+        if (cardHeaderAvatar && cleanUrl) {
+            cardHeaderAvatar.src = cleanUrl;
+        }
+
+        const modalContaAvatar = document.getElementById('modal-conta-avatar-img');
+        if (modalContaAvatar) {
+            if (cleanUrl) {
+                modalContaAvatar.src = cleanUrl;
+            } else {
+                const avatarBase = document.getElementById('avatar-body-img')?.getAttribute('src');
+                modalContaAvatar.src = avatarBase || fallbackUrl;
+            }
+        }
+    },
+
+    async uploadNovaFotoPerfil(file) {
+        if (!file) return;
+        if (file.size > 6 * 1024 * 1024) {
+            this.showToast('A imagem excede o limite máximo de 6MB.', 'error');
+            return;
+        }
+
+        const labels = [
+            document.getElementById('lbl-conta-foto-camera'),
+            document.getElementById('lbl-conta-foto-galeria')
+        ].filter(Boolean);
+        labels.forEach(l => l.classList.add('is-uploading'));
+
+        try {
+            this.showToast('Atualizando foto de perfil...', 'info');
+            const formData = new FormData();
+            formData.append('foto', file, file.name || 'foto-perfil.jpg');
+
+            const headers = {};
+            if (this.authToken) {
+                headers['Authorization'] = `Bearer ${this.authToken}`;
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const queryAlunoId = params.get('aluno_id') || this.alunoData?.aluno?.id;
+            if (queryAlunoId && !this.authToken) {
+                formData.append('aluno_id', String(queryAlunoId));
+            }
+
+            const res = await fetch('/api/aluno/foto-perfil', {
+                method: 'POST',
+                headers,
+                body: formData
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Não foi possível atualizar a foto de perfil.');
+            }
+
+            const novaUrl = data.foto_perfil_url || data.url;
+            if (this.alunoData?.aluno) {
+                this.alunoData.aluno.foto_perfil_url = novaUrl;
+            }
+
+            try {
+                const userRaw = localStorage.getItem('user');
+                if (userRaw) {
+                    const userObj = JSON.parse(userRaw);
+                    userObj.foto_perfil_url = novaUrl;
+                    localStorage.setItem('user', JSON.stringify(userObj));
+                }
+            } catch { /* ignore */ }
+
+            this.applyProfilePhotoUrl(novaUrl, this.alunoData?.aluno?.nome_completo);
+            this.showToast('Foto de perfil atualizada com sucesso!', 'success');
+        } catch (err) {
+            console.error('Erro ao alterar foto de perfil:', err);
+            this.showToast(err.message || 'Erro ao atualizar foto de perfil.', 'error');
+        } finally {
+            labels.forEach(l => l.classList.remove('is-uploading'));
+        }
+    },
+
     openAccountModal() {
         const modal = document.getElementById('modal-conta');
         if (!modal) return;
@@ -2000,10 +2144,7 @@ const PainelAlunoApp = {
             const gradMt = graduacao.muay_thai || graduacao.atual;
             prajiedEl.textContent = gradMt?.nivel_nome || 'Prajied Atual';
         }
-        if (avatarImg) {
-            const avatarBase = document.getElementById('avatar-body-img')?.getAttribute('src');
-            if (avatarBase) avatarImg.src = avatarBase;
-        }
+        this.applyProfilePhotoUrl(aluno.foto_perfil_url, aluno.nome_completo || aluno.primeiro_nome);
 
         modal.style.display = 'flex';
     },
@@ -2189,15 +2330,10 @@ const PainelAlunoApp = {
     renderGraduacoesView() {
         const aluno = this.alunoData?.aluno;
         if (aluno) {
-            const avatarEl = document.getElementById('graduacoes-header-avatar-img');
+            this.applyProfilePhotoUrl(aluno.foto_perfil_url || aluno.foto_url, aluno.nome_completo || aluno.nome);
             const nameEl = document.getElementById('graduacoes-header-student-name');
-            if (avatarEl) {
-                const avatarSrc = this.sanitizeUrl(aluno.foto_url) ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(aluno.nome || 'Atleta')}&background=ef4444&color=fff`;
-                avatarEl.src = avatarSrc;
-            }
             if (nameEl) {
-                nameEl.textContent = (aluno.nome || 'Atleta').split(' ')[0];
+                nameEl.textContent = (aluno.primeiro_nome || aluno.nome || 'Atleta').split(' ')[0];
             }
         }
 

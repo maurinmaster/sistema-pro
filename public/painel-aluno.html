@@ -22,7 +22,15 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=4.2">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=4.3">
+    <script>
+        window.__deferredPwaPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__deferredPwaPrompt = e;
+            window.dispatchEvent(new CustomEvent('pwa-prompt-ready'));
+        });
+    </script>
 </head>
 
 <body>
@@ -105,6 +113,14 @@
                     </div>
 
                     <div class="header-actions">
+                        <button type="button" class="btn-header-install-app pwa-install-trigger" id="desktop-btn-install-app" title="Instalar aplicativo no dispositivo">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <span>Instalar App</span>
+                        </button>
                         <button type="button" class="header-icon-btn" id="btn-open-notices" title="Avisos da Academia">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
@@ -125,6 +141,23 @@
                         </div>
                     </div>
                 </header>
+
+                <!-- Banner de Instalação do Aplicativo (Desktop) -->
+                <div class="pwa-install-banner pwa-install-banner-desktop" id="pwa-install-banner" data-pwa-banner>
+                    <div class="pwa-banner-info">
+                        <span class="pwa-banner-badge">📲 APP</span>
+                        <div>
+                            <strong>Instale o Aplicativo PRO COMBATE</strong>
+                            <p>Tenha acesso rápido em tela cheia no celular ou computador.</p>
+                        </div>
+                    </div>
+                    <div class="pwa-banner-actions">
+                        <button type="button" class="btn-pwa-install pwa-install-trigger" id="btn-banner-install-app">
+                            Instalar Aplicativo
+                        </button>
+                        <button type="button" class="btn-pwa-close" id="btn-close-install-banner" data-close-pwa-banner aria-label="Fechar aviso">&times;</button>
+                    </div>
+                </div>
 
                 <!-- Banner / Card de Convocação de Exame de Graduação -->
                 <div id="exam-invitation-container" style="display: none; margin-bottom: 24px;"></div>
@@ -528,13 +561,14 @@
                     <h1 class="mobile-greeting-title">Olá, <span id="mobile-student-name">Mauro</span>!</h1>
                 </div>
                 <div class="mobile-header-actions">
-                    <button type="button" class="mobile-circle-btn" id="mobile-btn-install-app"
-                        title="Instalar App no Celular" style="display: none; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <button type="button" class="mobile-circle-btn mobile-install-pill pwa-install-trigger" id="mobile-btn-install-app"
+                        title="Instalar App no Celular">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                             <polyline points="7 10 12 15 17 10" />
                             <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
+                        <span>App</span>
                     </button>
                     <button type="button" class="mobile-circle-btn" id="mobile-btn-notices"
                         title="Avisos e Notificações">
@@ -566,6 +600,23 @@
                 </div>
             </header>
 
+            <!-- Banner de Instalação do Aplicativo (Mobile Android / iPhone) -->
+            <div class="pwa-install-banner pwa-install-banner-mobile" id="mobile-pwa-install-banner" data-pwa-banner>
+                <div class="pwa-banner-info">
+                    <span class="pwa-banner-badge">📲 APP PRO COMBATE</span>
+                    <div>
+                        <strong>Instale como Aplicativo no celular</strong>
+                        <p>Abra direto pela Tela de Início no Android ou iPhone.</p>
+                    </div>
+                </div>
+                <div class="pwa-banner-actions">
+                    <button type="button" class="btn-pwa-install pwa-install-trigger" id="mobile-btn-banner-install-app">
+                        Instalar
+                    </button>
+                    <button type="button" class="btn-pwa-close" data-close-pwa-banner aria-label="Fechar aviso">&times;</button>
+                </div>
+            </div>
+
             <section class="athlete-main-card">
                 <!-- Efeitos de fundo (Glow & Watermark) -->
                 <div class="card-glow-bg"></div>
@@ -576,12 +627,18 @@
                     <div class="athlete-header-left">
                         <!-- Avatar com Borda na cor do Prajied/Faixa -->
                         <div class="athlete-avatar-frame-wrap" id="btn-open-skins-avatar"
-                            title="Personalizar Avatar do Lutador">
+                            title="Avatar do Lutador">
                             <div class="avatar-ring" id="athlete-avatar-ring">
                                 <div class="avatar-inner">
                                     <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
                                 </div>
                             </div>
+                            <button type="button" class="photo-edit-badge" id="btn-card-change-photo" title="Trocar foto de perfil" aria-label="Trocar foto de perfil">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                                    <circle cx="12" cy="13" r="4" />
+                                </svg>
+                            </button>
                             <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
                         </div>
 
@@ -1310,22 +1367,33 @@
                 <button type="button" class="modal-close-btn" data-close="modal-conta">&times;</button>
             </div>
             <div class="modal-body" style="padding: 18px 20px;">
-                <!-- Card Perfil Resumo -->
-                <div
-                    style="display: flex; align-items: center; gap: 14px; background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); padding: 14px; border-radius: 16px; margin-bottom: 16px;">
-                    <img id="modal-conta-avatar-img" src="/assets/avatar/homem-branco.png"
-                        style="width: 52px; height: 52px; border-radius: 14px; object-fit: cover; border: 2px solid #f97316;">
-                    <div style="flex: 1; min-width: 0;">
-                        <h4 id="modal-conta-nome"
-                            style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            Mauro Silva</h4>
-                        <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
-                            <span class="prajied-chip" id="modal-conta-prajied"
-                                style="font-size: 10px; padding: 2px 8px;">Prajied Atual</span>
-                            <span
-                                style="font-size: 10px; background: rgba(255,255,255,0.06); color: #cbd5e1; padding: 2px 8px; border-radius: 6px;">Matrícula:
-                                <strong id="modal-conta-matricula">#--</strong></span>
+                <!-- Card Perfil Resumo & Alteração de Foto -->
+                <div class="modal-conta-profile-box">
+                    <div class="modal-conta-profile-top">
+                        <img id="modal-conta-avatar-img" src="/assets/avatar/homem-branco.png" alt="Foto de perfil"
+                            style="width: 58px; height: 58px; border-radius: 14px; object-fit: cover; border: 2px solid #dc2626; flex-shrink: 0;">
+                        <div style="flex: 1; min-width: 0;">
+                            <h4 id="modal-conta-nome"
+                                style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                Mauro Silva</h4>
+                            <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px; flex-wrap: wrap;">
+                                <span class="prajied-chip" id="modal-conta-prajied"
+                                    style="font-size: 10px; padding: 2px 8px;">Prajied Atual</span>
+                                <span
+                                    style="font-size: 10px; background: rgba(255,255,255,0.06); color: #cbd5e1; padding: 2px 8px; border-radius: 6px;">Matrícula:
+                                    <strong id="modal-conta-matricula">#--</strong></span>
+                            </div>
                         </div>
+                    </div>
+                    <div class="modal-conta-photo-actions">
+                        <label for="input-painel-foto-camera" class="btn-conta-photo primary" id="lbl-conta-foto-camera">
+                            <span>📷 Tirar Foto</span>
+                        </label>
+                        <label for="input-painel-foto-galeria" class="btn-conta-photo" id="lbl-conta-foto-galeria">
+                            <span>🖼️ Escolher Foto</span>
+                        </label>
+                        <input type="file" id="input-painel-foto-camera" accept="image/jpeg,image/png,image/webp" capture="user" style="display: none;">
+                        <input type="file" id="input-painel-foto-galeria" accept="image/jpeg,image/png,image/webp" style="display: none;">
                     </div>
                 </div>
 
@@ -1356,6 +1424,10 @@
 
                 <!-- Botões de Ação da Conta -->
                 <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="button" id="btn-conta-install-app" class="btn-modal-save pwa-install-trigger"
+                        style="background: rgba(220, 38, 38, 0.14); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.45); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
+                        <span>📲 Instalar como Aplicativo</span>
+                    </button>
                     <button type="button" id="btn-conta-logout" class="btn-modal-save"
                         style="background: #dc2626; color: #ffffff; border-color: #ef4444; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1700,32 +1772,32 @@
         </div>
     </div>
 
-    <!-- Modal de Instruções para Instalar no iPhone / iOS (Safari) -->
+    <!-- Modal de Instruções para Instalar Aplicativo (Android & iPhone/iOS) -->
     <div class="modal-backdrop" id="modal-ios-install" style="display: none;">
-        <div class="modal-card modal-dark-modern" style="max-width: 400px;">
+        <div class="modal-card modal-dark-modern" style="max-width: 420px;">
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="modal-icon-badge" style="background: rgba(56, 189, 248, 0.16); color: #38bdf8;">
+                    <div class="modal-icon-badge" style="background: rgba(220, 38, 38, 0.16); color: #ef4444;">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
                             <line x1="12" y1="18" x2="12.01" y2="18" />
                         </svg>
                     </div>
                     <div>
-                        <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff;">Instalar no iPhone</h3>
-                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">Adicione o app PRO COMBATE na Tela de Início</p>
+                        <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #ffffff;">Instalar Aplicativo PRO COMBATE</h3>
+                        <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">Adicione o app à tela inicial do seu celular ou computador</p>
                     </div>
                 </div>
                 <button type="button" class="modal-close-btn" data-close="modal-ios-install">&times;</button>
             </div>
             <div class="modal-body" style="padding: 20px; display: flex; flex-direction: column; gap: 12px; font-size: 13.5px; color: #cbd5e1; line-height: 1.5;">
                 <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 12px; padding: 12px;">
-                    <strong style="color: #ffffff;">1. Toque em Compartilhar</strong><br>
-                    Na barra inferior do Safari, toque no ícone de compartilhamento (quadrado com seta para cima).
+                    <strong style="color: #ffffff;">🤖 No Android (Google Chrome):</strong><br>
+                    Toque no menu <strong>⋮</strong> (canto superior direito) e selecione <strong>&ldquo;Instalar aplicativo&rdquo;</strong> ou <strong>&ldquo;Adicionar à tela inicial&rdquo;</strong>.
                 </div>
                 <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 12px; padding: 12px;">
-                    <strong style="color: #ffffff;">2. Adicionar à Tela de Início</strong><br>
-                    Role as opções e toque em <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong> para abrir em tela cheia como aplicativo.
+                    <strong style="color: #ffffff;">🍎 No iPhone / iPad (Safari):</strong><br>
+                    Toque no ícone <strong>Compartilhar</strong> (quadrado com seta para cima na barra inferior) e escolha <strong>&ldquo;Adicionar à Tela de Início&rdquo;</strong>.
                 </div>
             </div>
         </div>
@@ -1773,7 +1845,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=4.2"></script>
+    <script src="/js/painel-aluno.js?v=4.3"></script>
 </body>
 
 </html>

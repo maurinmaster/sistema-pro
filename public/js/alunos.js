@@ -523,6 +523,13 @@ const AlunosModule = {
     async handleSubmitAluno(e) {
         e.preventDefault();
         const id = document.getElementById('aluno-id').value;
+        const fotoUrl = document.getElementById('aluno-foto').value || null;
+
+        if (!id && !fotoUrl) {
+            UI.showToast('A foto de perfil é obrigatória no momento do cadastro.', 'warning');
+            return;
+        }
+
         const btnSubmit = document.getElementById('btn-submit-aluno');
         btnSubmit.disabled = true;
         btnSubmit.innerHTML = `<div class="spinner"></div> Salvando...`;
@@ -535,7 +542,7 @@ const AlunosModule = {
             telefone_whatsapp: document.getElementById('aluno-whatsapp').value,
             email: document.getElementById('aluno-email').value || null,
             status: document.getElementById('aluno-status').value,
-            foto_perfil_url: document.getElementById('aluno-foto').value || null,
+            foto_perfil_url: fotoUrl,
             responsavel_nome: document.getElementById('aluno-resp-nome').value || null,
             responsavel_cpf: document.getElementById('aluno-resp-cpf').value || null,
             responsavel_telefone: document.getElementById('aluno-resp-fone').value || null,

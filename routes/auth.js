@@ -422,6 +422,11 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
             return res.status(400).json({ success: false, error: 'O telefone / WhatsApp é obrigatório para notificações.' });
         }
 
+        if (!foto_perfil_url || typeof foto_perfil_url !== 'string' || !foto_perfil_url.trim()) {
+            await conn.rollback();
+            return res.status(400).json({ success: false, error: 'A foto de perfil é obrigatória para realizar o cadastro.' });
+        }
+
         // Validação de Menor de Idade
         const guardianValidation = validateMinorGuardian(data_nascimento, responsavel_nome, responsavel_telefone);
         if (!guardianValidation.valid) {
@@ -454,7 +459,7 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
 
         // Criptografia da senha
         const senhaHash = await bcrypt.hash(senha, 10);
-        const fotoFinalUrl = foto_perfil_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(finalNomeCompleto)}&background=0284c7&color=fff&size=200`;
+        const fotoFinalUrl = String(foto_perfil_url).trim();
 
         // 1. Inserção na tabela principal de alunos
         const [alunoResult] = await conn.query(`

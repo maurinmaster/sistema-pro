@@ -237,6 +237,24 @@ test('Segurança e Autenticação: Fluxo completo de Auto-cadastro, Verificaçã
         const minorFailBody = await minorFailRes.json();
         assert.equal(minorFailBody.success, false);
 
+        // 5.1b. Cadastro sem foto de perfil deve ser rejeitado (foto obrigatória)
+        const noPhotoRes = await fetch(`${baseUrl}/api/auth/cadastro-aluno`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome_completo: 'Guerreiro Sem Foto',
+                data_nascimento: '1998-07-20',
+                genero: 'M',
+                email: testEmail,
+                senha: 'minhaSenhaForte2026',
+                telefone_whatsapp: '(11) 98888-2222',
+                consentimento_biometria_lgpd: 1
+            })
+        });
+        assert.equal(noPhotoRes.status, 400, 'Cadastro sem foto de perfil deve ser rejeitado');
+        const noPhotoBody = await noPhotoRes.json();
+        assert.equal(noPhotoBody.success, false);
+
         // 5.2. Auto-cadastro bem-sucedido com dados válidos
         const cadRes = await fetch(`${baseUrl}/api/auth/cadastro-aluno`, {
             method: 'POST',
@@ -249,6 +267,7 @@ test('Segurança e Autenticação: Fluxo completo de Auto-cadastro, Verificaçã
                 email: testEmail,
                 senha: 'minhaSenhaForte2026',
                 telefone_whatsapp: '(11) 98888-2222',
+                foto_perfil_url: '/uploads/alunos/foto-teste.jpg',
                 consentimento_biometria_lgpd: 1
             })
         });

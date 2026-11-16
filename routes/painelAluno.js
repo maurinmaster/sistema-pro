@@ -6,10 +6,53 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
+const { createRateLimiter } = require('../middlewares/auth');
+const { hasValidImageSignature } = require('../services/domainRules');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+
+const uploadFotoDir = path.join(__dirname, '../public/uploads/alunos');
+if (!fs.existsSync(uploadFotoDir)) {
+    fs.mkdirSync(uploadFotoDir, { recursive: true });
+}
+
+const fotoAlunoStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadFotoDir);
+    },
+    filename: (req, file, cb) => {
+        const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
+        const ext = path.extname(file.originalname || '').toLowerCase();
+        const safeExt = allowedExts.includes(ext) ? ext : '.jpg';
+        cb(null, `perfil-${Date.now()}-${Math.round(Math.random() * 1E6)}${safeExt}`);
+    }
+});
+
+const uploadFotoPerfilAluno = multer({
+    storage: fotoAlunoStorage,
+    limits: { fileSize: 6 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /^image\/(jpeg|jpg|png|webp)$/;
+        const allowedExts = /\.(jpeg|jpg|png|webp)$/;
+        const extname = allowedExts.test(path.extname(file.originalname || '').toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype || '');
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb(new Error('Apenas imagens nos formatos JPG, PNG ou WEBP são permitidas.'));
+    }
+});
+
+const fotoUploadLimiter = createRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: 'Limite de alterações de foto atingido. Aguarde alguns minutos.'
+});
 
 // Catálogo de Recompensas e Desbloqueáveis do Lutador
 const CATALOGO_LUVAS = [
@@ -44,6 +87,92 @@ function optionalAuth(req, res, next) {
     }
     next();
 }
+
+/**
+ * POST /api/aluno/foto-perfil
+ * Permite ao atleta autenticado alterar sua foto de perfil (câmera ou galeria)
+ */
+router.post('/foto-perfil', optionalAuth, fotoUploadLimiter, (req, res) => {
+    uploadFotoPerfilAluno.single('foto')(req, res, async (uploadErr) => {
+        if (uploadErr) {
+            return res.status(400).json({
+                success: false,
+                error: uploadErr.code === 'LIMIT_FILE_SIZE'
+                    ? 'A imagem excede o limite máximo permitido de 6MB.'
+                    : (uploadErr.message || 'Erro ao processar imagem.')
+            });
+        }
+
+        const safeRemoveFile = (filePath) => {
+            if (!filePath) return;
+            try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+        };
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: 'Nenhuma foto foi enviada.'
+            });
+        }
+
+        if (!hasValidImageSignature(req.file.path)) {
+            safeRemoveFile(req.file.path);
+            return res.status(400).json({
+                success: false,
+                error: 'Arquivo inválido: envie uma imagem JPG, PNG ou WEBP legítima.'
+            });
+        }
+
+        try {
+            let alunoId = null;
+            if (req.user) {
+                alunoId = req.user.aluno_id || (req.user.cargo === 'aluno' ? req.user.id : null);
+            }
+            if (!alunoId && process.env.NODE_ENV !== 'production') {
+                alunoId = parseInt(req.body?.aluno_id || req.query?.aluno_id || '1', 10);
+            }
+
+            if (!alunoId || isNaN(alunoId)) {
+                safeRemoveFile(req.file.path);
+                return res.status(401).json({ success: false, error: 'Autenticação necessária para alterar a foto.' });
+            }
+
+            const [alunos] = await pool.query(
+                "SELECT id, foto_perfil_url FROM alunos WHERE id = ? AND status != 'inativo' AND deleted_at IS NULL",
+                [alunoId]
+            );
+
+            if (alunos.length === 0) {
+                safeRemoveFile(req.file.path);
+                return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+            }
+
+            const antigaUrl = alunos[0].foto_perfil_url;
+            const fileUrl = `/uploads/alunos/${req.file.filename}`;
+
+            await pool.query(
+                'UPDATE alunos SET foto_perfil_url = ?, face_foto_base_url = ? WHERE id = ? AND deleted_at IS NULL',
+                [fileUrl, fileUrl, alunoId]
+            );
+
+            if (antigaUrl && typeof antigaUrl === 'string' && antigaUrl.startsWith('/uploads/alunos/') && antigaUrl !== fileUrl) {
+                const oldPath = path.join(uploadFotoDir, path.basename(antigaUrl));
+                safeRemoveFile(oldPath);
+            }
+
+            return res.json({
+                success: true,
+                message: 'Foto de perfil atualizada com sucesso!',
+                foto_perfil_url: fileUrl,
+                url: fileUrl
+            });
+        } catch (err) {
+            safeRemoveFile(req.file.path);
+            console.error('Erro ao atualizar foto de perfil do aluno:', err);
+            return res.status(500).json({ success: false, error: 'Erro interno ao atualizar foto de perfil.' });
+        }
+    });
+});
 
 /**
  * GET /api/aluno/meu-painel

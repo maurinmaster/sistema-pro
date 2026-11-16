@@ -7,7 +7,7 @@
     <title>PRO COMBATE • Acesso e Cadastro de Alunos</title>
     <meta name="description"
         content="Portal de acesso e cadastro de atletas PRO COMBATE. Crie sua conta, faça login ou recupere sua senha com facilidade e segurança.">
-    <meta name="theme-color" content="#090d16">
+    <meta name="theme-color" content="#ffffff">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,32 +24,33 @@
 
     <style>
         :root {
-            --bg-main: #090d16;
-            --bg-card: rgba(15, 23, 42, 0.78);
-            --bg-card-border: rgba(255, 255, 255, 0.08);
-            --bg-input: rgba(10, 15, 29, 0.7);
-            --bg-input-focus: rgba(15, 23, 42, 0.95);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --border-focus: #0284c7;
+            color-scheme: light;
+            --bg-main: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-border: #e2e8f0;
+            --bg-input: #ffffff;
+            --bg-input-focus: #ffffff;
+            --border-color: #cbd5e1;
+            --border-focus: #dc2626;
 
-            --primary: #0284c7;
-            --primary-light: #38bdf8;
-            --primary-hover: #0369a1;
-            --primary-glow: rgba(56, 189, 248, 0.28);
+            --primary: #dc2626;
+            --primary-light: #dc2626;
+            --primary-hover: #b91c1c;
+            --primary-glow: rgba(220, 38, 38, 0.22);
 
-            --accent: #6366f1;
-            --accent-glow: rgba(99, 102, 241, 0.25);
+            --accent: #b91c1c;
+            --accent-glow: rgba(185, 28, 28, 0.2);
 
             --success: #10b981;
-            --success-glow: rgba(16, 185, 129, 0.3);
-            --warning: #f59e0b;
-            --warning-bg: rgba(245, 158, 11, 0.12);
+            --success-glow: rgba(16, 185, 129, 0.25);
+            --warning: #b45309;
+            --warning-bg: rgba(245, 158, 11, 0.1);
             --warning-border: rgba(245, 158, 11, 0.35);
-            --error: #ef4444;
+            --error: #dc2626;
 
-            --text-primary: #f8fafc;
-            --text-secondary: #94a3b8;
-            --text-muted: #64748b;
+            --text-primary: #000000;
+            --text-secondary: #1e293b;
+            --text-muted: #475569;
 
             --radius-sm: 8px;
             --radius-md: 12px;
@@ -80,20 +81,20 @@
             position: relative;
             overflow-x: hidden;
             background-image:
-                radial-gradient(circle at 10% 10%, rgba(2, 132, 199, 0.12) 0%, transparent 45%),
-                radial-gradient(circle at 90% 90%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8) 0%, var(--bg-main) 100%);
+                radial-gradient(circle at 10% 10%, rgba(220, 38, 38, 0.06) 0%, transparent 45%),
+                radial-gradient(circle at 90% 90%, rgba(220, 38, 38, 0.05) 0%, transparent 50%),
+                linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
         }
 
-        /* Linhas sutis decorativas de tatame no fundo */
+        /* Linhas sutis decorativas no fundo claro */
         body::before {
             content: '';
             position: fixed;
             inset: 0;
             background-size: 40px 40px;
             background-image:
-                linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+                linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
             pointer-events: none;
             z-index: 0;
         }
@@ -118,50 +119,48 @@
             align-items: center;
             gap: 8px;
             padding: 6px 14px;
-            background: rgba(2, 132, 199, 0.12);
-            border: 1px solid rgba(56, 189, 248, 0.3);
+            background: rgba(220, 38, 38, 0.08);
+            border: 1px solid rgba(220, 38, 38, 0.28);
             border-radius: var(--radius-full);
-            color: var(--primary-light);
+            color: var(--primary);
             font-family: var(--font-heading);
             font-size: 12px;
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
             margin-bottom: 12px;
-            box-shadow: 0 0 16px var(--primary-glow);
         }
 
         .brand-title {
             font-family: var(--font-heading);
             font-size: 28px;
             font-weight: 800;
-            color: #ffffff;
+            color: #000000;
             letter-spacing: -0.5px;
             line-height: 1.15;
         }
 
         .brand-title span {
-            background: linear-gradient(135deg, #ffffff 40%, var(--primary-light) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background: none;
+            -webkit-text-fill-color: #dc2626;
+            color: #dc2626;
         }
 
         .brand-sub {
             font-size: 14px;
-            color: var(--text-secondary);
+            color: #000000;
             margin-top: 6px;
         }
 
         /* Card de Autenticação */
         .auth-card {
-            background: var(--bg-card);
+            background: #ffffff;
             border: 1px solid var(--bg-card-border);
             border-radius: var(--radius-lg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             padding: 32px 28px;
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.03);
             position: relative;
+            color: #000000;
         }
 
         @media (max-width: 480px) {
@@ -178,7 +177,7 @@
         /* Switcher de Abas (Segmented Control) */
         .auth-nav-pills {
             display: flex;
-            background: rgba(10, 15, 29, 0.8);
+            background: #f1f5f9;
             border: 1px solid var(--border-color);
             border-radius: var(--radius-full);
             padding: 4px;
@@ -193,7 +192,7 @@
             background: transparent;
             border: none;
             border-radius: var(--radius-full);
-            color: var(--text-secondary);
+            color: #000000;
             font-family: var(--font-heading);
             font-size: 14px;
             font-weight: 700;
@@ -206,7 +205,7 @@
         }
 
         .nav-pill-btn:hover {
-            color: #ffffff;
+            color: var(--primary);
         }
 
         .nav-pill-btn.active {
@@ -222,7 +221,7 @@
             align-items: center;
             margin-bottom: 26px;
             padding-bottom: 22px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
             position: relative;
         }
 
@@ -231,9 +230,9 @@
             width: 108px;
             height: 108px;
             border-radius: 50%;
-            background: rgba(15, 23, 42, 0.9);
-            border: 3px solid rgba(56, 189, 248, 0.4);
-            box-shadow: 0 0 24px rgba(56, 189, 248, 0.2);
+            background: #f8fafc;
+            border: 3px solid rgba(220, 38, 38, 0.35);
+            box-shadow: 0 6px 20px rgba(220, 38, 38, 0.14);
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -245,6 +244,11 @@
         .avatar-preview-wrap.has-photo {
             border-color: var(--success);
             box-shadow: 0 0 24px var(--success-glow);
+        }
+
+        .avatar-preview-wrap.photo-error {
+            border-color: #dc2626 !important;
+            box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.22) !important;
         }
 
         .avatar-preview-img {
@@ -290,25 +294,26 @@
             cursor: pointer;
             transition: var(--transition);
             border: 1px solid var(--border-color);
-            background: rgba(255, 255, 255, 0.04);
-            color: var(--text-primary);
+            background: #ffffff;
+            color: #000000;
         }
 
         .btn-photo-action:hover {
-            background: rgba(255, 255, 255, 0.09);
-            border-color: var(--primary-light);
+            background: var(--primary);
+            border-color: var(--primary);
             color: #ffffff;
             transform: translateY(-1px);
         }
 
         .btn-photo-action.primary {
-            background: rgba(2, 132, 199, 0.18);
-            border-color: rgba(56, 189, 248, 0.45);
-            color: var(--primary-light);
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
         }
 
         .btn-photo-action.primary:hover {
-            background: var(--primary);
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
             color: #ffffff;
             box-shadow: 0 4px 14px var(--primary-glow);
         }
@@ -321,7 +326,7 @@
         }
 
         .photo-tips span {
-            color: var(--text-secondary);
+            color: var(--text-primary);
             font-weight: 600;
         }
 
@@ -367,14 +372,14 @@
         .form-label {
             display: block;
             font-size: 12.5px;
-            font-weight: 600;
-            color: var(--text-secondary);
+            font-weight: 700;
+            color: #000000;
             margin-bottom: 6px;
             letter-spacing: 0.2px;
         }
 
         .form-label .required {
-            color: var(--primary-light);
+            color: var(--primary);
         }
 
         .input-wrap {
@@ -389,7 +394,7 @@
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             padding: 12px 14px;
-            color: #ffffff;
+            color: #000000;
             font-family: var(--font-body);
             font-size: 14px;
             outline: none;
@@ -397,13 +402,13 @@
         }
 
         .form-input::placeholder {
-            color: rgba(148, 163, 184, 0.4);
+            color: #64748b;
         }
 
         .form-input:focus {
             background: var(--bg-input-focus);
             border-color: var(--border-focus);
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+            box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
         }
 
         .input-icon-btn {
@@ -421,7 +426,7 @@
         }
 
         .input-icon-btn:hover {
-            color: var(--primary-light);
+            color: var(--primary);
         }
 
         /* Gênero Segmented */
@@ -436,7 +441,7 @@
             background: var(--bg-input);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            color: var(--text-secondary);
+            color: #000000;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
@@ -445,15 +450,15 @@
         }
 
         .gender-btn:hover {
-            color: #ffffff;
-            border-color: rgba(255, 255, 255, 0.2);
+            color: var(--primary);
+            border-color: var(--primary);
         }
 
         .gender-btn.selected {
-            background: rgba(2, 132, 199, 0.18);
-            border-color: var(--primary-light);
-            color: var(--primary-light);
-            box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--primary-glow);
         }
 
         /* Card Suave de Menor de Idade */
@@ -532,7 +537,7 @@
 
         .btn-submit:hover:not(:disabled) {
             transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 8px 24px rgba(220, 38, 38, 0.38);
             filter: brightness(1.05);
         }
 
@@ -551,12 +556,12 @@
             text-align: center;
             margin-top: 20px;
             font-size: 13px;
-            color: var(--text-muted);
+            color: #000000;
         }
 
         .auth-footer-links a {
-            color: var(--primary-light);
-            font-weight: 600;
+            color: var(--primary);
+            font-weight: 700;
             text-decoration: none;
             cursor: pointer;
             transition: var(--transition);
@@ -564,7 +569,7 @@
 
         .auth-footer-links a:hover {
             text-decoration: underline;
-            color: #ffffff;
+            color: var(--primary-hover);
         }
 
         /* Código de 6 dígitos */
@@ -585,13 +590,13 @@
             background: var(--bg-input);
             border: 2px solid var(--border-color);
             border-radius: var(--radius-md);
-            color: #ffffff;
+            color: #000000;
             outline: none;
             transition: var(--transition);
         }
 
         .digit-input:focus {
-            border-color: var(--primary-light);
+            border-color: var(--primary);
             box-shadow: 0 0 14px var(--primary-glow);
             background: var(--bg-input-focus);
         }
@@ -620,9 +625,9 @@
         }
 
         .state-icon-circle.key {
-            background: rgba(2, 132, 199, 0.15);
-            border: 2px solid var(--primary-light);
-            color: var(--primary-light);
+            background: rgba(220, 38, 38, 0.12);
+            border: 2px solid var(--primary);
+            color: var(--primary);
             box-shadow: 0 0 20px var(--primary-glow);
         }
 
@@ -632,15 +637,14 @@
             top: 24px;
             left: 50%;
             transform: translateX(-50%) translateY(-100px);
-            background: rgba(15, 23, 42, 0.95);
+            background: #ffffff;
             border: 1px solid var(--border-color);
             padding: 12px 22px;
             border-radius: var(--radius-full);
-            color: #ffffff;
+            color: #000000;
             font-size: 14px;
             font-weight: 600;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(12px);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
             z-index: 9999;
             transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
             max-width: 90%;
@@ -654,12 +658,12 @@
 
         #auth-toast.success {
             border-color: var(--success);
-            color: var(--success);
+            color: #047857;
         }
 
         #auth-toast.error {
             border-color: var(--error);
-            color: #f87171;
+            color: #dc2626;
         }
     </style>
 </head>
@@ -706,6 +710,9 @@
                 <form id="form-cadastro" novalidate>
                     <!-- Foto de Perfil / Câmera Integrada -->
                     <div class="profile-photo-section">
+                        <p style="font-size: 13px; font-weight: 700; color: #000000; margin-bottom: 12px;">
+                            Foto de Perfil Obrigatória <span style="color: #dc2626;">*</span>
+                        </p>
                         <div class="avatar-preview-wrap" id="avatar-wrap">
                             <img id="avatar-img" class="avatar-preview-img" alt="Foto de perfil">
                             <div class="avatar-placeholder" id="avatar-placeholder">
@@ -741,7 +748,7 @@
                         <input type="file" id="input-gallery-file" accept="image/*" style="display: none;">
                         <input type="hidden" id="cad-foto-url">
 
-                        <p class="photo-tips">Foto de frente, em local claro e sem boné</p>
+                        <p class="photo-tips">Foto <span>obrigatória</span> de frente, em local claro e sem boné</p>
                     </div>
 
                     <!-- Dados Pessoais: Nome & Sobrenome -->
@@ -940,9 +947,9 @@
                 <!-- Etapa 2: Digitar Código e Nova Senha -->
                 <div id="reset-step-2" style="display: none;">
                     <div style="text-align: center; margin-bottom: 18px;">
-                        <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700;">Nova Senha</h2>
+                        <h2 style="font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: #000000;">Nova Senha</h2>
                         <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-                            Digite o código de 6 dígitos enviado para <strong id="reset-email-display" style="color: #ffffff;">seu e-mail</strong> e sua nova senha.
+                            Digite o código de 6 dígitos enviado para <strong id="reset-email-display" style="color: #000000;">seu e-mail</strong> e sua nova senha.
                         </p>
                     </div>
 
@@ -1002,15 +1009,15 @@
             <!-- ========================================================= -->
             <section class="auth-view" id="view-verify">
                 <div style="text-align: center;">
-                    <div class="state-icon-circle key" style="border-color: var(--primary-light);">
+                    <div class="state-icon-circle key" style="border-color: var(--primary);">
                         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                             <polyline points="22,6 12,13 2,6" />
                         </svg>
                     </div>
-                    <h2 style="font-family: var(--font-heading); font-size: 21px; font-weight: 700;">Confirme seu E-mail</h2>
+                    <h2 style="font-family: var(--font-heading); font-size: 21px; font-weight: 700; color: #000000;">Confirme seu E-mail</h2>
                     <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.45;">
-                        Enviamos um código de 6 dígitos para <strong id="verify-email-display" style="color: #ffffff;">seu e-mail</strong>. Digite-o para ativar seu acesso:
+                        Enviamos um código de 6 dígitos para <strong id="verify-email-display" style="color: #000000;">seu e-mail</strong>. Digite-o para ativar seu acesso:
                     </p>
 
                     <div class="digits-container" id="verify-digits-container">
@@ -1042,7 +1049,7 @@
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
                     </div>
-                    <h2 style="font-family: var(--font-heading); font-size: 22px; font-weight: 800; color: #ffffff;">Conta Ativada com Sucesso!</h2>
+                    <h2 style="font-family: var(--font-heading); font-size: 22px; font-weight: 800; color: #000000;">Conta Ativada com Sucesso!</h2>
                     <p style="font-size: 14px; color: var(--text-secondary); margin: 8px auto 24px auto; max-width: 380px;">
                         Seu cadastro foi concluído e seu acesso ao PRO COMBATE está liberado.
                     </p>
@@ -1059,7 +1066,7 @@
     </div>
 
     <!-- Script de Gestão de Autenticação -->
-    <script src="/js/cadastro.js"></script>
+    <script src="/js/cadastro.js?v=4.3"></script>
 </body>
 
 </html>
