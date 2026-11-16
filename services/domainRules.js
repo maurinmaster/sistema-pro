@@ -113,6 +113,44 @@ function computeNextDueDate(diaVencimento = 10, referenceDate = new Date(), mode
 }
 
 /**
+ * Decide se uma nova fatura deve ser gerada na competência atual e com qual valor,
+ * ignorando faturas canceladas e considerando créditos de faturas já pagas na mesma competência.
+ */
+function calculateCompetenceInvoiceAmount(planValue, existingInvoices = []) {
+    const targetValue = Number(planValue) || 0;
+    if (targetValue <= 0) {
+        return { shouldCreate: false, amount: 0, reason: 'zero_plan_value', observacoes: null };
+    }
+
+    const activeInvoices = (existingInvoices || []).filter(inv => inv && inv.status !== 'cancelado');
+
+    const hasOpenInvoice = activeInvoices.some(inv => inv.status === 'pendente' || inv.status === 'atrasado');
+    if (hasOpenInvoice) {
+        return { shouldCreate: false, amount: 0, reason: 'existing_open_invoice', observacoes: null };
+    }
+
+    const totalPaid = activeInvoices
+        .filter(inv => inv.status === 'pago' || inv.status === 'isento')
+        .reduce((sum, inv) => sum + (Number(inv.valor_pago ?? inv.valor_original) || 0), 0);
+
+    if (totalPaid <= 0) {
+        return { shouldCreate: true, amount: Number(targetValue.toFixed(2)), reason: 'new_competence_invoice', observacoes: null };
+    }
+
+    const diff = Number((targetValue - totalPaid).toFixed(2));
+    if (diff > 0) {
+        return {
+            shouldCreate: true,
+            amount: diff,
+            reason: 'upgrade_difference',
+            observacoes: 'Diferença de plano sobre fatura já quitada na competência'
+        };
+    }
+
+    return { shouldCreate: false, amount: 0, reason: 'already_paid_in_competence', observacoes: null };
+}
+
+/**
  * Valida a assinatura binária (magic bytes) de arquivos de imagem (JPEG, PNG, WEBP)
  */
 function hasValidImageSignature(filePath) {
@@ -163,5 +201,6 @@ module.exports = {
     evaluateCheckinEligibility,
     classifyPlanTransition,
     computeNextDueDate,
+    calculateCompetenceInvoiceAmount,
     hasValidImageSignature
 };

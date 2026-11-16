@@ -292,7 +292,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             FROM faturas f
             JOIN matriculas m ON m.id = f.matricula_id
             JOIN planos p ON p.id = m.plano_id
-            WHERE f.aluno_id = ?
+            WHERE f.aluno_id = ? AND f.status != 'cancelado'
             ORDER BY 
                 CASE 
                     WHEN f.status = 'atrasado' OR (f.status = 'pendente' AND f.data_vencimento < CURDATE()) THEN 0
@@ -1688,7 +1688,7 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
             FROM faturas f
             JOIN matriculas m ON m.id = f.matricula_id
             JOIN planos p ON p.id = m.plano_id
-            WHERE f.aluno_id = ?
+            WHERE f.aluno_id = ? AND f.status != 'cancelado'
             ORDER BY f.data_vencimento DESC
         `, [alunoId]);
 

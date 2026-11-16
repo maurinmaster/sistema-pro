@@ -1,4 +1,8 @@
-const { classifyPlanTransition, computeNextDueDate } = require('./domainRules');
+const {
+    classifyPlanTransition,
+    computeNextDueDate,
+    calculateCompetenceInvoiceAmount
+} = require('./domainRules');
 
 /**
  * Serviço de Domínio para Gestão de Matrículas (Contratos) e Geração de Faturas Vinculadas.
@@ -12,15 +16,18 @@ const MatriculaService = {
         const { competencia, dataVencimento } = computeNextDueDate(diaVencimento, new Date(), dueDateMode);
 
         const [fatExist] = await conn.query(
-            'SELECT id FROM faturas WHERE aluno_id = ? AND competencia = ?',
+            `SELECT id, matricula_id, status, valor_original, valor_pago
+             FROM faturas
+             WHERE aluno_id = ? AND competencia = ? AND status != 'cancelado'`,
             [alunoId, competencia]
         );
 
-        if (fatExist.length === 0) {
+        const decision = calculateCompetenceInvoiceAmount(valor, fatExist);
+        if (decision.shouldCreate && decision.amount > 0) {
             await conn.query(`
-                INSERT INTO faturas (matricula_id, aluno_id, competencia, valor_original, data_vencimento, status)
-                VALUES (?, ?, ?, ?, ?, 'pendente')
-            `, [matriculaId, alunoId, competencia, valor, dataVencimento]);
+                INSERT INTO faturas (matricula_id, aluno_id, competencia, valor_original, data_vencimento, status, observacoes)
+                VALUES (?, ?, ?, ?, ?, 'pendente', ?)
+            `, [matriculaId, alunoId, competencia, decision.amount, dataVencimento, decision.observacoes || null]);
             return true;
         }
         return false;
@@ -40,11 +47,33 @@ const MatriculaService = {
             dueDateMode = 'keep_current_month'
         } = options;
 
-        // Se já tiver matrícula ativa, encerra a anterior para manter unicidade de contrato ativo
-        await conn.query(
-            `UPDATE matriculas SET status = 'cancelada' WHERE aluno_id = ? AND status = 'ativa'`,
+        // Se já tiver matrícula ativa, encerra a anterior e cancela suas faturas em aberto
+        const [activeMats] = await conn.query(
+            `SELECT id FROM matriculas WHERE aluno_id = ? AND status = 'ativa'`,
             [alunoId]
         );
+
+        if (activeMats.length > 0) {
+            const activeIds = activeMats.map(m => m.id);
+            await conn.query(
+                `UPDATE matriculas SET
+                    status = 'cancelada',
+                    data_fim = CURDATE(),
+                    motivo_cancelamento_trancamento = COALESCE(motivo_cancelamento_trancamento, 'Substituída por nova matrícula')
+                 WHERE aluno_id = ? AND status = 'ativa'`,
+                [alunoId]
+            );
+            await conn.query(
+                `UPDATE faturas SET
+                    status = 'cancelado',
+                    observacoes = CONCAT(COALESCE(observacoes, ''), ' [Cancelada por substituição de contrato em ', DATE_FORMAT(NOW(), '%d/%m/%Y'), ']')
+                 WHERE matricula_id IN (?) AND status IN ('pendente', 'atrasado')`,
+                [activeIds]
+            );
+        }
+
+        // Garante que o aluno volte a ficar ativo ao contratar um novo plano (ex: após cancelamento anterior)
+        await conn.query(`UPDATE alunos SET status = 'ativo' WHERE id = ?`, [alunoId]);
 
         let valorFinal = valorAcordado !== null && valorAcordado !== undefined && Number(valorAcordado) > 0
             ? Number(valorAcordado)
@@ -265,7 +294,7 @@ const MatriculaService = {
                 UPDATE faturas SET
                     status = 'cancelado',
                     observacoes = CONCAT(COALESCE(observacoes, ''), ' [Cancelada por rescisão contratual em ', DATE_FORMAT(NOW(), '%d/%m/%Y'), ']')
-                WHERE matricula_id = ? AND status = 'pendente'
+                WHERE matricula_id = ? AND status IN ('pendente', 'atrasado')
             `, [matriculaId]);
         }
 
@@ -346,6 +375,14 @@ const MatriculaService = {
                     observacoes = CONCAT(COALESCE(observacoes, ''), ?)
                 WHERE id = ?
             `, [novaMatriculaId, valorFinal, obsTag, fatPendente[0].id]);
+        } else {
+            await this.ensureCurrentMonthInvoice(conn, {
+                matriculaId: novaMatriculaId,
+                alunoId: matAtual.aluno_id,
+                valor: valorFinal,
+                diaVencimento: diaVenc,
+                dueDateMode: 'keep_current_month'
+            });
         }
 
         return {

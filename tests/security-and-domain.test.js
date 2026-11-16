@@ -1756,6 +1756,94 @@ test('Deploy & PWA Mobile: Remoção de acessos rápidos de login, hardening e s
     assert.ok(painelHtml.includes('viewport-fit=cover'), 'painel-aluno.html deve suportar safe-area viewport-fit=cover');
 });
 
+test('Domínio Financeiro: Regras de faturamento na competência após cancelamento ou plano pago ativo', async () => {
+    const { calculateCompetenceInvoiceAmount } = require('../services/domainRules');
+    const MatriculaService = require('../services/matriculaService');
+
+    // 1. Fatura cancelada na competência NÃO bloqueia nova cobrança ao contratar outro plano
+    const afterCancel = calculateCompetenceInvoiceAmount(180, [
+        { id: 1, status: 'cancelado', valor_original: 150, valor_pago: null }
+    ]);
+    assert.equal(afterCancel.shouldCreate, true);
+    assert.equal(afterCancel.amount, 180);
+    assert.equal(afterCancel.reason, 'new_competence_invoice');
+
+    // 2. Plano novo de mesmo valor ou menor com fatura já PAGA na competência não cobra em duplicidade
+    const sameOrDowngradePaid = calculateCompetenceInvoiceAmount(150, [
+        { id: 2, status: 'pago', valor_original: 180, valor_pago: 180 }
+    ]);
+    assert.equal(sameOrDowngradePaid.shouldCreate, false);
+    assert.equal(sameOrDowngradePaid.reason, 'already_paid_in_competence');
+
+    // 3. Plano novo mais caro com fatura já PAGA na competência gera apenas a diferença
+    const upgradePaid = calculateCompetenceInvoiceAmount(250, [
+        { id: 3, status: 'pago', valor_original: 180, valor_pago: 180 }
+    ]);
+    assert.equal(upgradePaid.shouldCreate, true);
+    assert.equal(upgradePaid.amount, 70);
+    assert.equal(upgradePaid.reason, 'upgrade_difference');
+
+    // 4. Fatura pendente ou atrasada ativa evita duplicidade
+    const openInvoice = calculateCompetenceInvoiceAmount(200, [
+        { id: 4, status: 'atrasado', valor_original: 200, valor_pago: null }
+    ]);
+    assert.equal(openInvoice.shouldCreate, false);
+    assert.equal(openInvoice.reason, 'existing_open_invoice');
+
+    // 5. Teste transacional simulado: cancelar matrícula atrasada e contratar novo plano reativa aluno e gera nova fatura
+    const queries = [];
+    const mockConn = {
+        async query(sql, params = []) {
+            queries.push({ sql, params });
+            if (sql.includes('SELECT id, aluno_id, status FROM matriculas WHERE id = ?')) {
+                return [[{ id: 10, aluno_id: 5, status: 'ativa' }]];
+            }
+            if (sql.includes('SELECT id FROM matriculas WHERE aluno_id = ? AND status = \'ativa\'')) {
+                return [[]];
+            }
+            if (sql.includes('SELECT valor_mensal FROM planos WHERE id = ?')) {
+                return [[{ valor_mensal: 199.9 }]];
+            }
+            if (sql.includes('INSERT INTO matriculas')) {
+                return [{ insertId: 11 }];
+            }
+            if (sql.includes('FROM faturas') && sql.includes("status != 'cancelado'")) {
+                return [[]];
+            }
+            if (sql.includes('SELECT modalidade_id FROM planos_modalidades')) {
+                return [[]];
+            }
+            return [{ affectedRows: 1 }];
+        }
+    };
+
+    const cancelRes = await MatriculaService.cancelEnrollment(mockConn, {
+        matriculaId: 10,
+        motivo: 'Desistência antes do pagamento',
+        cancelarFaturasAbertas: true
+    });
+    assert.equal(cancelRes.statusCode, 200);
+    assert.ok(
+        queries.some(q => q.sql.includes("status IN ('pendente', 'atrasado')") && q.sql.includes("status = 'cancelado'")),
+        'Cancelamento deve cancelar tanto faturas pendentes quanto atrasadas'
+    );
+
+    const enrollRes = await MatriculaService.createEnrollmentWithInvoice(mockConn, {
+        alunoId: 5,
+        planoId: 2,
+        diaVencimento: 10
+    });
+    assert.equal(enrollRes.matriculaId, 11);
+    assert.ok(
+        queries.some(q => q.sql.includes("UPDATE alunos SET status = 'ativo' WHERE id = ?")),
+        'Nova matrícula deve reativar o status do aluno'
+    );
+    assert.ok(
+        queries.some(q => q.sql.includes('INSERT INTO faturas')),
+        'Nova matrícula após cancelamento deve gerar nova fatura pendente'
+    );
+});
+
 test.after(async () => {
     try {
         await pool.end();
