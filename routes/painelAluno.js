@@ -13,6 +13,7 @@ const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
+const { persistUploadedFile, removeUploadedFile } = require('../services/uploadStorage');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -149,6 +150,7 @@ router.post('/foto-perfil', optionalAuth, fotoUploadLimiter, (req, res) => {
 
             const antigaUrl = alunos[0].foto_perfil_url;
             const fileUrl = `/uploads/alunos/${req.file.filename}`;
+            await persistUploadedFile(fileUrl, req.file.path);
 
             await pool.query(
                 'UPDATE alunos SET foto_perfil_url = ?, face_foto_base_url = ? WHERE id = ? AND deleted_at IS NULL',
@@ -156,8 +158,7 @@ router.post('/foto-perfil', optionalAuth, fotoUploadLimiter, (req, res) => {
             );
 
             if (antigaUrl && typeof antigaUrl === 'string' && antigaUrl.startsWith('/uploads/alunos/') && antigaUrl !== fileUrl) {
-                const oldPath = path.join(uploadFotoDir, path.basename(antigaUrl));
-                safeRemoveFile(oldPath);
+                await removeUploadedFile(antigaUrl);
             }
 
             return res.json({

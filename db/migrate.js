@@ -727,6 +727,12 @@ async function runMigrations() {
             console.log('🏆 [Bootstrap] Conquistas iniciais criadas.');
         }
 
+        const { ensureUploadTable, syncUploadsOnBoot } = require('../services/uploadStorage');
+        await ensureUploadTable();
+        await syncUploadsOnBoot().catch((err) => {
+            console.warn('⚠️ [UploadStorage] Aviso na sincronização de uploads:', err.message);
+        });
+
         const { seedWiki } = require('./seed-wiki');
         await seedWiki().catch(() => {});
 

@@ -11,6 +11,7 @@ const multer = require('multer');
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
+const { persistUploadedFile } = require('../services/uploadStorage');
 
 // Diretório para fotos dos passos da Wiki
 const uploadWikiDir = path.join(__dirname, '../public/uploads/wiki');
@@ -46,11 +47,10 @@ const uploadPasso = multer({
 });
 
 /**
- * POST /api/wiki-golpes/upload-capa
- * Upload de imagem/GIF de capa para o golpe com verificação de magic bytes
+ * Helper compartilhado para upload de imagens/GIFs da Wiki com validação de magic bytes e persistência durável
  */
-router.post('/upload-capa', authenticateToken, authorizeRoles('admin', 'professor'), (req, res) => {
-    uploadPasso.any()(req, res, (uploadErr) => {
+function handleWikiImageUpload(req, res, fieldCandidates, successMessage, logLabel) {
+    uploadPasso.any()(req, res, async (uploadErr) => {
         if (uploadErr) {
             return res.status(400).json({
                 success: false,
@@ -61,50 +61,7 @@ router.post('/upload-capa', authenticateToken, authorizeRoles('admin', 'professo
         }
 
         try {
-            const file = req.file || (req.files && (req.files.find(f => f.fieldname === 'capa' || f.fieldname === 'foto') || req.files[0]));
-            if (!file) {
-                return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado.' });
-            }
-
-            if (!hasValidImageSignature(file.path)) {
-                try { fs.unlinkSync(file.path); } catch { /* ignore */ }
-                return res.status(400).json({
-                    success: false,
-                    error: 'Arquivo inválido: o conteúdo binário não corresponde a uma imagem JPG, PNG, WEBP ou GIF legítima.'
-                });
-            }
-
-            const fileUrl = `/uploads/wiki/${file.filename}`;
-            res.json({
-                success: true,
-                url: fileUrl,
-                filename: file.filename,
-                message: 'Capa do golpe enviada com sucesso!'
-            });
-        } catch (err) {
-            console.error('Erro no processamento da imagem de capa:', err);
-            res.status(500).json({ success: false, error: 'Erro interno ao processar a capa.' });
-        }
-    });
-});
-
-/**
- * POST /api/wiki-golpes/upload-passo
- * Upload de imagem ilustrativa para um passo do golpe com verificação de magic bytes
- */
-router.post('/upload-passo', authenticateToken, authorizeRoles('admin', 'professor'), (req, res) => {
-    uploadPasso.any()(req, res, (uploadErr) => {
-        if (uploadErr) {
-            return res.status(400).json({
-                success: false,
-                error: uploadErr.code === 'LIMIT_FILE_SIZE'
-                    ? 'A imagem excede o limite máximo de 15MB.'
-                    : (uploadErr.message || 'Erro no envio do arquivo.')
-            });
-        }
-
-        try {
-            const file = req.file || (req.files && (req.files.find(f => f.fieldname === 'foto' || f.fieldname === 'passo') || req.files[0]));
+            const file = req.file || (req.files && (req.files.find(f => fieldCandidates.includes(f.fieldname)) || req.files[0]));
             if (!file) {
                 return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado.' });
             }
@@ -119,17 +76,35 @@ router.post('/upload-passo', authenticateToken, authorizeRoles('admin', 'profess
             }
 
             const fileUrl = `/uploads/wiki/${file.filename}`;
+            await persistUploadedFile(fileUrl, file.path);
+
             res.json({
                 success: true,
                 url: fileUrl,
                 filename: file.filename,
-                message: 'Imagem do passo enviada com sucesso!'
+                message: successMessage
             });
         } catch (err) {
-            console.error('Erro no processamento da imagem do passo:', err);
-            res.status(500).json({ success: false, error: 'Erro interno ao processar a imagem.' });
+            console.error(`Erro no processamento da ${logLabel}:`, err);
+            res.status(500).json({ success: false, error: 'Erro interno ao processar o arquivo enviado.' });
         }
     });
+}
+
+/**
+ * POST /api/wiki-golpes/upload-capa
+ * Upload de imagem/GIF de capa para o golpe com verificação de magic bytes
+ */
+router.post('/upload-capa', authenticateToken, authorizeRoles('admin', 'professor'), (req, res) => {
+    handleWikiImageUpload(req, res, ['capa', 'foto'], 'Capa do golpe enviada com sucesso!', 'imagem de capa');
+});
+
+/**
+ * POST /api/wiki-golpes/upload-passo
+ * Upload de imagem ilustrativa para um passo do golpe com verificação de magic bytes
+ */
+router.post('/upload-passo', authenticateToken, authorizeRoles('admin', 'professor'), (req, res) => {
+    handleWikiImageUpload(req, res, ['foto', 'passo'], 'Imagem do passo enviada com sucesso!', 'imagem do passo');
 });
 
 /**
@@ -353,9 +328,23 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'professor'), asyn
             ? nivel_dificuldade
             : 'iniciante';
         const descGeral = descricao_geral ? String(descricao_geral).trim() : null;
-        const imgCapa = imagem_capa !== undefined ? (imagem_capa ? String(imagem_capa).trim().substring(0, 255) : null) : null;
 
         await conn.beginTransaction();
+
+        let imgCapa;
+        if (imagem_capa === undefined) {
+            const [existRows] = await conn.query(
+                `SELECT imagem_capa FROM wiki_golpes WHERE id = ? AND ativo = 1`,
+                [golpeId]
+            );
+            if (existRows.length === 0) {
+                await conn.rollback();
+                return res.status(404).json({ success: false, error: 'Golpe não encontrado para atualização.' });
+            }
+            imgCapa = existRows[0].imagem_capa || null;
+        } else {
+            imgCapa = imagem_capa ? String(imagem_capa).trim().substring(0, 255) : null;
+        }
 
         const [updateResult] = await conn.query(`
             UPDATE wiki_golpes

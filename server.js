@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { resolveOrRestoreUpload } = require('./services/uploadStorage');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -77,6 +78,42 @@ app.use(['/manifest.json', '/sw.js', '/favicon.ico', '/assets/icons'], (req, res
 app.get('/favicon.ico', (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, must-revalidate');
     res.sendFile(path.join(__dirname, 'public', 'assets', 'icons', 'icon-192.png'));
+});
+
+// Serve uploads dinâmicos (wiki/alunos) com restauração automática de diretório compartilhado / MySQL
+app.get('/uploads/:folder/:filename', async (req, res, next) => {
+    const folder = String(req.params.folder || '').toLowerCase();
+    if (folder !== 'wiki' && folder !== 'alunos') {
+        return next();
+    }
+
+    const safeFilename = path.basename(String(req.params.filename || ''));
+    const urlPath = `/uploads/${folder}/${safeFilename}`;
+
+    try {
+        const resolved = await resolveOrRestoreUpload(urlPath);
+        if (!resolved) {
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            return res.status(404).type('text/plain').send('Arquivo não encontrado.');
+        }
+
+        res.setHeader('Content-Type', resolved.mimeType || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+
+        if (resolved.buffer) {
+            return res.send(resolved.buffer);
+        }
+        return res.sendFile(resolved.filePath, { cacheControl: false }, (sendErr) => {
+            if (sendErr && !res.headersSent) {
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                res.status(404).type('text/plain').send('Arquivo não encontrado.');
+            }
+        });
+    } catch (err) {
+        console.error('Erro ao servir arquivo de upload:', err);
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        return res.status(500).type('text/plain').send('Erro ao carregar arquivo.');
+    }
 });
 
 // Arquivos estáticos do frontend Vanilla

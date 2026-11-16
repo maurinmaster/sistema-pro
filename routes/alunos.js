@@ -7,6 +7,7 @@ const multer = require('multer');
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const { validateMinorGuardian, hasValidImageSignature } = require('../services/domainRules');
+const { persistUploadedFile, removeUploadedFile } = require('../services/uploadStorage');
 const MatriculaService = require('../services/matriculaService');
 
 // Configuração do Multer para armazenamento de fotos de perfil
@@ -45,7 +46,7 @@ const upload = multer({
 
 // POST /api/alunos/upload-foto - Upload de foto de perfil (admin e recepcao)
 router.post('/upload-foto', authenticateToken, authorizeRoles('admin', 'recepcao'), (req, res) => {
-    upload.single('foto')(req, res, (uploadErr) => {
+    upload.single('foto')(req, res, async (uploadErr) => {
         if (uploadErr) {
             return res.status(400).json({
                 success: false,
@@ -70,6 +71,7 @@ router.post('/upload-foto', authenticateToken, authorizeRoles('admin', 'recepcao
             }
 
             const fileUrl = `/uploads/alunos/${req.file.filename}`;
+            await persistUploadedFile(fileUrl, req.file.path);
             res.json({
                 success: true,
                 message: 'Foto carregada com sucesso!',
@@ -1171,14 +1173,9 @@ async function executarExclusaoPermanente(conn, alunoId) {
     // 3. Exclui o registro principal do aluno
     await conn.query('DELETE FROM alunos WHERE id = ?', [alunoId]);
 
-    // 4. Limpa arquivo físico de foto se for upload local do sistema
+    // 4. Limpa arquivo físico de foto e cópias persistentes se for upload local do sistema
     if (aluno.foto_perfil_url && aluno.foto_perfil_url.startsWith('/uploads/alunos/')) {
-        const filePath = path.join(__dirname, '..', 'public', aluno.foto_perfil_url);
-        try {
-            if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        } catch {
-            // Silencioso se arquivo já não existir
-        }
+        await removeUploadedFile(aluno.foto_perfil_url);
     }
 
     return aluno;

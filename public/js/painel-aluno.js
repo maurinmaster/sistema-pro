@@ -2658,7 +2658,7 @@ const PainelAlunoApp = {
             const diffClass = `curriculum-tag-diff-${(g.nivel_dificuldade || 'iniciante').toLowerCase()}`;
             const diffLabel = (g.nivel_dificuldade || 'iniciante').charAt(0).toUpperCase() + (g.nivel_dificuldade || 'iniciante').slice(1);
             const totalPassos = parseInt(g.total_passos, 10) || 0;
-            const capaUrl = this.sanitizeUrl(g.imagem_capa);
+            const capaUrl = this.sanitizeUrl(g.imagem_capa || g.imagem_capa_exibicao);
 
             // Badge explícito de Faixa Atual vs Faixa Anterior com ícones SVG consistentes
             const isAtual = Boolean(g.is_faixa_atual);

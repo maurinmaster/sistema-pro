@@ -8,6 +8,21 @@ const WikiModule = {
     modalidades: [],
     currentGolpeVisualizacao: null,
     currentPassoIndex: 0,
+    uploadsEmAndamento: 0,
+
+    setUploadState(delta) {
+        this.uploadsEmAndamento = Math.max(0, this.uploadsEmAndamento + delta);
+        const btnSubmit = document.getElementById('btn-salvar-golpe');
+        if (!btnSubmit) return;
+
+        if (this.uploadsEmAndamento > 0) {
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Enviando mídia... aguarde';
+        } else {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = 'Salvar Golpe na Wiki';
+        }
+    },
 
     init() {
         this.bindEvents();
@@ -84,6 +99,7 @@ const WikiModule = {
 
             const statusText = document.getElementById('golpe-capa-status-text');
             if (statusText) statusText.textContent = 'Enviando imagem/GIF de capa...';
+            this.setUploadState(1);
 
             try {
                 const formData = new FormData();
@@ -116,6 +132,7 @@ const WikiModule = {
                 if (statusText) statusText.textContent = 'Falha no envio da capa.';
                 UI.showToast(err.message || 'Falha ao enviar a foto de capa.', 'error');
             } finally {
+                this.setUploadState(-1);
                 fileInputCapa.value = '';
             }
         });
@@ -248,7 +265,7 @@ const WikiModule = {
             const diffClass = `wiki-tag-diff-${g.nivel_dificuldade || 'iniciante'}`;
             const diffLabel = (g.nivel_dificuldade || 'iniciante').charAt(0).toUpperCase() + (g.nivel_dificuldade || 'iniciante').slice(1);
             const totalPassos = parseInt(g.total_passos, 10) || 0;
-            const capaUrl = UI.sanitizeUrl(g.imagem_capa);
+            const capaUrl = UI.sanitizeUrl(g.imagem_capa || g.imagem_capa_exibicao);
 
             const capaHtml = capaUrl
                 ? `<img src="${capaUrl}" alt="${nomeEsc}" onerror="this.parentElement.innerHTML='<div class=\\'wiki-card-cover-placeholder\\'>🥊 Sem Imagem</div>'">`
@@ -297,6 +314,8 @@ const WikiModule = {
     },
 
     openModalNovoGolpe() {
+        this.uploadsEmAndamento = 0;
+        this.setUploadState(0);
         document.getElementById('modal-golpe-title').textContent = 'Cadastrar Novo Golpe / Movimento';
         document.getElementById('golpe-id').value = '';
         document.getElementById('golpe-nome').value = '';
@@ -330,6 +349,8 @@ const WikiModule = {
     },
 
     async openModalEditarGolpe(id) {
+        this.uploadsEmAndamento = 0;
+        this.setUploadState(0);
         try {
             const res = await API.get(`/wiki-golpes/${id}`);
             if (!res || !res.success || !res.golpe) {
@@ -453,7 +474,7 @@ const WikiModule = {
                     <div class="passo-img-uploader" title="Clique para selecionar uma foto deste passo">
                         ${previewContent}
                     </div>
-                    <input type="file" class="passo-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                    <input type="file" class="passo-file-input" accept="image/jpeg,image/png,image/webp,image/gif" style="display: none;">
                     <input type="hidden" class="passo-img-url-input" value="${imgUrl}">
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -491,12 +512,14 @@ const WikiModule = {
             if (!fileInput.files || fileInput.files.length === 0) return;
             const file = fileInput.files[0];
 
-            if (file.size > 5 * 1024 * 1024) {
-                UI.showToast('A imagem selecionada excede o limite de 5MB.', 'error');
+            if (file.size > 15 * 1024 * 1024) {
+                UI.showToast('A imagem ou GIF selecionada excede o limite de 15MB.', 'error');
+                fileInput.value = '';
                 return;
             }
 
-            uploaderBox.innerHTML = `<span style="font-size: 11px; color: var(--primary-light);">Enviando foto...</span>`;
+            uploaderBox.innerHTML = `<span style="font-size: 11px; color: var(--primary-light);">Enviando mídia...</span>`;
+            this.setUploadState(1);
 
             try {
                 const formData = new FormData();
@@ -515,7 +538,7 @@ const WikiModule = {
 
                 urlInput.value = data.url;
                 uploaderBox.innerHTML = `<img src="${UI.sanitizeUrl(data.url)}" alt="Foto do Passo">`;
-                UI.showToast('Foto do passo carregada com sucesso!', 'success');
+                UI.showToast('Mídia do passo carregada com sucesso!', 'success');
             } catch (err) {
                 console.error('Erro no upload de foto do passo:', err);
                 uploaderBox.innerHTML = `
@@ -525,6 +548,9 @@ const WikiModule = {
                     </div>
                 `;
                 UI.showToast(err.message || 'Falha ao enviar a foto do passo.', 'error');
+            } finally {
+                this.setUploadState(-1);
+                fileInput.value = '';
             }
         });
 
@@ -572,6 +598,11 @@ const WikiModule = {
     },
 
     async salvarGolpe() {
+        if (this.uploadsEmAndamento > 0) {
+            UI.showToast('Aguarde a conclusão do envio da imagem/GIF antes de salvar.', 'warning');
+            return;
+        }
+
         const golpeId = document.getElementById('golpe-id').value;
         const nome = document.getElementById('golpe-nome').value.trim();
         const modalidade_id = document.getElementById('golpe-modalidade').value || null;

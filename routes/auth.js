@@ -10,6 +10,7 @@ const multer = require('multer');
 const pool = require('../db/connection');
 const { authenticateToken, createRateLimiter, JWT_SECRET } = require('../middlewares/auth');
 const { calculateAge, validateMinorGuardian, hasValidImageSignature } = require('../services/domainRules');
+const { persistUploadedFile } = require('../services/uploadStorage');
 const emailService = require('../services/emailService');
 
 // Diretório para armazenamento de fotos de biometria e perfil
@@ -323,7 +324,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
 // 2. POST /api/auth/upload-foto-perfil - Upload e verificação de foto da câmera / perfil
 // ============================================================================
 router.post(['/upload-foto-biometria', '/upload-foto-perfil'], cadastroRateLimiter, (req, res) => {
-    uploadBiometria.single('foto')(req, res, (uploadErr) => {
+    uploadBiometria.single('foto')(req, res, async (uploadErr) => {
         if (uploadErr) {
             return res.status(400).json({
                 success: false,
@@ -351,6 +352,7 @@ router.post(['/upload-foto-biometria', '/upload-foto-perfil'], cadastroRateLimit
             }
 
             const fileUrl = `/uploads/alunos/${req.file.filename}`;
+            await persistUploadedFile(fileUrl, req.file.path);
             res.json({
                 success: true,
                 message: 'Foto facial registrada com sucesso para reconhecimento biométrico!',
