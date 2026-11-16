@@ -1844,6 +1844,31 @@ test('Domínio Financeiro: Regras de faturamento na competência após cancelame
     );
 });
 
+test('Gateway Asaas: Extração estruturada de falhas e sanitização de dados sensíveis em logs', () => {
+    const PaymentLogService = require('../services/paymentLogService');
+    const asaasService = require('../services/asaasService');
+
+    const err = asaasService.buildAsaasError(
+        400,
+        { errors: [{ code: 'invalid_cpfCnpj', description: 'O CPF/CNPJ informado é inválido.' }] },
+        'Erro padrão',
+        'criar_cliente'
+    );
+    const info = PaymentLogService.extractAsaasErrorInfo(err);
+    assert.equal(info.httpStatus, 400);
+    assert.equal(info.codigoErro, 'invalid_cpfCnpj');
+    assert.equal(info.mensagemErro, 'O CPF/CNPJ informado é inválido.');
+
+    const sanitized = JSON.parse(PaymentLogService.sanitizeDetails({
+        access_token: 'secret_key',
+        creditCard: { number: '4111111111111111', ccv: '999' },
+        errors: [{ code: 'invalid_cpfCnpj', description: 'O CPF/CNPJ informado é inválido.' }]
+    }));
+    assert.equal(sanitized.access_token, '[REDACTED]');
+    assert.equal(sanitized.creditCard, '[REDACTED]');
+    assert.equal(sanitized.errors[0].code, 'invalid_cpfCnpj');
+});
+
 test.after(async () => {
     try {
         await pool.end();

@@ -733,6 +733,9 @@ async function runMigrations() {
             console.warn('⚠️ [UploadStorage] Aviso na sincronização de uploads:', err.message);
         });
 
+        const { ensurePaymentLogsTable } = require('../services/paymentLogService');
+        await ensurePaymentLogsTable();
+
         const { seedWiki } = require('./seed-wiki');
         await seedWiki().catch(() => {});
 

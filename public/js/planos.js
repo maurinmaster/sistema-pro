@@ -65,13 +65,31 @@ const PlanosModule = {
         if (formNovaFatura) {
             formNovaFatura.addEventListener('submit', (e) => this.salvarNovaFatura(e));
         }
+
+        // Filtros e ações da aba Logs de Pagamento
+        const filtroLogsStatus = document.getElementById('filtro-logs-resolvido');
+        const filtroLogsBusca = document.getElementById('filtro-logs-busca');
+        const btnAtualizarLogs = document.getElementById('btn-atualizar-logs-pagamento');
+        const btnLimparLogs = document.getElementById('btn-limpar-logs-resolvidos');
+
+        if (filtroLogsStatus) filtroLogsStatus.addEventListener('change', () => this.loadLogsFalhas());
+        if (btnAtualizarLogs) btnAtualizarLogs.addEventListener('click', () => this.loadLogsFalhas());
+        if (btnLimparLogs) btnLimparLogs.addEventListener('click', () => this.limparLogsResolvidos());
+        if (filtroLogsBusca) {
+            let logTimeout = null;
+            filtroLogsBusca.addEventListener('input', () => {
+                clearTimeout(logTimeout);
+                logTimeout = setTimeout(() => this.loadLogsFalhas(), 300);
+            });
+        }
     },
 
     async loadAll() {
         await Promise.all([
             this.loadModalidadesCache(),
             this.loadPlanos(),
-            this.loadFaturas()
+            this.loadFaturas(),
+            this.loadLogsFalhas()
         ]);
     },
 
@@ -86,14 +104,14 @@ const PlanosModule = {
         // Atualiza painéis
         const tabPlanos = document.getElementById('financeiro-pane-planos');
         const tabFaturas = document.getElementById('financeiro-pane-faturas');
+        const tabLogs = document.getElementById('financeiro-pane-logs-pagamento');
 
-        if (tabPlanos && tabFaturas) {
-            if (tabName === 'planos') {
-                tabPlanos.style.display = 'block';
-                tabFaturas.style.display = 'none';
-            } else {
-                tabPlanos.style.display = 'none';
-                tabFaturas.style.display = 'block';
+        if (tabPlanos) tabPlanos.style.display = tabName === 'planos' ? 'block' : 'none';
+        if (tabFaturas) tabFaturas.style.display = tabName === 'faturas' ? 'block' : 'none';
+        if (tabLogs) {
+            tabLogs.style.display = tabName === 'logs-pagamento' ? 'block' : 'none';
+            if (tabName === 'logs-pagamento') {
+                this.loadLogsFalhas();
             }
         }
     },
@@ -674,6 +692,106 @@ const PlanosModule = {
             await this.loadFaturas();
         } catch (err) {
             UI.showToast(err.message || 'Erro ao cancelar fatura.', 'error');
+        }
+    },
+
+    async loadLogsFalhas() {
+        const tbody = document.getElementById('logs-pagamento-table-body');
+        const badge = document.getElementById('badge-logs-falhas');
+        const resolvido = document.getElementById('filtro-logs-resolvido')?.value ?? '0';
+        const busca = document.getElementById('filtro-logs-busca')?.value?.trim() || '';
+
+        try {
+            const params = new URLSearchParams({ resolvido, limit: '100' });
+            if (busca) params.set('busca', busca);
+
+            const res = await API.get(`/faturas/logs-falhas?${params.toString()}`);
+            const logs = res.data || [];
+            const totalPendentes = Number(res.resumo?.total_pendentes || 0);
+
+            if (badge) {
+                badge.textContent = String(totalPendentes);
+                badge.style.display = totalPendentes > 0 ? 'inline-block' : 'none';
+            }
+
+            if (!tbody) return;
+
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                            Nenhuma falha de pagamento registrada para os filtros selecionados.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = logs.map(log => {
+                const safeId = Number(log.id);
+                const dataFmt = log.created_at ? new Date(log.created_at).toLocaleString('pt-BR') : '-';
+                const alunoNome = UI.escapeHtml(log.aluno_nome || (log.aluno_id ? `Aluno #${Number(log.aluno_id)}` : 'Não identificado'));
+                const alunoSub = UI.escapeHtml(log.aluno_cpf || log.aluno_email || '');
+                const opFmt = UI.escapeHtml(log.operacao || '-');
+                const refFmt = log.referencia_tipo && log.referencia_id
+                    ? `${UI.escapeHtml(log.referencia_tipo)} #${Number(log.referencia_id)}`
+                    : '';
+                const httpBadge = log.http_status
+                    ? `<span style="background: rgba(239,68,68,0.15); color: #ef4444; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 11px;">HTTP ${Number(log.http_status)}</span>`
+                    : '';
+                const codeText = log.codigo_erro ? `<div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">${UI.escapeHtml(log.codigo_erro)}</div>` : '';
+                const msgFmt = UI.escapeHtml(log.mensagem_erro || 'Erro sem descrição');
+                const isResolvido = Number(log.resolvido) === 1;
+
+                return `
+                    <tr>
+                        <td style="white-space: nowrap; font-size: 12px;">${UI.escapeHtml(dataFmt)}</td>
+                        <td>
+                            <div style="font-weight: 600;">${alunoNome}</div>
+                            ${alunoSub ? `<div style="font-size: 11px; color: var(--text-muted);">${alunoSub}</div>` : ''}
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; font-size: 12px;">${opFmt}</div>
+                            ${refFmt ? `<div style="font-size: 11px; color: var(--text-muted);">${refFmt}</div>` : ''}
+                        </td>
+                        <td>${httpBadge || '-'}${codeText}</td>
+                        <td style="max-width: 340px; white-space: normal; word-break: break-word; font-size: 12px; color: #fca5a5;">${msgFmt}</td>
+                        <td>
+                            ${isResolvido
+                                ? `<span style="color: #10b981; font-size: 12px; font-weight: 600;">Resolvido</span>`
+                                : `<button type="button" class="btn btn-secondary btn-sm" onclick="PlanosModule.resolverLogFalha(${safeId})">Marcar Resolvido</button>`}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        } catch (err) {
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: #ef4444;">Erro ao carregar logs de pagamento.</td></tr>`;
+            }
+        }
+    },
+
+    async resolverLogFalha(logId) {
+        try {
+            const res = await API.request(`/faturas/logs-falhas/${Number(logId)}/resolver`, {
+                method: 'PATCH',
+                body: JSON.stringify({ resolvido: true })
+            });
+            UI.showToast(res.message || 'Log resolvido.', 'success');
+            await this.loadLogsFalhas();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao atualizar log.', 'error');
+        }
+    },
+
+    async limparLogsResolvidos() {
+        if (!confirm('Remover permanentemente todos os logs já marcados como resolvidos?')) return;
+        try {
+            const res = await API.delete('/faturas/logs-falhas/limpar-resolvidos');
+            UI.showToast(res.message || 'Logs limpos.', 'success');
+            await this.loadLogsFalhas();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao limpar logs.', 'error');
         }
     }
 };

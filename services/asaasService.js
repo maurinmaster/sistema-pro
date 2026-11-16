@@ -4,6 +4,7 @@
  */
 
 const crypto = require('crypto');
+const PaymentLogService = require('./paymentLogService');
 
 class AsaasService {
     constructor() {
@@ -65,9 +66,48 @@ class AsaasService {
     }
 
     /**
+     * Constrói um erro estruturado com metadados retornados pela API do Asaas.
+     */
+    buildAsaasError(httpStatus, data, fallbackMsg, operation, paymentId = null) {
+        const errorsArr = Array.isArray(data?.errors) ? data.errors : null;
+        const msg = errorsArr && errorsArr.length > 0
+            ? errorsArr.map(e => e.description || e.code).filter(Boolean).join('; ')
+            : fallbackMsg;
+        const err = new Error(msg || fallbackMsg);
+        err.asaasStatus = httpStatus || null;
+        err.asaasErrors = errorsArr;
+        err.asaasCode = errorsArr && errorsArr.length > 0 ? (errorsArr[0].code || null) : null;
+        err.asaasOperation = operation;
+        if (paymentId) err.asaasPaymentId = paymentId;
+        return err;
+    }
+
+    /**
+     * Registra a falha do Asaas no sistema de log persistente sem duplicar registros.
+     */
+    async logServiceFailure(operacao, err, context = {}) {
+        if (!err || err._loggedByPaymentLog) return;
+        const info = PaymentLogService.extractAsaasErrorInfo(err);
+        err._loggedByPaymentLog = true;
+        await PaymentLogService.recordFailure({
+            gateway: 'asaas',
+            operacao: err.asaasOperation || operacao,
+            alunoId: context.alunoId || null,
+            referenciaTipo: context.referenciaTipo || null,
+            referenciaId: context.referenciaId || null,
+            paymentId: info.paymentId || context.paymentId || null,
+            httpStatus: info.httpStatus,
+            codigoErro: info.codigoErro,
+            mensagemErro: info.mensagemErro,
+            detalhes: info.detalhes,
+            origemRota: context.origemRota || null
+        });
+    }
+
+    /**
      * Cria ou busca um cliente existente no Asaas
      */
-    async criarOuBuscarCliente({ nome, email, cpfCnpj, telefone, alunoId }) {
+    async criarOuBuscarCliente({ nome, email, cpfCnpj, telefone, alunoId, context = {} }) {
         const cleanCpf = this.cleanDigits(cpfCnpj);
         const cleanPhone = this.cleanDigits(telefone);
 
@@ -113,30 +153,23 @@ class AsaasService {
                 body: JSON.stringify(payload)
             });
 
-            const createData = await createRes.json();
+            const createData = await createRes.json().catch(() => ({}));
             if (!createRes.ok) {
-                const msg = createData.errors ? createData.errors.map(e => e.description).join('; ') : 'Erro ao cadastrar cliente no Asaas';
-                throw new Error(msg);
+                throw this.buildAsaasError(createRes.status, createData, 'Erro ao cadastrar cliente no Asaas', 'criar_cliente');
             }
 
             return createData;
         } catch (err) {
             console.error('[AsaasService] Falha ao criar/buscar cliente:', err.message);
-            // Em caso de falha de conexão com a API externa, fallback seguro para não travar
-            return {
-                id: `cus_fallback_${alunoId || Date.now()}`,
-                name: nome,
-                email: email,
-                is_mock: true,
-                warning: err.message
-            };
+            await this.logServiceFailure('criar_cliente', err, { alunoId, ...context });
+            throw err;
         }
     }
 
     /**
      * Cria uma nova cobrança no Asaas para o Exame de Graduação
      */
-    async criarCobranca({ customerId, valor, vencimento, descricao, externalReference, billingType = 'PIX' }) {
+    async criarCobranca({ customerId, valor, vencimento, descricao, externalReference, billingType = 'PIX', context = {} }) {
         const valNum = parseFloat(valor);
         if (isNaN(valNum) || valNum <= 0) {
             throw new Error('Valor da cobrança deve ser numérico e maior que zero.');
@@ -196,17 +229,16 @@ class AsaasService {
                 body: JSON.stringify(payload)
             });
 
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (!res.ok) {
-                const msg = data.errors ? data.errors.map(e => e.description).join('; ') : 'Erro ao gerar cobrança no Asaas';
-                throw new Error(msg);
+                throw this.buildAsaasError(res.status, data, 'Erro ao gerar cobrança no Asaas', 'criar_cobranca');
             }
 
             // Se a cobrança for Pix ou indefinida, busca o QR Code Pix imediatamente
             let pixData = null;
             if (bType === 'PIX' || bType === 'UNDEFINED') {
                 try {
-                    pixData = await this.obterPixQrCode(data.id);
+                    pixData = await this.obterPixQrCode(data.id, context);
                 } catch (pixErr) {
                     console.warn('[AsaasService] Não foi possível carregar QR Code Pix imediato:', pixErr.message);
                 }
@@ -228,6 +260,7 @@ class AsaasService {
             };
         } catch (err) {
             console.error('[AsaasService] Falha ao criar cobrança:', err.message);
+            await this.logServiceFailure('criar_cobranca', err, context);
             throw err;
         }
     }
@@ -235,7 +268,7 @@ class AsaasService {
     /**
      * Obtém o QR Code e chave Copia e Cola para pagamento Pix no Asaas
      */
-    async obterPixQrCode(paymentId) {
+    async obterPixQrCode(paymentId, context = {}) {
         if (!paymentId) return null;
 
         if (!this.isConfigured() || String(paymentId).startsWith('pay_mock_')) {
@@ -255,13 +288,13 @@ class AsaasService {
 
             if (!res.ok) {
                 const errData = await res.json().catch(() => ({}));
-                const msg = errData.errors ? errData.errors.map(e => e.description).join('; ') : 'Erro ao buscar Pix QR Code no Asaas';
-                throw new Error(msg);
+                throw this.buildAsaasError(res.status, errData, 'Erro ao buscar Pix QR Code no Asaas', 'obter_pix_qrcode', paymentId);
             }
 
             return await res.json();
         } catch (err) {
             console.error('[AsaasService] Erro ao obter Pix QR Code:', err.message);
+            await this.logServiceFailure('obter_pix_qrcode', err, { paymentId, ...context });
             throw err;
         }
     }
@@ -282,7 +315,7 @@ class AsaasService {
     /**
      * Processa pagamento direto com cartão de crédito via Asaas
      */
-    async pagarComCartao({ paymentId, customerId, valor, vencimento, descricao, externalReference, creditCard, creditCardHolderInfo, remoteIp }) {
+    async pagarComCartao({ paymentId, customerId, valor, vencimento, descricao, externalReference, creditCard, creditCardHolderInfo, remoteIp, context = {} }) {
         if (!creditCard || !creditCard.number || !creditCard.holderName || !creditCard.expiryMonth || !creditCard.expiryYear || !creditCard.ccv) {
             throw new Error('Todos os dados do cartão de crédito são obrigatórios (número, titular, validade e CVV).');
         }
@@ -352,12 +385,11 @@ class AsaasService {
                     })
                 });
 
-                const payData = await payRes.json();
+                const payData = await payRes.json().catch(() => ({}));
                 if (payRes.ok && (payData.status === 'CONFIRMED' || payData.status === 'RECEIVED')) {
                     return payData;
                 } else if (!payRes.ok) {
-                    const msg = payData.errors ? payData.errors.map(e => e.description).join('; ') : 'Erro ao processar pagamento com cartão';
-                    throw new Error(msg);
+                    throw this.buildAsaasError(payRes.status, payData, 'Erro ao processar pagamento com cartão', 'pagar_cartao', paymentId);
                 }
             }
 
@@ -383,15 +415,15 @@ class AsaasService {
                 })
             });
 
-            const createData = await createRes.json();
+            const createData = await createRes.json().catch(() => ({}));
             if (!createRes.ok) {
-                const msg = createData.errors ? createData.errors.map(e => e.description).join('; ') : 'Erro ao processar cobrança no cartão';
-                throw new Error(msg);
+                throw this.buildAsaasError(createRes.status, createData, 'Erro ao processar cobrança no cartão', 'pagar_cartao');
             }
 
             return createData;
         } catch (err) {
             console.error('[AsaasService] Falha ao processar pagamento por cartão:', err.message);
+            await this.logServiceFailure('pagar_cartao', err, { paymentId, ...context });
             throw err;
         }
     }
@@ -399,7 +431,7 @@ class AsaasService {
     /**
      * Consulta o status atualizado de uma cobrança no Asaas
      */
-    async consultarCobranca(paymentId) {
+    async consultarCobranca(paymentId, context = {}) {
         if (!paymentId) return null;
 
         if (!this.isConfigured() || String(paymentId).startsWith('pay_mock_')) {
@@ -417,12 +449,14 @@ class AsaasService {
             });
 
             if (!res.ok) {
-                throw new Error('Falha ao consultar cobrança no Asaas');
+                const errData = await res.json().catch(() => ({}));
+                throw this.buildAsaasError(res.status, errData, 'Falha ao consultar cobrança no Asaas', 'consultar_cobranca', paymentId);
             }
 
             return await res.json();
         } catch (err) {
             console.error('[AsaasService] Erro ao consultar cobrança:', err.message);
+            await this.logServiceFailure('consultar_cobranca', err, { paymentId, ...context });
             throw err;
         }
     }

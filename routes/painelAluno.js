@@ -1892,12 +1892,19 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
         }
 
         // Cria ou busca cliente no Asaas
+        const asaasContext = {
+            alunoId: fat.aluno_id,
+            referenciaTipo: 'fatura',
+            referenciaId: fat.id,
+            origemRota: '/api/aluno/faturas/:id/gerar-asaas'
+        };
         const customer = await asaasService.criarOuBuscarCliente({
             nome: fat.nome_completo,
             email: fat.email,
             cpfCnpj: fat.cpf,
             telefone: fat.telefone_whatsapp,
-            alunoId: fat.aluno_id
+            alunoId: fat.aluno_id,
+            context: asaasContext
         });
 
         // Data de vencimento da cobrança (mínimo 2 dias à frente se já vencida)
@@ -1916,7 +1923,8 @@ router.post('/faturas/:id/gerar-asaas', optionalAuth, async (req, res) => {
             vencimento: dueDate,
             descricao: `Mensalidade ${fat.competencia} - ${fat.plano_nome} (PRO COMBATE)`,
             externalReference: `fatura_${fat.id}_aluno_${fat.aluno_id}`,
-            billingType: 'PIX'
+            billingType: 'PIX',
+            context: asaasContext
         });
 
         const pixQr = cobranca.pixQrCode ? cobranca.pixQrCode.encodedImage : null;
@@ -2102,6 +2110,12 @@ router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
         }
 
         // 1. Obtém ou cria o cliente no gateway Asaas se não existir
+        const asaasContext = {
+            alunoId: fat.aluno_id,
+            referenciaTipo: 'fatura',
+            referenciaId: fat.id,
+            origemRota: '/api/aluno/faturas/:id/pagar-cartao'
+        };
         let customerId = fat.asaas_customer_id;
         if (!customerId) {
             const customer = await asaasService.criarOuBuscarCliente({
@@ -2109,7 +2123,8 @@ router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
                 email: fat.email,
                 cpfCnpj: fat.cpf,
                 telefone: fat.telefone_whatsapp,
-                alunoId: fat.aluno_id
+                alunoId: fat.aluno_id,
+                context: asaasContext
             });
             customerId = customer.id;
         }
@@ -2136,7 +2151,8 @@ router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
                 addressNumber: numero_endereco || 'S/N',
                 phone: telefone_titular || fat.telefone_whatsapp
             },
-            remoteIp: req.ip
+            remoteIp: req.ip,
+            context: asaasContext
         });
 
         const cardBrand = cobranca.creditCard?.creditCardBrand || asaasService.detectCardBrand(numero_cartao);

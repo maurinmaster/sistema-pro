@@ -452,6 +452,15 @@
                             </svg>
                             <span>Mensalidades & Faturas</span>
                         </button>
+                        <button class="financeiro-tab-btn" data-tab="logs-pagamento">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                            <span>Logs de Pagamento</span>
+                            <span id="badge-logs-falhas" style="display: none; background: #ef4444; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 999px; margin-left: 6px;">0</span>
+                        </button>
                     </div>
 
                     <!-- PAINEL 1: PLANOS COMERCIAIS (CRUD) -->
@@ -651,6 +660,49 @@
                                     </thead>
                                     <tbody id="financeiro-table-body">
                                         <!-- Preenchido via PlanosModule -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PAINEL 3: LOGS DE FALHAS DO GATEWAY DE PAGAMENTO -->
+                    <div id="financeiro-pane-logs-pagamento" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text-main);">Logs de Falhas no Pagamento (Asaas)</h3>
+                                <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Registro automático de erros retornados pelo gateway que impediram a geração ou conclusão de um pagamento</p>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn btn-secondary" id="btn-atualizar-logs-pagamento">Atualizar</button>
+                                <button type="button" class="btn btn-secondary" id="btn-limpar-logs-resolvidos">Limpar Resolvidos</button>
+                            </div>
+                        </div>
+
+                        <div class="filters-bar" style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+                            <select id="filtro-logs-resolvido" class="form-select" style="width: 190px;">
+                                <option value="0" selected>Pendentes</option>
+                                <option value="todos">Todos</option>
+                                <option value="1">Resolvidos</option>
+                            </select>
+                            <input type="text" id="filtro-logs-busca" class="form-input" placeholder="Buscar por aluno, código ou mensagem de erro..." style="flex: 1; min-width: 240px;">
+                        </div>
+
+                        <div class="table-card">
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data / Hora</th>
+                                            <th>Aluno</th>
+                                            <th>Operação / Origem</th>
+                                            <th>Status / Código</th>
+                                            <th>Motivo Informado pelo Asaas</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="logs-pagamento-table-body">
+                                        <tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Carregando logs...</td></tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -2736,7 +2788,7 @@
     <script src="/js/dashboard.js"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js"></script>
-    <script src="/js/planos.js"></script>
+    <script src="/js/planos.js?v=4.9"></script>
     <script src="/js/wiki.js?v=4.5"></script>
     <script src="/js/exames.js?v=3.7"></script>
     <script src="/js/app.js?v=3.7"></script>

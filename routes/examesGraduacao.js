@@ -772,12 +772,19 @@ async function executarAceiteConvite({ conviteId, alunoId, billingType = 'PIX' }
     }
 
     // 1. Cria ou busca o cliente no Gateway Asaas
+    const asaasContext = {
+        alunoId: convite.aluno_id,
+        referenciaTipo: 'convite_exame',
+        referenciaId: convite.id,
+        origemRota: '/api/exames/gerar-cobranca'
+    };
     const customer = await asaasService.criarOuBuscarCliente({
         nome: convite.nome_completo,
         email: convite.email,
         cpfCnpj: convite.cpf,
         telefone: convite.telefone_whatsapp,
-        alunoId: convite.aluno_id
+        alunoId: convite.aluno_id,
+        context: asaasContext
     });
 
     // 2. Determina a data de vencimento da taxa
@@ -794,7 +801,8 @@ async function executarAceiteConvite({ conviteId, alunoId, billingType = 'PIX' }
         vencimento: dueDate,
         descricao: `Taxa de Exame: ${convite.evento_titulo} - Promoção para ${convite.graduacao_pretendida_nome}`,
         externalReference: `convite_${convite.id}_aluno_${convite.aluno_id}`,
-        billingType: billingType
+        billingType: billingType,
+        context: asaasContext
     });
 
     const pixQrCode = cobranca.pixQrCode ? cobranca.pixQrCode.encodedImage : null;
@@ -1165,6 +1173,12 @@ router.post(['/exames/:conviteId/pagar-cartao', '/exames/convites/:conviteId/pag
         }
 
         // 1. Obtém ou cria cliente no gateway
+        const asaasContext = {
+            alunoId: convite.aluno_id,
+            referenciaTipo: 'convite_exame',
+            referenciaId: convite.id,
+            origemRota: '/api/exames/convites/:conviteId/pagar-cartao'
+        };
         let customerId = convite.asaas_customer_id;
         if (!customerId) {
             const customer = await asaasService.criarOuBuscarCliente({
@@ -1172,7 +1186,8 @@ router.post(['/exames/:conviteId/pagar-cartao', '/exames/convites/:conviteId/pag
                 email: convite.email,
                 cpfCnpj: convite.cpf,
                 telefone: convite.telefone_whatsapp,
-                alunoId: convite.aluno_id
+                alunoId: convite.aluno_id,
+                context: asaasContext
             });
             customerId = customer.id;
         }
@@ -1199,7 +1214,8 @@ router.post(['/exames/:conviteId/pagar-cartao', '/exames/convites/:conviteId/pag
                 addressNumber: numero_endereco || 'S/N',
                 phone: telefone_titular || convite.telefone_whatsapp
             },
-            remoteIp: req.ip
+            remoteIp: req.ip,
+            context: asaasContext
         });
 
         const cardBrand = cobranca.creditCard?.creditCardBrand || asaasService.detectCardBrand(numero_cartao);

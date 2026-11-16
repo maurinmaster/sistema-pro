@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
+const PaymentLogService = require('../services/paymentLogService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 // GET /api/faturas - Listagem geral de faturas com filtros (admin e recepcao)
@@ -235,7 +236,112 @@ router.post('/webhook-asaas', async (req, res) => {
         res.status(200).json({ received: true });
     } catch (err) {
         console.error('[Webhook Asaas Faturas] Erro:', err.message);
+        await PaymentLogService.recordFailure({
+            operacao: 'webhook_fatura',
+            paymentId: req.body?.payment?.id || null,
+            httpStatus: 500,
+            mensagemErro: err.message || 'Erro interno ao processar webhook',
+            origemRota: '/api/faturas/webhook-asaas'
+        });
         res.status(500).json({ error: 'Erro interno ao processar webhook' });
+    }
+});
+
+// GET /api/faturas/logs-falhas - Lista falhas de pagamento registradas pelo gateway (admin e recepcao)
+router.get('/logs-falhas', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
+    try {
+        await PaymentLogService.ensurePaymentLogsTable();
+
+        const { resolvido = '0', busca = '', limit = 100 } = req.query;
+        const limitNum = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 200);
+
+        let query = `
+            SELECT
+                l.id, l.gateway, l.operacao, l.aluno_id, l.referencia_tipo, l.referencia_id,
+                l.payment_id, l.http_status, l.codigo_erro, l.mensagem_erro, l.detalhes_json,
+                l.origem_rota, l.resolvido, l.created_at,
+                a.nome_completo AS aluno_nome,
+                a.email AS aluno_email,
+                a.cpf AS aluno_cpf
+            FROM gateway_pagamento_logs l
+            LEFT JOIN alunos a ON a.id = l.aluno_id
+            WHERE 1=1
+        `;
+        const params = [];
+
+        if (resolvido === '0' || resolvido === '1') {
+            query += ' AND l.resolvido = ?';
+            params.push(Number(resolvido));
+        }
+
+        if (busca && busca.trim()) {
+            const term = `%${busca.trim()}%`;
+            query += ' AND (a.nome_completo LIKE ? OR l.mensagem_erro LIKE ? OR l.codigo_erro LIKE ? OR l.operacao LIKE ?)';
+            params.push(term, term, term, term);
+        }
+
+        query += ' ORDER BY l.created_at DESC, l.id DESC LIMIT ?';
+        params.push(limitNum);
+
+        const [rows] = await pool.query(query, params);
+
+        const [counts] = await pool.query(`
+            SELECT
+                SUM(CASE WHEN resolvido = 0 THEN 1 ELSE 0 END) AS total_pendentes,
+                SUM(CASE WHEN created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) THEN 1 ELSE 0 END) AS total_24h
+            FROM gateway_pagamento_logs
+        `);
+
+        res.json({
+            success: true,
+            data: rows,
+            resumo: {
+                total_pendentes: Number(counts[0]?.total_pendentes || 0),
+                total_24h: Number(counts[0]?.total_24h || 0)
+            }
+        });
+    } catch (err) {
+        console.error('Erro ao listar logs de falha de pagamento:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao consultar logs de pagamento.' });
+    }
+});
+
+// PATCH /api/faturas/logs-falhas/:id/resolver - Marca log de falha como resolvido/pendente
+router.patch('/logs-falhas/:id/resolver', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
+    try {
+        await PaymentLogService.ensurePaymentLogsTable();
+        const { id } = req.params;
+        const resolvido = req.body?.resolvido === false || req.body?.resolvido === 0 ? 0 : 1;
+
+        const [result] = await pool.query(
+            'UPDATE gateway_pagamento_logs SET resolvido = ? WHERE id = ?',
+            [resolvido, id]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Registro de log não encontrado.' });
+        }
+
+        res.json({ success: true, message: resolvido ? 'Log marcado como resolvido.' : 'Log reaberto como pendente.' });
+    } catch (err) {
+        console.error('Erro ao atualizar log de pagamento:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao atualizar log de pagamento.' });
+    }
+});
+
+// DELETE /api/faturas/logs-falhas/limpar-resolvidos - Remove logs já resolvidos (admin)
+router.delete('/logs-falhas/limpar-resolvidos', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    try {
+        await PaymentLogService.ensurePaymentLogsTable();
+        const [result] = await pool.query('DELETE FROM gateway_pagamento_logs WHERE resolvido = 1');
+        res.json({
+            success: true,
+            removed: result.affectedRows || 0,
+            message: `${result.affectedRows || 0} log(s) resolvido(s) removido(s).`
+        });
+    } catch (err) {
+        console.error('Erro ao limpar logs de pagamento:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao limpar logs de pagamento.' });
     }
 });
 
