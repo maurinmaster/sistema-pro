@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=4.9">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.0">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -539,6 +539,163 @@
                     <!-- Inserido dinamicamente pelo PainelAlunoApp -->
                 </div>
             </div>
+
+            <!-- ========================================================= -->
+            <!-- SPA VIEW 5: HISTÓRICO & EVOLUÇÃO FÍSICA (PÁGINA DEDICADA) -->
+            <!-- ========================================================= -->
+            <div class="spa-view" id="spa-view-evolucao" style="display: none;">
+                <div class="wiki-header-nav-row">
+                    <button type="button" class="btn-voltar-painel" onclick="PainelAlunoApp.switchView('dashboard')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        <span>Voltar à Visão Geral</span>
+                    </button>
+
+                    <div class="student-profile-pill">
+                        <img id="evolucao-header-avatar-img"
+                            src="https://ui-avatars.com/api/?name=Atleta&background=06b6d4&color=fff" alt="Avatar">
+                        <span id="evolucao-header-student-name">Atleta</span>
+                    </div>
+                </div>
+
+                <div class="faturas-overview-banner" style="margin-bottom: 16px;">
+                    <div class="faturas-overview-header">
+                        <div class="faturas-icon-wrap" style="background: rgba(6, 182, 212, 0.16); color: #22d3ee;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                <polyline points="17 6 23 6 23 12" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 19px; color: #f8fafc;">Histórico & Evolução</h2>
+                            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #94a3b8;">Acompanhamento de medidas e composição corporal</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1. GRÁFICO INTERATIVO DE EVOLUÇÃO DAS MEDIDAS -->
+                <div class="evolution-chart-box" id="evolution-chart-box">
+                    <div class="evolution-chart-header">
+                        <div class="chart-header-left">
+                            <span class="chart-tag-pill">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                                    <polyline points="17 6 23 6 23 12" />
+                                </svg>
+                                <span>Curva de Evolução</span>
+                            </span>
+                            <h4 class="chart-main-title" id="evolution-chart-title">Progresso de Peso Corporal</h4>
+                            <span class="chart-stat-badge" id="evolution-chart-stat-badge">Acompanhamento temporal</span>
+                        </div>
+
+                        <div class="evolution-metric-pills" id="evolution-metric-pills">
+                            <button type="button" class="metric-pill active" data-metric="peso">Peso (kg)</button>
+                            <button type="button" class="metric-pill" data-metric="cintura">Cintura (cm)</button>
+                            <button type="button" class="metric-pill" data-metric="torax">Tórax (cm)</button>
+                            <button type="button" class="metric-pill" data-metric="quadril">Quadril (cm)</button>
+                            <button type="button" class="metric-pill" data-metric="imc">IMC</button>
+                        </div>
+                    </div>
+
+                    <div class="evolution-chart-canvas-wrap" id="evolution-chart-canvas-wrap">
+                        <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 24px;">Carregando gráfico de evolução...</div>
+                    </div>
+                </div>
+
+                <!-- 2. Cards de Resumo Geral da Evolução -->
+                <div class="evolution-summary-grid" id="evolution-summary-cards"></div>
+
+                <!-- 3. Medidas Corporais Atuais: Tórax, Cintura e Quadril -->
+                <div class="modal-circumferences-panel" style="margin-top: 14px; background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>
+                            Medidas Corporais & Circunferências
+                        </span>
+                        <span style="font-size: 11px; color: #64748b;" id="modal-circumferences-date">Última checagem registrada</span>
+                    </div>
+                    <div class="modal-circumferences-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                        <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                                    <span>Tórax</span>
+                                </span>
+                                <span class="meas-delta-inline" id="delta-torax-tag" style="display: none;">
+                                    <span id="arrow-torax"></span><span id="delta-torax-num"></span>
+                                </span>
+                            </div>
+                            <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
+                                <span class="stat-num" id="meas-torax-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
+                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
+                            </div>
+                        </div>
+
+                        <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                                    <span>Cintura</span>
+                                </span>
+                                <span class="meas-delta-inline" id="delta-cintura-tag" style="display: none;">
+                                    <span id="arrow-cintura"></span><span id="delta-cintura-num"></span>
+                                </span>
+                            </div>
+                            <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
+                                <span class="stat-num" id="meas-cintura-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
+                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
+                            </div>
+                        </div>
+
+                        <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                                    <span>Quadril</span>
+                                </span>
+                                <span class="meas-delta-inline" id="delta-quadril-tag" style="display: none;">
+                                    <span id="arrow-quadril"></span><span id="delta-quadril-num"></span>
+                                </span>
+                            </div>
+                            <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
+                                <span class="stat-num" id="meas-quadril-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
+                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Barra de Ações: Nova Aferição -->
+                <div class="evolution-actions-bar" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 10px 0;">
+                    <h4 style="color: #ffffff; font-size: 13.5px; margin: 0; font-family: var(--font-heading);">
+                        Histórico Cronológico (<span id="total-evaluations-count">0</span>)
+                    </h4>
+                    <button type="button" class="btn-new-eval" id="btn-add-eval-from-modal">
+                        + Nova Avaliação
+                    </button>
+                </div>
+
+                <!-- Tabela Responsiva de Histórico com Deltas -->
+                <div class="evolution-table-wrap">
+                    <table class="evolution-table" id="evolution-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Peso</th>
+                                <th>IMC</th>
+                                <th>Tórax</th>
+                                <th>Cintura</th>
+                                <th>Quadril</th>
+                                <th>Braço</th>
+                                <th>Coxa</th>
+                                <th>Observações</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="evolution-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
         </main>
 
         <!-- ============================================================= -->
@@ -629,12 +786,6 @@
                                     <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
                                 </div>
                             </div>
-                            <button type="button" class="photo-edit-badge" id="btn-card-change-photo" title="Trocar foto de perfil" aria-label="Trocar foto de perfil">
-                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                                    <circle cx="12" cy="13" r="4" />
-                                </svg>
-                            </button>
                             <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
                         </div>
 
@@ -653,35 +804,6 @@
                                     <span class="prajied-dot" id="card-prajied-dot"></span>
                                     <span id="card-prajied-name">Iniciante</span>
                                 </span>
-                                <span class="title-chip" id="card-title-chip">Iniciante Focado</span>
-                            </div>
-
-                            <!-- Situação Financeira do Aluno (Em dia, Em atraso, Pendente) -->
-                            <div class="athlete-plan-row" id="athlete-plan-row">
-                                <span class="plan-status-badge sem-plano" id="card-plan-status-badge" style="cursor: pointer;" title="Clique para ver suas faturas e histórico de pagamentos">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
-                                        <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
-                                        <line x1="1" y1="10" x2="23" y2="10"/>
-                                    </svg>
-                                    <span id="card-plan-status-text">Sem Plano Contratado</span>
-                                </span>
-                            </div>
-
-                            <!-- Banner de Alerta de Mensalidade em Atraso com Ação Direta para Pagamento Asaas -->
-                            <div class="athlete-overdue-alert" id="athlete-overdue-alert" style="display: none;">
-                                <div class="overdue-alert-left">
-                                    <span class="overdue-pulse-dot"></span>
-                                    <div class="overdue-text-group">
-                                        <span class="overdue-title" id="overdue-alert-title">Mensalidade em Atraso</span>
-                                        <span class="overdue-sub" id="overdue-alert-sub">Regularize via PIX</span>
-                                    </div>
-                                </div>
-                                <button type="button" class="btn-pay-asaas-now" id="btn-open-plan-payment" title="Pagar via PIX Instantâneo">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                                    </svg>
-                                    <span>Pagar Agora</span>
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -1147,168 +1269,38 @@
     </div>
 
     <!-- ================================================================= -->
-    <!-- MODAL 4: HISTÓRICO & COMPARATIVO DE EVOLUÇÃO FÍSICA               -->
     <!-- ================================================================= -->
-    <div class="modal-backdrop" id="modal-evolucao" style="display: none;">
-        <div class="modal-card modal-extra-large modal-evolucao-card">
+    <!-- POPUP DE ALERTA DE MENSALIDADE EM ATRASO                          -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-aviso-atraso" style="display: none;">
+        <div class="modal-card" style="max-width: 420px; border: 1px solid rgba(239, 68, 68, 0.45);">
             <div class="modal-header">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="stat-icon-wrap icon-cyan"
-                        style="width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                            <polyline points="17 6 23 6 23 12" />
+                    <div class="stat-icon-wrap" style="width: 36px; height: 36px; border-radius: 10px; background: rgba(239, 68, 68, 0.16); color: #ef4444; display: flex; align-items: center; justify-content: center;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                            <line x1="12" y1="9" x2="12" y2="13" />
+                            <line x1="12" y1="17" x2="12.01" y2="17" />
                         </svg>
                     </div>
                     <div>
-                        <h3 style="margin: 0; font-size: 17px;">Histórico & Evolução</h3>
-                        <span style="font-size: 11.5px; color: #94a3b8;">Acompanhamento de medidas e composição corporal</span>
+                        <h3 style="margin: 0; font-size: 16.5px; color: #fecaca;" id="popup-atraso-title">Mensalidade em Atraso</h3>
+                        <span style="font-size: 12px; color: #fca5a5;" id="popup-atraso-sub">Regularize para manter seus treinos liberados</span>
                     </div>
                 </div>
-                <button type="button" class="modal-close-btn" data-close="modal-evolucao">&times;</button>
+                <button type="button" class="modal-close-btn" data-close="modal-aviso-atraso">&times;</button>
             </div>
-            <div class="modal-body">
-                <!-- 1. GRÁFICO INTERATIVO DE EVOLUÇÃO DAS MEDIDAS -->
-                <div class="evolution-chart-box" id="evolution-chart-box">
-                    <div class="evolution-chart-header">
-                        <div class="chart-header-left">
-                            <span class="chart-tag-pill">
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5">
-                                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-                                    <polyline points="17 6 23 6 23 12" />
-                                </svg>
-                                <span>Curva de Evolução</span>
-                            </span>
-                            <h4 class="chart-main-title" id="evolution-chart-title">Progresso de Peso Corporal</h4>
-                            <span class="chart-stat-badge" id="evolution-chart-stat-badge">Acompanhamento temporal</span>
-                        </div>
-
-                        <!-- Filtros / Pílulas de Métrica -->
-                        <div class="evolution-metric-pills" id="evolution-metric-pills">
-                            <button type="button" class="metric-pill active" data-metric="peso">Peso (kg)</button>
-                            <button type="button" class="metric-pill" data-metric="cintura">Cintura (cm)</button>
-                            <button type="button" class="metric-pill" data-metric="torax">Tórax (cm)</button>
-                            <button type="button" class="metric-pill" data-metric="quadril">Quadril (cm)</button>
-                            <button type="button" class="metric-pill" data-metric="imc">IMC</button>
-                        </div>
-                    </div>
-
-                    <!-- Palco do Gráfico SVG -->
-                    <div class="evolution-chart-canvas-wrap" id="evolution-chart-canvas-wrap">
-                        <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 24px;">Carregando gráfico de evolução...</div>
-                    </div>
-                </div>
-
-                <!-- 2. Cards de Resumo Geral da Evolução (Início vs Atual) -->
-                <div class="evolution-summary-grid" id="evolution-summary-cards">
-                    <!-- Preenchido via JavaScript -->
-                </div>
-
-                <!-- 3. Medidas Corporais Atuais: Tórax, Cintura e Quadril -->
-                <div class="modal-circumferences-panel" style="margin-top: 14px; background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>
-                            Medidas Corporais & Circunferências
-                        </span>
-                        <span style="font-size: 11px; color: #64748b;" id="modal-circumferences-date">Última checagem registrada</span>
-                    </div>
-                    <div class="modal-circumferences-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                        <!-- Tórax -->
-                        <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.2">
-                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                                    </svg>
-                                    <span>Tórax</span>
-                                </span>
-                                <span class="meas-delta-inline" id="delta-torax-tag" style="display: none;">
-                                    <span id="arrow-torax"></span><span id="delta-torax-num"></span>
-                                </span>
-                            </div>
-                            <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
-                                <span class="stat-num" id="meas-torax-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
-                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
-                            </div>
-                        </div>
-
-                        <!-- Cintura -->
-                        <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2.2">
-                                        <circle cx="12" cy="12" r="10" />
-                                        <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-                                    </svg>
-                                    <span>Cintura</span>
-                                </span>
-                                <span class="meas-delta-inline" id="delta-cintura-tag" style="display: none;">
-                                    <span id="arrow-cintura"></span><span id="delta-cintura-num"></span>
-                                </span>
-                            </div>
-                            <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
-                                <span class="stat-num" id="meas-cintura-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
-                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
-                            </div>
-                        </div>
-
-                        <!-- Quadril -->
-                        <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
-                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                        <line x1="3" y1="9" x2="21" y2="9" />
-                                        <line x1="9" y1="21" x2="9" y2="9" />
-                                    </svg>
-                                    <span>Quadril</span>
-                                </span>
-                                <span class="meas-delta-inline" id="delta-quadril-tag" style="display: none;">
-                                    <span id="arrow-quadril"></span><span id="delta-quadril-num"></span>
-                                </span>
-                            </div>
-                            <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
-                                <span class="stat-num" id="meas-quadril-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
-                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Barra de Ações: Nova Aferição -->
-                <div class="evolution-actions-bar" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 10px 0;">
-                    <h4 style="color: #ffffff; font-size: 13.5px; margin: 0; font-family: var(--font-heading);">
-                        Histórico Cronológico (<span id="total-evaluations-count">0</span>)
-                    </h4>
-                    <button type="button" class="btn-new-eval" id="btn-add-eval-from-modal">
-                        + Nova Avaliação
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+                <p style="margin: 0; font-size: 13.5px; color: #cbd5e1; line-height: 1.5;" id="popup-atraso-desc">
+                    Identificamos uma mensalidade vencida em aberto. Você pode quitar rapidamente via PIX ou Cartão na aba de Faturas.
+                </p>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="btn-popup-atraso-pagar" class="btn-modal-save" style="flex: 1; background: linear-gradient(135deg, #ef4444, #dc2626); border: none; color: #fff; font-weight: 700;">
+                        Pagar Agora
                     </button>
-                </div>
-
-                <!-- Tabela Responsiva de Histórico com Deltas -->
-                <div class="evolution-table-wrap">
-                    <table class="evolution-table" id="evolution-table">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Peso</th>
-                                <th>IMC</th>
-                                <th>Tórax</th>
-                                <th>Cintura</th>
-                                <th>Quadril</th>
-                                <th>Braço</th>
-                                <th>Coxa</th>
-                                <th>Observações</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="evolution-table-body">
-                            <!-- Preenchido dinamicamente -->
-                        </tbody>
-                    </table>
+                    <button type="button" id="btn-popup-atraso-depois" class="btn-modal-save" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); color: #cbd5e1;">
+                        Depois
+                    </button>
                 </div>
             </div>
         </div>
@@ -1376,9 +1368,19 @@
                         <strong id="modal-conta-email" style="font-size: 12.5px; color: #f8fafc;">--</strong>
                     </div>
                     <div
-                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; color: #94a3b8;">Telefone / WhatsApp</span>
-                        <strong id="modal-conta-telefone" style="font-size: 12.5px; color: #f8fafc;">--</strong>
+                        style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span style="font-size: 12px; color: #94a3b8;">Telefone / WhatsApp</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <strong id="modal-conta-telefone" style="font-size: 12.5px; color: #f8fafc;">--</strong>
+                                <button type="button" id="btn-editar-telefone" style="background: rgba(245, 158, 11, 0.14); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; cursor: pointer;">Alterar</button>
+                            </div>
+                        </div>
+                        <div id="conta-telefone-edit-wrap" style="display: none; gap: 6px; align-items: center;">
+                            <input type="tel" id="input-conta-telefone" placeholder="(11) 99999-9999" maxlength="15" style="flex: 1; background: #0f172a; border: 1px solid rgba(255,255,255,0.16); color: #f8fafc; border-radius: 8px; padding: 6px 10px; font-size: 12.5px;">
+                            <button type="button" id="btn-salvar-telefone" style="background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 6px 12px; font-size: 11.5px; font-weight: 700; cursor: pointer;">Salvar</button>
+                            <button type="button" id="btn-cancelar-telefone" style="background: rgba(255,255,255,0.08); color: #cbd5e1; border: none; border-radius: 8px; padding: 6px 10px; font-size: 11.5px; cursor: pointer;">Cancelar</button>
+                        </div>
                     </div>
                     <div
                         style="background: rgba(15, 23, 42, 0.5); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
@@ -1816,7 +1818,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=4.9"></script>
+    <script src="/js/painel-aluno.js?v=5.0"></script>
 </body>
 
 </html>

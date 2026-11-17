@@ -377,7 +377,7 @@ const AuthApp = {
         const cpf = document.getElementById('cad-cpf')?.value.trim();
         const nasc = document.getElementById('cad-nasc')?.value;
         const whatsapp = document.getElementById('cad-whatsapp')?.value.trim();
-        const genero = document.getElementById('cad-genero')?.value || 'Masculino';
+        const genero = document.getElementById('cad-genero')?.value || '';
         const email = document.getElementById('cad-email')?.value.trim();
         const senha = document.getElementById('cad-senha')?.value;
         const senhaConf = document.getElementById('cad-senha-conf')?.value;
@@ -385,6 +385,11 @@ const AuthApp = {
         const fotoUrl = document.getElementById('cad-foto-url')?.value || null;
 
         // Validações
+        if (!genero) {
+            this.showToast('Selecione o sexo para continuar.', 'error');
+            document.getElementById('cad-genero')?.focus();
+            return;
+        }
         if (this.isUploadingPhoto) {
             this.showToast('Aguarde o término do envio da foto...', 'error');
             return;

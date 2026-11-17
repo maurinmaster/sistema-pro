@@ -801,13 +801,13 @@
                             <input type="tel" id="cad-whatsapp" class="form-input" placeholder="(00) 00000-0000" maxlength="15" required autocomplete="tel">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Gênero</label>
-                            <div class="gender-selector">
-                                <button type="button" class="gender-btn selected" data-value="Masculino">Masculino</button>
-                                <button type="button" class="gender-btn" data-value="Feminino">Feminino</button>
-                                <button type="button" class="gender-btn" data-value="Outro">Outro</button>
-                            </div>
-                            <input type="hidden" id="cad-genero" value="Masculino">
+                            <label class="form-label" for="cad-genero">Sexo <span class="required">*</span></label>
+                            <select id="cad-genero" class="form-input" required>
+                                <option value="">Selecione...</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Feminino</option>
+                                <option value="Outro">Outro</option>
+                            </select>
                         </div>
                     </div>
 
@@ -1063,7 +1063,7 @@
     </div>
 
     <!-- Script de Gestão de Autenticação -->
-    <script src="/js/cadastro.js?v=4.4"></script>
+    <script src="/js/cadastro.js?v=4.5"></script>
 </body>
 
 </html>

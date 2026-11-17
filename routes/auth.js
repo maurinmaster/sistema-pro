@@ -463,6 +463,9 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
         const senhaHash = await bcrypt.hash(senha, 10);
         const fotoFinalUrl = String(foto_perfil_url).trim();
 
+        const generoNormMap = { M: 'M', Masculino: 'M', F: 'F', Feminino: 'F', Outro: 'Outro' };
+        const generoFinal = generoNormMap[String(genero || '').trim()] || 'Outro';
+
         // 1. Inserção na tabela principal de alunos
         const [alunoResult] = await conn.query(`
             INSERT INTO alunos (
@@ -475,7 +478,7 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
             finalNomeCompleto,
             cpf ? String(cpf).trim() : null,
             data_nascimento,
-            genero || 'Outro',
+            generoFinal,
             normalizedEmail,
             senhaHash,
             telefone_whatsapp.trim(),

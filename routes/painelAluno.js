@@ -2197,5 +2197,50 @@ router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
     }
 });
 
+/**
+ * PUT /api/aluno/perfil/telefone
+ * Permite que o próprio aluno atualize seu telefone/WhatsApp de contato.
+ */
+router.put('/perfil/telefone', optionalAuth, async (req, res) => {
+    try {
+        let alunoId = req.user ? (req.user.aluno_id || req.user.id) : null;
+        if (!alunoId && req.body?.aluno_id) alunoId = parseInt(req.body.aluno_id, 10);
+        if (!alunoId) {
+            return res.status(401).json({ success: false, error: 'Sessão de aluno não identificada.' });
+        }
+
+        const rawPhone = String(req.body?.telefone || '').trim();
+        const digits = rawPhone.replace(/\D/g, '');
+        if (digits.length < 10 || digits.length > 11) {
+            return res.status(400).json({ success: false, error: 'Informe um telefone/WhatsApp válido com DDD (10 ou 11 dígitos).' });
+        }
+
+        let formatted = rawPhone;
+        if (digits.length === 11) {
+            formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+        } else {
+            formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+        }
+
+        const [result] = await pool.query(
+            'UPDATE alunos SET telefone_whatsapp = ? WHERE id = ? AND deleted_at IS NULL',
+            [formatted, alunoId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        res.json({
+            success: true,
+            telefone: formatted,
+            message: 'Telefone atualizado com sucesso!'
+        });
+    } catch (err) {
+        console.error('Erro ao atualizar telefone do aluno:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao atualizar telefone.' });
+    }
+});
+
 module.exports = router;
 

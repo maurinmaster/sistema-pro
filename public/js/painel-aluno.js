@@ -231,19 +231,61 @@ const PainelAlunoApp = {
             this.saveMedidas();
         });
 
-        // Abrir modal de histórico e comparativo de evolução
+        // Abrir página de histórico e comparativo de evolução
         document.getElementById('btn-open-evolution')?.addEventListener('click', () => {
-            this.openEvolutionModal();
+            this.switchView('evolucao');
         });
         document.getElementById('btn-add-eval-from-modal')?.addEventListener('click', () => {
-            const modalEv = document.getElementById('modal-evolucao');
-            if (modalEv) modalEv.style.display = 'none';
             this.openMedidasModal();
         });
         ['box-meas-torax', 'box-meas-cintura', 'box-meas-quadril'].forEach(id => {
             document.getElementById(id)?.addEventListener('click', () => {
-                this.openEvolutionModal();
+                this.switchView('evolucao');
             });
+        });
+
+        // Popup de aviso de mensalidade em atraso
+        document.getElementById('btn-popup-atraso-pagar')?.addEventListener('click', () => {
+            const popup = document.getElementById('modal-aviso-atraso');
+            if (popup) popup.style.display = 'none';
+            this.switchView('faturas');
+            const fatAberta = this.alunoData?.plano?.fatura_aberta;
+            if (fatAberta && fatAberta.id) {
+                this.openModalPagamentoMensalidade(fatAberta.id);
+            }
+        });
+        document.getElementById('btn-popup-atraso-depois')?.addEventListener('click', () => {
+            const popup = document.getElementById('modal-aviso-atraso');
+            if (popup) popup.style.display = 'none';
+        });
+
+        // Edição de telefone/WhatsApp na conta do aluno
+        document.getElementById('btn-editar-telefone')?.addEventListener('click', () => {
+            const wrap = document.getElementById('conta-telefone-edit-wrap');
+            const input = document.getElementById('input-conta-telefone');
+            if (wrap) wrap.style.display = 'flex';
+            if (input) {
+                input.value = this.alunoData?.aluno?.telefone || '';
+                input.focus();
+            }
+        });
+        document.getElementById('btn-cancelar-telefone')?.addEventListener('click', () => {
+            const wrap = document.getElementById('conta-telefone-edit-wrap');
+            if (wrap) wrap.style.display = 'none';
+        });
+        document.getElementById('input-conta-telefone')?.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '').slice(0, 11);
+            if (v.length > 6) {
+                v = v.length === 11
+                    ? `(${v.slice(0, 2)}) ${v.slice(2, 7)}-${v.slice(7)}`
+                    : `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+            } else if (v.length > 2) {
+                v = `(${v.slice(0, 2)}) ${v.slice(2)}`;
+            }
+            e.target.value = v;
+        });
+        document.getElementById('btn-salvar-telefone')?.addEventListener('click', () => {
+            this.saveTelefoneAluno();
         });
 
         // Alternar métricas no gráfico de evolução de medidas
@@ -429,12 +471,14 @@ const PainelAlunoApp = {
             });
         }
 
-        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas vs #graduacoes)
+        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas vs #graduacoes vs #evolucao)
         window.addEventListener('popstate', () => {
             if (window.location.hash === '#faturas') {
                 this.switchView('faturas', false);
             } else if (window.location.hash === '#graduacoes') {
                 this.switchView('graduacoes', false);
+            } else if (window.location.hash === '#evolucao') {
+                this.switchView('evolucao', false);
             } else if (window.location.hash === '#wiki') {
                 this.switchView('wiki', false);
             } else {
@@ -446,6 +490,8 @@ const PainelAlunoApp = {
             this.switchView('faturas', false);
         } else if (window.location.hash === '#graduacoes') {
             this.switchView('graduacoes', false);
+        } else if (window.location.hash === '#evolucao') {
+            this.switchView('evolucao', false);
         } else if (window.location.hash === '#wiki') {
             this.switchView('wiki', false);
         }
@@ -657,10 +703,8 @@ const PainelAlunoApp = {
         const cardPrajiedName = document.getElementById('card-prajied-name');
         const cardPrajiedDot = document.getElementById('card-prajied-dot');
         const athleteAvatarRing = document.getElementById('athlete-avatar-ring');
-        const cardTitleChip = document.getElementById('card-title-chip');
 
         if (cardAthleteName) cardAthleteName.textContent = aluno.nome_completo || aluno.primeiro_nome;
-        if (cardTitleChip) cardTitleChip.textContent = tituloAtivo;
 
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
         if (gradMt) {
@@ -685,55 +729,9 @@ const PainelAlunoApp = {
             if (cardDegreeBadge) cardDegreeBadge.style.display = 'none';
         }
 
-        // 5.1. Situação Financeira do Aluno & Indicador de Atraso / Pagamento Asaas
-        const cardPlanStatusBadge = document.getElementById('card-plan-status-badge');
-        const cardPlanStatusText = document.getElementById('card-plan-status-text');
-        const overdueAlert = document.getElementById('athlete-overdue-alert');
-        const overdueAlertTitle = document.getElementById('overdue-alert-title');
-        const overdueAlertSub = document.getElementById('overdue-alert-sub');
-
-        if (cardPlanStatusBadge) {
-            if (plano?.has_atraso) {
-                cardPlanStatusBadge.className = 'plan-status-badge atrasado';
-                if (cardPlanStatusText) {
-                    cardPlanStatusText.textContent = 'Situação: Em Atraso';
-                }
-                if (overdueAlert) {
-                    overdueAlert.style.display = 'flex';
-                    if (overdueAlertTitle) {
-                        const qtd = plano.total_atrasadas || 1;
-                        overdueAlertTitle.textContent = `${qtd} Mensalidade${qtd > 1 ? 's' : ''} em Atraso`;
-                    }
-                    if (overdueAlertSub) {
-                        const fatAtrasada = plano.fatura_aberta;
-                        if (fatAtrasada && fatAtrasada.data_vencimento) {
-                            const dFmt = new Date(fatAtrasada.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
-                            const vFmt = parseFloat(fatAtrasada.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                            overdueAlertSub.textContent = `Venceu em ${dFmt} • ${vFmt}`;
-                        } else {
-                            overdueAlertSub.textContent = 'Regularize via PIX';
-                        }
-                    }
-                }
-            } else if (plano?.status_financeiro === 'pendente') {
-                cardPlanStatusBadge.className = 'plan-status-badge pendente';
-                if (cardPlanStatusText) {
-                    cardPlanStatusText.textContent = 'Situação: Pendente';
-                }
-                if (overdueAlert) overdueAlert.style.display = 'none';
-            } else if (plano) {
-                cardPlanStatusBadge.className = 'plan-status-badge em-dia';
-                if (cardPlanStatusText) {
-                    cardPlanStatusText.textContent = 'Situação: Em dia';
-                }
-                if (overdueAlert) overdueAlert.style.display = 'none';
-            } else {
-                cardPlanStatusBadge.className = 'plan-status-badge sem-plano';
-                if (cardPlanStatusText) {
-                    cardPlanStatusText.textContent = 'Sem Plano Contratado';
-                }
-                if (overdueAlert) overdueAlert.style.display = 'none';
-            }
+        // 5.1. Situação Financeira: removida da tela principal; exibe popup se houver mensalidade em atraso
+        if (plano?.has_atraso) {
+            this.maybeShowOverduePopup(plano);
         }
 
         // Métricas Corporais e Régua
@@ -1303,9 +1301,8 @@ const PainelAlunoApp = {
             document.getElementById('modal-medidas').style.display = 'none';
             await this.loadDashboardData();
 
-            // Se o modal de evolução estiver aberto, atualiza também
-            const modalEv = document.getElementById('modal-evolucao');
-            if (modalEv && modalEv.style.display === 'flex') {
+            // Se a página de evolução estiver aberta, atualiza também
+            if (this.currentView === 'evolucao') {
                 await this.openEvolutionModal();
             }
 
@@ -1318,12 +1315,10 @@ const PainelAlunoApp = {
     // MODAL HISTÓRICO & COMPARATIVO DE EVOLUÇÃO
     // -------------------------------------------------------------------------
     async openEvolutionModal() {
-        const modal = document.getElementById('modal-evolucao');
-        if (!modal) return;
-
-        modal.style.display = 'flex';
-        const modalBody = modal.querySelector('.modal-body');
-        if (modalBody) modalBody.scrollTop = 0;
+        const evolucaoView = document.getElementById('spa-view-evolucao');
+        if (evolucaoView) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
         const summaryContainer = document.getElementById('evolution-summary-cards');
         const tableBody = document.getElementById('evolution-table-body');
@@ -2212,7 +2207,95 @@ const PainelAlunoApp = {
         }
         this.applyProfilePhotoUrl(aluno.foto_perfil_url, aluno.nome_completo || aluno.primeiro_nome);
 
+        const editWrap = document.getElementById('conta-telefone-edit-wrap');
+        if (editWrap) editWrap.style.display = 'none';
+
         modal.style.display = 'flex';
+    },
+
+    maybeShowOverduePopup(plano) {
+        if (!plano || !plano.has_atraso) return;
+        const fatId = plano.fatura_aberta?.id || 'atraso';
+        const seenKey = `overdue_popup_seen_${fatId}`;
+        if (sessionStorage.getItem(seenKey)) return;
+        sessionStorage.setItem(seenKey, '1');
+
+        const popup = document.getElementById('modal-aviso-atraso');
+        if (!popup) return;
+
+        const titleEl = document.getElementById('popup-atraso-title');
+        const subEl = document.getElementById('popup-atraso-sub');
+        const descEl = document.getElementById('popup-atraso-desc');
+
+        const qtd = plano.total_atrasadas || 1;
+        if (titleEl) titleEl.textContent = `${qtd} Mensalidade${qtd > 1 ? 's' : ''} em Atraso`;
+
+        const fat = plano.fatura_aberta;
+        if (subEl) {
+            if (fat && fat.data_vencimento) {
+                const dFmt = new Date(fat.data_vencimento).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+                const vFmt = parseFloat(fat.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                subEl.textContent = `Venceu em ${dFmt} • ${vFmt}`;
+            } else {
+                subEl.textContent = 'Regularize via PIX ou Cartão';
+            }
+        }
+        if (descEl) {
+            descEl.textContent = 'Você possui mensalidade vencida em aberto. Acesse a aba de Faturas ou clique em "Pagar Agora" para regularizar.';
+        }
+        popup.style.display = 'flex';
+    },
+
+    async saveTelefoneAluno() {
+        const input = document.getElementById('input-conta-telefone');
+        const btn = document.getElementById('btn-salvar-telefone');
+        const phoneEl = document.getElementById('modal-conta-telefone');
+        const wrap = document.getElementById('conta-telefone-edit-wrap');
+        if (!input) return;
+
+        const telefone = input.value.trim();
+        const digits = telefone.replace(/\D/g, '');
+        if (digits.length < 10 || digits.length > 11) {
+            alert('Informe um telefone/WhatsApp válido com DDD (10 ou 11 dígitos).');
+            input.focus();
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+        }
+
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryAlunoId = urlParams.get('aluno_id') || this.alunoData?.aluno?.id || null;
+            const headers = { 'Content-Type': 'application/json' };
+            const token = this.getAuthToken();
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const res = await fetch('/api/aluno/perfil/telefone', {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify({ telefone, aluno_id: queryAlunoId })
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.error || 'Erro ao atualizar telefone.');
+            }
+
+            if (this.alunoData?.aluno) {
+                this.alunoData.aluno.telefone = data.telefone;
+            }
+            if (phoneEl) phoneEl.textContent = data.telefone;
+            if (wrap) wrap.style.display = 'none';
+        } catch (err) {
+            alert(err.message || 'Erro ao atualizar telefone.');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Salvar';
+            }
+        }
     },
 
     // -------------------------------------------------------------------------
@@ -2300,19 +2383,37 @@ const PainelAlunoApp = {
      * Alterna instantaneamente a visão entre Dashboard, Wiki, Faturas e Graduações (SPA dinâmico sem reload)
      */
     switchView(viewName, updateHash = true) {
-        this.currentView = (viewName === 'wiki' || viewName === 'faturas' || viewName === 'graduacoes') ? viewName : 'dashboard';
+        this.currentView = (viewName === 'wiki' || viewName === 'faturas' || viewName === 'graduacoes' || viewName === 'evolucao') ? viewName : 'dashboard';
 
         const dashboardView = document.getElementById('spa-view-dashboard');
         const wikiView = document.getElementById('spa-view-wiki');
         const faturasView = document.getElementById('spa-view-faturas');
         const graduacoesView = document.getElementById('spa-view-graduacoes');
+        const evolucaoView = document.getElementById('spa-view-evolucao');
         const rightPanel = document.querySelector('.right-panel-dark');
         const shell = document.querySelector('.dashboard-shell');
 
-        if (this.currentView === 'faturas') {
+        if (this.currentView === 'evolucao') {
+            if (dashboardView) dashboardView.style.display = 'none';
+            if (wikiView) wikiView.style.display = 'none';
+            if (faturasView) faturasView.style.display = 'none';
+            if (graduacoesView) graduacoesView.style.display = 'none';
+            if (evolucaoView) evolucaoView.style.display = 'block';
+            if (rightPanel) rightPanel.style.display = 'none';
+            if (shell) shell.classList.add('wiki-spa-expanded');
+
+            const aluno = this.alunoData?.aluno || {};
+            const evName = document.getElementById('evolucao-header-student-name');
+            const evAvatar = document.getElementById('evolucao-header-avatar-img');
+            if (evName) evName.textContent = aluno.nome_completo || aluno.primeiro_nome || 'Atleta';
+            if (evAvatar && aluno.foto_perfil_url) evAvatar.src = aluno.foto_perfil_url;
+
+            this.openEvolutionModal();
+        } else if (this.currentView === 'faturas') {
             if (dashboardView) dashboardView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
+            if (evolucaoView) evolucaoView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -2331,6 +2432,7 @@ const PainelAlunoApp = {
             if (dashboardView) dashboardView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
+            if (evolucaoView) evolucaoView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -2347,6 +2449,7 @@ const PainelAlunoApp = {
             if (dashboardView) dashboardView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
+            if (evolucaoView) evolucaoView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -2365,6 +2468,7 @@ const PainelAlunoApp = {
             if (wikiView) wikiView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
+            if (evolucaoView) evolucaoView.style.display = 'none';
             if (dashboardView) dashboardView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = '';
             if (shell) shell.classList.remove('wiki-spa-expanded');
@@ -2380,7 +2484,7 @@ const PainelAlunoApp = {
         }
 
         if (updateHash) {
-            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', wiki: '#wiki', dashboard: '#dashboard' };
+            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', evolucao: '#evolucao', wiki: '#wiki', dashboard: '#dashboard' };
             const hash = hashMap[this.currentView] || '#dashboard';
             if (window.location.hash !== hash) {
                 history.pushState(null, '', hash);
