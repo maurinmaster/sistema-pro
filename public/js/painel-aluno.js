@@ -1067,7 +1067,9 @@ const PainelAlunoApp = {
             badgesContainer.innerHTML = conquistas.map(c => `
                 <div class="achievement-carousel-card ${c.desbloqueada ? 'unlocked' : 'locked'}" title="${this.escapeHtml(c.titulo || '')}: ${this.escapeHtml(c.descricao || '')}">
                     <div class="achievement-icon-box">
-                        ${c.icone || (c.desbloqueada ? '🏆' : '🔒')}
+                        ${c.icone || (c.desbloqueada
+                            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>'
+                            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>')}
                     </div>
                     <div>
                         <h4 class="achievement-name">${this.escapeHtml(c.titulo || '')}</h4>
@@ -1603,7 +1605,9 @@ const PainelAlunoApp = {
         if (!Array.isArray(historico) || historico.length === 0) {
             wrap.innerHTML = `
                 <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 36px;">
-                    <div style="font-size: 28px; margin-bottom: 8px;">📊</div>
+                    <div style="margin-bottom: 10px; display: flex; justify-content: center;">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                    </div>
                     <strong style="color: #ffffff;">Nenhuma medição física registrada ainda.</strong><br>
                     <span style="font-size: 12px; margin-top: 4px; display: inline-block;">Lance sua primeira medição em <em>"+ Nova Avaliação"</em> para acompanhar a evolução gráfica!</span>
                 </div>
@@ -2495,7 +2499,7 @@ const PainelAlunoApp = {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f59e0b';
         ctx.font = '800 26px Outfit, Plus Jakarta Sans, sans-serif';
-        ctx.fillText('🥋 GRADUAÇÃO', 104, 578);
+        ctx.fillText('GRADUAÇÃO', 104, 578);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = '#cbd5e1';
@@ -2547,7 +2551,7 @@ const PainelAlunoApp = {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#38bdf8';
         ctx.font = '800 26px Outfit, Plus Jakarta Sans, sans-serif';
-        ctx.fillText('🔥 FREQUÊNCIA', 104, 860);
+        ctx.fillText('FREQUÊNCIA', 104, 860);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = '#fb923c';
@@ -2592,7 +2596,7 @@ const PainelAlunoApp = {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f59e0b';
         ctx.font = '800 28px Outfit, Plus Jakarta Sans, sans-serif';
-        ctx.fillText('🏆 CONQUISTAS', 104, 1188);
+        ctx.fillText('CONQUISTAS', 104, 1188);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = '#cbd5e1';
@@ -4021,13 +4025,13 @@ const PainelAlunoApp = {
             if (btnText) btnText.textContent = '✓ Inscrição Confirmada & Paga';
         } else if (conviteStatus === 'aceito') {
             btnInscrever.className = 'btn-inscrever-exame btn-exame-pendente';
-            if (btnText) btnText.textContent = '💳 Concluir Pagamento PIX';
+            if (btnText) btnText.textContent = 'Concluir Pagamento PIX';
         } else if (conviteStatus === 'recusado') {
             btnInscrever.className = 'btn-inscrever-exame btn-exame-recusado';
-            if (btnText) btnText.textContent = '❌ Desistência Registrada • Mudar de Ideia?';
+            if (btnText) btnText.textContent = 'Desistência Registrada • Mudar de Ideia?';
         } else {
             btnInscrever.className = 'btn-inscrever-exame';
-            if (btnText) btnText.textContent = '🥋 Inscrever-se no Exame de Graduação';
+            if (btnText) btnText.textContent = 'Inscrever-se no Exame de Graduação';
         }
 
         // Verifica se o atleta marcou para não mostrar mais ou registrou desistência deste exame
@@ -4278,7 +4282,7 @@ const PainelAlunoApp = {
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1; margin-bottom: 12px;">
-                        <span>📅 Vencimento: <strong>${vencFmt}</strong></span>
+                        <span style="display: inline-flex; align-items: center; gap: 5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Vencimento: <strong>${vencFmt}</strong></span>
                         <span style="font-size: 11px; color: #94a3b8;">Fatura #${fat.fatura_id}</span>
                     </div>
 
@@ -4291,7 +4295,7 @@ const PainelAlunoApp = {
                 <!-- Seletor de Método de Pagamento -->
                 <div class="pay-methods-tabs">
                     <button type="button" class="btn-pay-tab active" id="tab-btn-pay-pix-mens" onclick="PainelAlunoApp.alternarMetodoPagamento('pix', 'mens')">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                        <svg width="15" height="15" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true"><path d="M112.57 391.19c20.056 0 38.928-7.808 53.12-22l76.693-76.692c5.385-5.404 14.765-5.384 20.15 0l76.989 76.989c14.191 14.172 33.045 21.98 53.12 21.98h15.098l-97.138 97.139c-30.326 30.344-79.505 30.344-109.85 0l-97.415-97.416h9.233zm280.068-270.38c-20.056 0-38.928 7.808-53.12 22l-76.97 76.99c-5.55 5.53-14.6 5.568-20.15-.02l-76.692-76.693c-14.192-14.191-33.064-22-53.12-22h-9.234l97.416-97.416c30.344-30.344 79.523-30.344 109.867 0l97.139 97.139h-15.136zM39.921 200.903l63.694-63.693h8.955c14.953 0 29.01 5.814 39.591 16.395l76.693 76.692c13.385 13.367 35.164 13.385 48.55-.02l76.969-76.97c10.58-10.58 24.639-16.394 39.592-16.394h24.331l63.972 63.99c30.344 30.344 30.344 79.524 0 109.868l-63.972 63.972h-24.331c-14.953 0-29.01-5.814-39.592-16.395l-76.97-76.97c-13.385-13.385-35.164-13.385-48.549 0l-76.693 76.693c-10.581 10.58-24.638 16.395-39.591 16.395h-8.955l-63.694-63.693c-30.344-30.344-30.344-79.524 0-109.868z"/></svg>
                         <span>PIX Instantâneo</span>
                     </button>
                     <button type="button" class="btn-pay-tab tab-card" id="tab-btn-pay-card-mens" onclick="PainelAlunoApp.alternarMetodoPagamento('cartao', 'mens')">
@@ -4303,10 +4307,7 @@ const PainelAlunoApp = {
                 <!-- 2. Box PIX -->
                 <div id="box-pay-pix-mens" class="asaas-pix-box">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 8px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.2">
-                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
-                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                        </svg>
+                        <svg width="18" height="18" viewBox="0 0 512 512" fill="#32BCAD" aria-hidden="true"><path d="M112.57 391.19c20.056 0 38.928-7.808 53.12-22l76.693-76.692c5.385-5.404 14.765-5.384 20.15 0l76.989 76.989c14.191 14.172 33.045 21.98 53.12 21.98h15.098l-97.138 97.139c-30.326 30.344-79.505 30.344-109.85 0l-97.415-97.416h9.233zm280.068-270.38c-20.056 0-38.928 7.808-53.12 22l-76.97 76.99c-5.55 5.53-14.6 5.568-20.15-.02l-76.692-76.693c-14.192-14.191-33.064-22-53.12-22h-9.234l97.416-97.416c30.344-30.344 79.523-30.344 109.867 0l97.139 97.139h-15.136zM39.921 200.903l63.694-63.693h8.955c14.953 0 29.01 5.814 39.591 16.395l76.693 76.692c13.385 13.367 35.164 13.385 48.55-.02l76.969-76.97c10.58-10.58 24.639-16.394 39.592-16.394h24.331l63.972 63.99c30.344 30.344 30.344 79.524 0 109.868l-63.972 63.972h-24.331c-14.953 0-29.01-5.814-39.592-16.395l-76.97-76.97c-13.385-13.385-35.164-13.385-48.549 0l-76.693 76.693c-10.581 10.58-24.638 16.395-39.591 16.395h-8.955l-63.694-63.693c-30.344-30.344-30.344-79.524 0-109.868z"/></svg>
                         <h4 style="margin: 0; font-size: 14px; font-weight: 800; color: #ffffff;">Pague via PIX Instantâneo</h4>
                     </div>
                     <p style="font-size: 12px; color: #94a3b8; margin: 0 0 10px 0; line-height: 1.4;">
@@ -4337,7 +4338,8 @@ const PainelAlunoApp = {
                         ${this.sanitizeUrl(fat.asaas_invoice_url) ? `
                             <a href="${this.sanitizeUrl(fat.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer"
                                style="display: flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 14px; border-radius: 10px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12); color: #cbd5e1; text-decoration: none; font-size: 12px; font-weight: 600;">
-                                <span>🔗 Pagar no Checkout Digital</span>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                <span>Pagar no Checkout Digital</span>
                             </a>
                         ` : ''}
                     </div>
@@ -4415,7 +4417,7 @@ const PainelAlunoApp = {
             console.error('Erro ao abrir pagamento:', err);
             box.innerHTML = `
                 <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 14px; padding: 24px 16px; text-align: center;">
-                    <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
+                    <div style="margin-bottom: 8px; display: flex; justify-content: center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                     <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 800; color: #fca5a5;">Erro ao Gerar Pagamento</h4>
                     <p style="margin: 0 0 16px 0; font-size: 12.5px; color: #fecaca; line-height: 1.45;">
                         ${this.escapeHtml(err.message || 'Não foi possível gerar a cobrança. Tente novamente.')}
@@ -4547,7 +4549,7 @@ const PainelAlunoApp = {
             if (listContainer) {
                 listContainer.innerHTML = `
                     <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 14px; padding: 32px 20px; text-align: center; color: #fca5a5;">
-                        <div style="font-size: 28px; margin-bottom: 8px;">⚠️</div>
+                        <div style="margin-bottom: 8px; display: flex; justify-content: center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
                         <h4 style="margin: 0 0 6px 0; font-size: 15px; font-weight: 700; color: #f87171;">Não foi possível carregar suas faturas</h4>
                         <p style="margin: 0 0 16px 0; font-size: 12.5px; color: #fca5a5; line-height: 1.45;">
                             ${this.escapeHtml(err.message || 'Verifique sua conexão ou tente novamente mais tarde.')}
@@ -4684,16 +4686,16 @@ const PainelAlunoApp = {
 
             // Badge único de Status
             let statusPillClass = 'pendente';
-            let statusIcon = '⏳';
+            let statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
             if (isPago) {
                 statusPillClass = 'pago';
-                statusIcon = '✓';
+                statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><polyline points="20 6 9 17 4 12"/></svg>';
             } else if (isAtrasado) {
                 statusPillClass = 'atrasado';
-                statusIcon = '⚠️';
+                statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
             } else if (item.status === 'cancelado') {
                 statusPillClass = 'cancelado';
-                statusIcon = '✕';
+                statusIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
             }
 
             // Botão de ação intuitivo
