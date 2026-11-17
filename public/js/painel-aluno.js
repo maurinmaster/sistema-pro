@@ -3654,7 +3654,8 @@ const PainelAlunoApp = {
 
         document.getElementById('modal-exame-titulo').textContent = convite.evento_titulo;
         document.getElementById('modal-exame-subtitulo').textContent = `Convocação Oficial • ${convite.modalidade_nome}`;
-        document.getElementById('modal-exame-modalidade-badge').textContent = convite.modalidade_nome;
+        const modBadgeEl = document.getElementById('modal-exame-modalidade-badge');
+        if (modBadgeEl) modBadgeEl.textContent = convite.modalidade_nome;
         document.getElementById('modal-exame-grad-atual').textContent = convite.graduacao_atual_nome;
         document.getElementById('modal-exame-grad-pretendida').textContent = convite.graduacao_pretendida_nome;
         document.getElementById('modal-exame-data').textContent = dataFmt;
@@ -3679,35 +3680,39 @@ const PainelAlunoApp = {
         const cobrancaBox = document.getElementById('modal-exame-cobranca-container');
         if (convite.convite_status === 'pago') {
             cobrancaBox.innerHTML = `
-                <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 14px; padding: 20px; text-align: center;">
-                    <div style="width: 50px; height: 50px; border-radius: 50%; background: #22c55e; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px auto; font-size: 24px; font-weight: 800;">
+                <div style="background: #1E232E; border: 1px solid rgba(34, 197, 94, 0.35); border-radius: 14px; padding: 18px; text-align: center;">
+                    <div style="width: 46px; height: 46px; border-radius: 50%; background: #22c55e; color: #fff; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px auto; font-size: 22px; font-weight: 800;">
                         ✓
                     </div>
-                    <h4 style="font-size: 16px; font-weight: 800; color: #166534; margin: 0 0 6px 0;">Sua vaga no exame está confirmada!</h4>
-                    <p style="font-size: 13px; color: #15803d; margin: 0 0 14px 0; line-height: 1.4;">
-                        O pagamento da taxa de exame foi compensado com sucesso. Parabéns pela dedicação aos treinos marciais!
+                    <h4 style="font-size: 15.5px; font-weight: 800; color: #4ade80; margin: 0 0 6px 0;">Sua vaga no exame está confirmada!</h4>
+                    <p style="font-size: 12.5px; color: #cbd5e1; margin: 0 0 10px 0; line-height: 1.4;">
+                        O pagamento da taxa de exame foi compensado com sucesso. Parabéns pela dedicação aos treinos!
                     </p>
-                    <div style="font-size: 12px; color: #64748b;">
-                        Data do pagamento: <strong>${convite.data_pagamento ? new Date(convite.data_pagamento).toLocaleString('pt-BR') : 'Hoje'}</strong>
+                    <div style="font-size: 11.5px; color: #94a3b8;">
+                        Data do pagamento: <strong style="color: #f8fafc;">${convite.data_pagamento ? new Date(convite.data_pagamento).toLocaleString('pt-BR') : 'Hoje'}</strong>
                     </div>
                 </div>
             `;
         } else if (convite.convite_status === 'aceito' || (convite.asaas_payment_id && convite.convite_status !== 'recusado')) {
-            // Já aceitou ou tem cobrança gerada no Asaas
             const pixQrCodeSrc = convite.asaas_pix_qrcode ? (convite.asaas_pix_qrcode.startsWith('data:') ? convite.asaas_pix_qrcode : `data:image/png;base64,${convite.asaas_pix_qrcode}`) : '';
             const pixCopiaCola = convite.asaas_pix_copia_cola || '00020101021226840014br.gov.bcb.pix2562pro-combate-graduacao';
 
             cobrancaBox.innerHTML = `
-                <div style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 14px; padding: 20px;">
-                    <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 12px;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                        <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin: 0;">Pagamento da Taxa de Graduação</h4>
+                <div style="background: #1E232E; border: 1px solid #2D3545; border-radius: 14px; padding: 14px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #2D3545;">
+                        <div>
+                            <span style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #94a3b8;">Total a Pagar</span>
+                            <strong style="font-size: 22px; font-weight: 800; color: #34d399; font-family: var(--font-heading);">R$ ${valorFmt}</strong>
+                        </div>
+                        <span style="font-size: 11.5px; color: #cbd5e1; font-weight: 600;">Taxa de Inscrição</span>
                     </div>
 
                     <!-- Seletor de Método de Pagamento -->
-                    <div class="pay-methods-tabs" style="margin-bottom: 16px;">
+                    <div class="pay-methods-tabs">
                         <button type="button" class="btn-pay-tab active" id="tab-btn-pay-pix-exame" onclick="PainelAlunoApp.alternarMetodoPagamento('pix', 'exame')">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                            <svg width="15" height="15" viewBox="0 0 512 512" fill="currentColor" aria-hidden="true">
+                                <path d="M112.57 391.19c20.056 0 38.928-7.808 53.12-22l76.693-76.692c5.385-5.404 14.765-5.384 20.15 0l76.989 76.989c14.191 14.172 33.045 21.98 53.12 21.98h15.098l-97.138 97.139c-30.326 30.344-79.505 30.344-109.85 0l-97.415-97.416h9.233zm280.068-270.38c-20.056 0-38.928 7.808-53.12 22l-76.97 76.99c-5.55 5.53-14.6 5.568-20.15-.02l-76.692-76.693c-14.192-14.191-33.064-22-53.12-22h-9.234l97.416-97.416c30.344-30.344 79.523-30.344 109.867 0l97.139 97.139h-15.136zM39.921 200.903l63.694-63.693h8.955c14.953 0 29.01 5.814 39.591 16.395l76.693 76.692c13.385 13.367 35.164 13.385 48.55-.02l76.969-76.97c10.58-10.58 24.639-16.394 39.592-16.394h24.331l63.972 63.99c30.344 30.344 30.344 79.524 0 109.868l-63.972 63.972h-24.331c-14.953 0-29.01-5.814-39.592-16.395l-76.97-76.97c-13.385-13.385-35.164-13.385-48.549 0l-76.693 76.693c-10.581 10.58-24.638 16.395-39.591 16.395h-8.955l-63.694-63.693c-30.344-30.344-30.344-79.524 0-109.868z"/>
+                            </svg>
                             <span>PIX Instantâneo</span>
                         </button>
                         <button type="button" class="btn-pay-tab tab-card" id="tab-btn-pay-card-exame" onclick="PainelAlunoApp.alternarMetodoPagamento('cartao', 'exame')">
@@ -3718,35 +3723,29 @@ const PainelAlunoApp = {
 
                     <!-- Box PIX Exame -->
                     <div id="box-pay-pix-exame" style="text-align: center;">
-                        <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">
-                            Escaneie o QR Code PIX abaixo ou copie o código Copia e Cola para pagar pelo aplicativo do seu banco:
-                        </p>
-
                         ${pixQrCodeSrc ? `
-                            <div style="display: flex; justify-content: center; margin-bottom: 16px;">
-                                <div style="padding: 10px; background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
-                                    <img src="${pixQrCodeSrc}" alt="QR Code Pix" style="width: 180px; height: 180px; display: block; object-fit: contain;">
+                            <div style="display: flex; justify-content: center; margin-bottom: 12px;">
+                                <div style="padding: 8px; background: #ffffff; border-radius: 12px; display: inline-block;">
+                                    <img src="${pixQrCodeSrc}" alt="QR Code Pix" style="width: 140px; height: 140px; display: block; object-fit: contain;">
                                 </div>
                             </div>
                         ` : ''}
 
-                        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-                            <input type="text" id="input-pix-copia-cola" readonly value="${this.escapeHtml(pixCopiaCola)}" 
-                                   style="flex: 1; padding: 10px 12px; font-size: 12px; font-family: monospace; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; color: #334155;">
-                            <button type="button" id="btn-copiar-pix-code" onclick="PainelAlunoApp.copiarPixCopiaCola()" 
-                                    style="padding: 10px 14px; font-size: 12px; font-weight: 700; background: #0284c7; color: #fff; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                                Copiar PIX
-                            </button>
-                        </div>
+                        <button type="button" id="btn-copiar-pix-code" onclick="PainelAlunoApp.copiarPixCopiaCola()"
+                                style="width: 100%; padding: 12px 16px; font-size: 14px; font-weight: 800; background: linear-gradient(135deg, #0ea5e9, #0284c7); color: #ffffff; border: none; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                            <span>Copiar Código PIX</span>
+                        </button>
 
-                        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
-                            ${this.sanitizeUrl(convite.asaas_invoice_url) ? `
-                                <a href="${this.sanitizeUrl(convite.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer"
-                                   style="padding: 10px 16px; border-radius: 8px; background: #fff; border: 1.5px solid #0284c7; color: #0284c7; font-weight: 700; font-size: 12.5px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                                    <span>🔗 Abrir Fatura / Cartão</span>
-                                </a>
-                            ` : ''}
-                        </div>
+                        <input type="text" id="input-pix-copia-cola" readonly value="${this.escapeHtml(pixCopiaCola)}"
+                               style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 11px; font-family: monospace; background: #12151C; border: 1px solid #2D3545; border-radius: 8px; color: #94a3b8; margin-bottom: 10px; text-align: center;">
+
+                        ${this.sanitizeUrl(convite.asaas_invoice_url) ? `
+                            <a href="${this.sanitizeUrl(convite.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer"
+                               style="font-size: 12px; color: #38bdf8; text-decoration: underline; display: inline-block;">
+                                Abrir fatura digital externa
+                            </a>
+                        ` : ''}
                     </div>
 
                     <!-- Box Cartão Exame -->
@@ -3821,17 +3820,17 @@ const PainelAlunoApp = {
         } else {
             // Status Convidado
             cobrancaBox.innerHTML = `
-                <div style="text-align: center; padding: 12px 0;">
-                    <p style="font-size: 13.5px; color: #475569; margin: 0 0 18px 0; line-height: 1.5;">
-                        Deseja aceitar a convocação para o exame de graduação? Ao aceitar, o sistema gerará imediatamente o Pix QR Code e a fatura para pagamento da taxa de <strong>R$ ${valorFmt}</strong>.
+                <div style="background: #1E232E; border: 1px solid #2D3545; border-radius: 14px; padding: 16px; text-align: center;">
+                    <p style="font-size: 13px; color: #CBD5E1; margin: 0 0 14px 0; line-height: 1.45;">
+                        Deseja confirmar sua inscrição no exame? O sistema gerará o PIX e a opção de cartão para a taxa de <strong style="color: #34d399;">R$ ${valorFmt}</strong>.
                     </p>
-                    <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+                    <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
                         <button type="button" onclick="PainelAlunoApp.recusarConviteExame(${convite.convite_id})" 
-                                style="padding: 11px 18px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; color: #64748b; font-weight: 600; font-size: 13px; cursor: pointer;">
+                                style="padding: 11px 16px; border-radius: 10px; border: 1px solid #334155; background: transparent; color: #CBD5E1; font-weight: 600; font-size: 13px; cursor: pointer;">
                             Não Posso Participar
                         </button>
                         <button type="button" onclick="PainelAlunoApp.aceitarConviteExame(${convite.convite_id})" 
-                                style="padding: 11px 22px; border-radius: 10px; border: none; background: linear-gradient(135deg, #d97706, #b45309); color: #fff; font-weight: 800; font-size: 13.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 14px rgba(217, 119, 6, 0.3);">
+                                style="padding: 11px 20px; border-radius: 10px; border: none; background: linear-gradient(135deg, #f59e0b, #ea580c); color: #fff; font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
                             <span>Confirmar e Gerar PIX</span>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                         </button>

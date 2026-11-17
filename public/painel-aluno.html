@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.6">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.7">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -1628,66 +1628,78 @@
     <!-- MODAL 6: INSCRIÇÃO & PAGAMENTO DO EXAME DE GRADUAÇÃO (ASAAS)      -->
     <!-- ================================================================= -->
     <div class="modal-backdrop" id="modal-exame-aluno" style="display: none;">
-        <div class="modal-card modal-medium" style="max-width: 580px;">
-            <div class="modal-header">
-                <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="modal-card modal-medium" style="max-width: 520px; padding: 0; background: #12151C; border: 1px solid #2D3545;">
+            <div class="modal-header" style="padding: 14px 16px; margin-bottom: 0; border-bottom: 1px solid #2D3545;">
+                <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
                     <div class="stat-icon-wrap icon-amber"
-                        style="width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        style="width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2">
                             <circle cx="12" cy="8" r="6" />
                             <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
                         </svg>
                     </div>
-                    <div>
+                    <div style="min-width: 0;">
                         <h3 id="modal-exame-titulo"
-                            style="margin: 0; font-size: 18px; color: var(--text-dark-primary);">Exame de Graduação
-                            Oficial</h3>
+                            style="margin: 0; font-size: 16.5px; color: #FFFFFF; line-height: 1.25;">Exame de Graduação Oficial</h3>
                         <p id="modal-exame-subtitulo"
-                            style="margin: 2px 0 0 0; font-size: 12.5px; color: var(--text-dark-secondary);">Convocação
-                            & Inscrição</p>
+                            style="margin: 2px 0 0 0; font-size: 12px; color: #CBD5E1;">Convocação &amp; Inscrição</p>
                     </div>
                 </div>
                 <button type="button" class="modal-close-btn" data-close="modal-exame-aluno">&times;</button>
             </div>
 
-            <div class="modal-body" style="padding: 20px 24px;">
-                <!-- Card de Informações do Exame -->
+            <div class="modal-body" style="padding: 14px 16px 18px 16px;">
+                <!-- Card 1: Informações do Exame (Dark Mode Consistente) -->
                 <div
-                    style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+                    style="background: #1E232E; border: 1px solid #2D3545; border-radius: 14px; padding: 14px; margin-bottom: 14px;">
                     <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <span id="modal-exame-modalidade-badge"
-                            style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; background: rgba(14, 165, 233, 0.12); color: #0284c7;">Modalidade</span>
+                        style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: #CBD5E1;">
+                            <span><strong id="modal-exame-grad-atual" style="color: #FFFFFF;">--</strong></span>
+                            <span style="color: #f59e0b; font-weight: 700;">➜</span>
+                            <span><strong id="modal-exame-grad-pretendida" style="color: #fbbf24;">--</strong></span>
+                        </div>
                         <div id="modal-exame-status-badge"></div>
                     </div>
 
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
-                        <span style="font-size: 13px; color: var(--text-dark-secondary);">Graduação Atual: <strong
-                                id="modal-exame-grad-atual" style="color: var(--text-dark-primary);">--</strong></span>
-                        <span style="color: #94a3b8; font-weight: 700;">➜</span>
-                        <span style="font-size: 13px; color: var(--text-dark-secondary);">Pretendida: <strong
-                                id="modal-exame-grad-pretendida" style="color: #d97706;">--</strong></span>
-                    </div>
-
                     <div
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; font-size: 13px; color: var(--text-dark-secondary); margin-bottom: 12px;">
-                        <div>📅 <strong>Data:</strong> <span id="modal-exame-data">--</span></div>
-                        <div>⏰ <strong>Horário:</strong> <span id="modal-exame-horario">--</span></div>
-                        <div>📍 <strong>Local:</strong> <span id="modal-exame-local">--</span></div>
-                        <div>💰 <strong>Taxa:</strong> <strong id="modal-exame-valor" style="color: #16a34a;">R$
-                                0,00</strong></div>
+                        style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 12px; font-size: 12.5px; color: #CBD5E1; margin-bottom: 10px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            <span><strong>Data:</strong> <span id="modal-exame-data" style="color: #FFFFFF;">--</span></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span><strong>Horário:</strong> <span id="modal-exame-horario" style="color: #FFFFFF;">--</span></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+                            </svg>
+                            <span><strong>Local:</strong> <span id="modal-exame-local" style="color: #FFFFFF;">--</span></span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">
+                                <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>
+                            </svg>
+                            <span><strong>Taxa:</strong> <strong id="modal-exame-valor" style="color: #34d399;">R$ 0,00</strong></span>
+                        </div>
                     </div>
 
                     <div id="modal-exame-orientacoes-box"
-                        style="font-size: 12.5px; color: #64748b; border-top: 1px dashed #cbd5e1; padding-top: 10px; line-height: 1.4;">
-                        <strong>Orientações:</strong> <span id="modal-exame-descricao">--</span>
+                        style="font-size: 11.5px; color: #CBD5E1; background: rgba(245, 158, 11, 0.08); border-left: 3px solid #f59e0b; padding: 7px 10px; border-radius: 6px; line-height: 1.35;">
+                        <strong style="color: #fbbf24;">Orientações:</strong> <span id="modal-exame-descricao">--</span>
                     </div>
                 </div>
 
-                <!-- Box de Pagamento Asaas / Confirmação -->
+                <!-- Box de Pagamento / Confirmação -->
                 <div id="modal-exame-cobranca-container">
-                    <!-- Dinâmico via PainelAlunoApp: renderiza opções de aceite, Pix QR Code ou confirmação -->
+                    <!-- Dinâmico via PainelAlunoApp -->
                 </div>
             </div>
         </div>
@@ -1828,7 +1840,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=5.6"></script></script></script>
+    <script src="/js/painel-aluno.js?v=5.7"></script></script></script></script>
 </body>
 
 </html>
