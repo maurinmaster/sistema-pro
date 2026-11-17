@@ -231,6 +231,11 @@ const PainelAlunoApp = {
             this.saveMedidas();
         });
 
+        // Botão QR Check-in no topo do card do atleta
+        document.getElementById('btn-hero-qr-checkin')?.addEventListener('click', () => {
+            this.openContaModal();
+        });
+
         // Abrir página de histórico e comparativo de evolução
         document.getElementById('btn-open-evolution')?.addEventListener('click', () => {
             this.switchView('evolucao');
@@ -705,8 +710,14 @@ const PainelAlunoApp = {
         const athleteAvatarRing = document.getElementById('athlete-avatar-ring');
 
         if (cardAthleteName) cardAthleteName.textContent = aluno.nome_completo || aluno.primeiro_nome;
+        const cardTopAthleteName = document.getElementById('card-top-athlete-name');
+        if (cardTopAthleteName) cardTopAthleteName.textContent = aluno.nome_completo || aluno.primeiro_nome;
 
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
+        const cardModalityEl = document.getElementById('card-athlete-modality');
+        if (cardModalityEl) {
+            cardModalityEl.textContent = gradMt?.modalidade_nome || plano?.nome || 'Muay Thai';
+        }
         if (gradMt) {
             if (cardPrajiedName) cardPrajiedName.textContent = gradMt.nivel_nome || 'Prajied Atual';
             const c1 = gradMt.cor_primaria || '#f59e0b';

@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.0">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.1">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -770,25 +770,44 @@
                 </div>
             </div>
 
+            <!-- Barra Compacta Superior do Atleta (Foto + Nome + Prajied + QR Check-in) -->
+            <div class="athlete-top-bar">
+                <div class="athlete-top-bar-left">
+                    <div class="athlete-avatar-frame-wrap athlete-top-avatar" id="btn-open-skins-avatar" title="Avatar do Lutador">
+                        <div class="avatar-ring" id="athlete-avatar-ring">
+                            <div class="avatar-inner">
+                                <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
+                            </div>
+                        </div>
+                        <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
+                    </div>
+                    <div class="athlete-top-info">
+                        <div class="athlete-top-name" id="card-top-athlete-name">Atleta</div>
+                        <span class="prajied-chip" id="card-prajied-chip">
+                            <span class="prajied-dot" id="card-prajied-dot"></span>
+                            <span id="card-prajied-name">Iniciante</span>
+                        </span>
+                    </div>
+                </div>
+                <button type="button" class="btn-hero-qr-checkin" id="btn-hero-qr-checkin" title="Ver Matrícula e Dados da Conta">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="7" rx="1"/>
+                        <rect x="14" y="3" width="7" height="7" rx="1"/>
+                        <rect x="3" y="14" width="7" height="7" rx="1"/>
+                        <path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14v2"/>
+                    </svg>
+                    <span>QR Check-in</span>
+                </button>
+            </div>
+
             <section class="athlete-main-card">
                 <!-- Efeitos de fundo (Glow & Watermark) -->
                 <div class="card-glow-bg"></div>
                 <div class="card-watermark">MT</div>
 
-                <!-- 1. Header do Atleta: Compacto e Expressivo -->
+                <!-- 1. Header do Card: Nome + Modalidade + Botão Skin -->
                 <div class="athlete-card-header">
                     <div class="athlete-header-left">
-                        <!-- Avatar com Borda na cor do Prajied/Faixa -->
-                        <div class="athlete-avatar-frame-wrap" id="btn-open-skins-avatar"
-                            title="Avatar do Lutador">
-                            <div class="avatar-ring" id="athlete-avatar-ring">
-                                <div class="avatar-inner">
-                                    <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
-                                </div>
-                            </div>
-                            <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
-                        </div>
-
                         <div class="athlete-meta-info">
                             <div class="athlete-name-row">
                                 <h2 class="athlete-card-name" id="card-athlete-name">Atleta</h2>
@@ -797,18 +816,11 @@
                                         d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
                                 </svg>
                             </div>
-
-                            <!-- Badges de Nível / Prajied -->
-                            <div class="athlete-badges-row">
-                                <span class="prajied-chip" id="card-prajied-chip">
-                                    <span class="prajied-dot" id="card-prajied-dot"></span>
-                                    <span id="card-prajied-name">Iniciante</span>
-                                </span>
-                            </div>
+                            <p class="athlete-card-modality" id="card-athlete-modality">Muay Thai</p>
                         </div>
                     </div>
 
-                    <!-- Ação Rápida de Biometria / Skin -->
+                    <!-- Ação Rápida de Skin -->
                     <button type="button" class="btn-card-expand" id="btn-select-skin"
                         title="Personalizar Avatar & Equipamento">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -848,14 +860,11 @@
                         </div>
                     </div>
 
-                    <!-- Faixa Limpa de Resumo Biométrico (Peso | Altura | IMC) -->
+                    <!-- Faixa Limpa de Resumo Biométrico Inline (Peso | Altura | IMC) -->
                     <div class="bio-summary-strip">
                         <div class="bio-summary-item">
-                            <span class="bio-stat-label">Peso</span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num" id="ruler-weight-val">--</span>
-                                <span class="stat-unit">kg</span>
-                            </div>
+                            <span class="bio-inline-label">Peso:</span>
+                            <strong class="bio-inline-val"><span id="ruler-weight-val">--</span> kg</strong>
                             <div class="chip-delta-sub" id="delta-peso-sub" style="display: none;">
                                 <span id="delta-peso-arrow">=</span>
                                 <span id="delta-peso-val">Sem variação</span>
@@ -863,27 +872,21 @@
                         </div>
 
                         <div class="bio-summary-item">
-                            <span class="bio-stat-label">Altura</span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num" id="ruler-height-val">--</span>
-                                <span class="stat-unit">cm</span>
-                            </div>
-                            <span class="chip-note-sub" id="athlete-wingspan-sub">Envergadura: --</span>
+                            <span class="bio-inline-label">Altura:</span>
+                            <strong class="bio-inline-val"><span id="ruler-height-val">--</span> cm</strong>
+                            <span class="chip-note-sub" id="athlete-wingspan-sub" style="display: none;">Envergadura: --</span>
                         </div>
 
                         <div class="bio-summary-item">
-                            <span class="bio-stat-label">IMC</span>
-                            <div class="bio-stat-val">
-                                <span class="stat-num" id="bmi-number">--</span>
-                            </div>
-                            <span class="chip-status-tag" id="bmi-status-pill">Não aferido</span>
+                            <span class="bio-inline-label">IMC:</span>
+                            <strong class="bio-inline-val" id="bmi-number">--</strong>
+                            <span class="chip-status-tag" id="bmi-status-pill" style="display: none;">Não aferido</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Barra Inferior de Ações e Toggle de Notas Técnicas -->
+                <!-- Barra Inferior de Ações e Link Ver Biometria -->
                 <div class="athlete-bio-actions-bar">
-                    <span class="metrics-head-date" id="measurements-last-check">Última checagem: ontem</span>
                     <div class="meas-quick-actions">
                         <button type="button" class="btn-meas-action" id="btn-toggle-eval-details" aria-expanded="false" title="Ver Notas Técnicas do Professor">
                             <span>Notas Técnicas ↓</span>
@@ -891,10 +894,10 @@
                         <button type="button" class="btn-meas-action" id="btn-modal-medidas" title="Lançar Nova Medição">
                             <span>+ Medir</span>
                         </button>
-                        <button type="button" class="btn-meas-action btn-meas-accent" id="btn-open-evolution" title="Histórico e Comparativo de Evolução">
-                            <span>Evolução</span>
-                        </button>
                     </div>
+                    <button type="button" class="btn-ver-biometria-link" id="btn-open-evolution">
+                        <span>Ver Biometria &rarr;</span>
+                    </button>
                 </div>
 
                 <!-- Painel Recolhível de Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) -->
@@ -1818,7 +1821,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=5.0"></script>
+    <script src="/js/painel-aluno.js?v=5.1"></script>
 </body>
 
 </html>
