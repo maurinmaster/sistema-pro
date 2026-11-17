@@ -2341,6 +2341,8 @@ const PainelAlunoApp = {
         const aluno = this.alunoData?.aluno || {};
         const plano = this.alunoData?.plano || null;
         const graduacao = this.alunoData?.graduacao || {};
+        const frequencia = this.alunoData?.frequencia || {};
+        const streak = frequencia.streak || {};
         const conquistas = Array.isArray(this.alunoData?.conquistas) ? this.alunoData.conquistas : [];
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
         const beltC1 = gradMt?.cor_primaria || '#f59e0b';
@@ -2354,58 +2356,48 @@ const PainelAlunoApp = {
         ctx.fillStyle = bgGrad;
         ctx.fillRect(0, 0, W, H);
 
-        const glow = ctx.createRadialGradient(W / 2, 920, 40, W / 2, 920, 520);
-        glow.addColorStop(0, `${beltC1}44`);
-        glow.addColorStop(0.55, `${beltC2}18`);
+        const glow = ctx.createRadialGradient(W / 2, 580, 40, W / 2, 580, 560);
+        glow.addColorStop(0, `${beltC1}38`);
+        glow.addColorStop(0.55, `${beltC2}14`);
         glow.addColorStop(1, 'transparent');
         ctx.fillStyle = glow;
-        ctx.fillRect(0, 380, W, 1080);
+        ctx.fillRect(0, 120, W, 1000);
 
-        // 2. Carrega imagens em paralelo (Logo, Foto do Aluno, Camadas do Avatar)
+        // 2. Carrega imagens em paralelo (Logo e Foto do Aluno)
         const logoSrc = '/assets/icons/logo.png?v=2';
         const photoSrc = document.getElementById('card-header-avatar-img')?.src || aluno.foto_perfil_url || '';
-        const bodySrc = document.getElementById('avatar-body-img')?.src || '/assets/avatar/homem-branco.png';
-        const hairEl = document.getElementById('avatar-hair-img');
-        const hairSrc = (hairEl && hairEl.style.display !== 'none') ? hairEl.src : '';
-        const prajiedWrap = document.getElementById('prajied-arm-container');
-        const prajiedEl = document.getElementById('avatar-prajied-img');
-        const prajiedSrc = (prajiedWrap && prajiedWrap.style.display !== 'none' && prajiedEl) ? prajiedEl.src : '';
 
-        const [logoImg, photoImg, bodyImg, hairImg, prajiedImg] = await Promise.all([
+        const [logoImg, photoImg] = await Promise.all([
             this.loadImageSafe(logoSrc),
-            this.loadImageSafe(photoSrc),
-            this.loadImageSafe(bodySrc),
-            this.loadImageSafe(hairSrc),
-            this.loadImageSafe(prajiedSrc)
+            this.loadImageSafe(photoSrc)
         ]);
 
         // 3. Logo oficial no topo
         if (logoImg) {
-            const maxLogoW = 360;
-            const maxLogoH = 120;
+            const maxLogoW = 380;
+            const maxLogoH = 126;
             const ratio = Math.min(maxLogoW / logoImg.width, maxLogoH / logoImg.height);
             const lw = logoImg.width * ratio;
             const lh = logoImg.height * ratio;
-            ctx.drawImage(logoImg, (W - lw) / 2, 74, lw, lh);
+            ctx.drawImage(logoImg, (W - lw) / 2, 82, lw, lh);
         } else {
             ctx.fillStyle = '#ffffff';
             ctx.font = '800 48px Outfit, Plus Jakarta Sans, sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('PRO COMBATE', W / 2, 140);
+            ctx.fillText('PRO COMBATE', W / 2, 150);
         }
 
         // 4. Card de Identidade (Foto do aluno + Nome + Faixa/Prajied + Modalidade)
-        this.drawRoundedRect(ctx, 64, 232, W - 128, 224, 32);
-        ctx.fillStyle = 'rgba(22, 31, 46, 0.88)';
+        this.drawRoundedRect(ctx, 64, 248, W - 128, 240, 32);
+        ctx.fillStyle = 'rgba(22, 31, 46, 0.9)';
         ctx.fill();
         ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.24)';
         ctx.stroke();
 
-        // Anel e foto circular do aluno
-        const cx = 176;
-        const cy = 344;
-        const rOuter = 74;
+        const cx = 180;
+        const cy = 368;
+        const rOuter = 78;
         const ringGrad = ctx.createLinearGradient(cx - rOuter, cy - rOuter, cx + rOuter, cy + rOuter);
         ringGrad.addColorStop(0, beltC1);
         ringGrad.addColorStop(1, beltC2);
@@ -2430,7 +2422,6 @@ const PainelAlunoApp = {
         }
         ctx.restore();
 
-        // Texto do Atleta
         const nomeAtleta = aluno.nome_completo || aluno.primeiro_nome || 'Atleta';
         const faixaNome = gradMt?.nivel_nome || 'Iniciante';
         const grauNum = gradMt?.ordem_hierarquica || 1;
@@ -2438,14 +2429,13 @@ const PainelAlunoApp = {
 
         ctx.textAlign = 'left';
         ctx.fillStyle = '#ffffff';
-        ctx.font = '800 40px Outfit, Plus Jakarta Sans, sans-serif';
-        ctx.fillText(nomeAtleta.slice(0, 26), 278, 318);
+        ctx.font = '800 42px Outfit, Plus Jakarta Sans, sans-serif';
+        ctx.fillText(nomeAtleta.slice(0, 26), 286, 336);
 
-        // Pill da faixa
         const faixaTexto = `${faixaNome} • ${grauNum}º Grau`;
         ctx.font = '700 25px Plus Jakarta Sans, sans-serif';
-        const pillW = Math.min(ctx.measureText(faixaTexto).width + 64, 680);
-        this.drawRoundedRect(ctx, 278, 338, pillW, 48, 24);
+        const pillW = Math.min(ctx.measureText(faixaTexto).width + 64, 660);
+        this.drawRoundedRect(ctx, 286, 356, pillW, 48, 24);
         ctx.fillStyle = 'rgba(245, 158, 11, 0.16)';
         ctx.fill();
         ctx.lineWidth = 1.5;
@@ -2454,40 +2444,120 @@ const PainelAlunoApp = {
 
         ctx.fillStyle = beltC1;
         ctx.beginPath();
-        ctx.arc(306, 362, 8, 0, Math.PI * 2);
+        ctx.arc(314, 380, 8, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.fillStyle = '#fef3c7';
-        ctx.fillText(faixaTexto, 326, 371);
+        ctx.fillText(faixaTexto, 334, 389);
 
         ctx.fillStyle = '#cbd5e1';
         ctx.font = '600 24px Plus Jakarta Sans, sans-serif';
-        ctx.fillText(modNome.slice(0, 42), 278, 424);
+        ctx.fillText(modNome.slice(0, 42), 286, 444);
 
-        // 5. Avatar Multicamadas Centralizado (Corpo + Cabelo + Prajied)
-        const stageTop = 490;
-        const stageMaxH = 840;
-        const stageMaxW = 760;
+        // 5. Card de Graduação (Próxima Graduação & Progresso)
+        const nextRankLabel = document.getElementById('card-next-rank-label')?.textContent?.trim() || 'Rumo ao Próximo Grau';
+        const statusBadgeText = document.getElementById('card-eligibility-badge')?.textContent?.trim() || 'Em Evolução';
+        const barWidthStr = document.getElementById('card-next-rank-progress-bar')?.style?.width || '0%';
+        const progressPct = Math.max(0, Math.min(100, parseFloat(barWidthStr) || 0));
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-        ctx.beginPath();
-        ctx.ellipse(W / 2, 1318, 210, 28, 0, 0, Math.PI * 2);
+        this.drawRoundedRect(ctx, 64, 520, W - 128, 250, 32);
+        ctx.fillStyle = 'rgba(22, 31, 46, 0.9)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = '800 26px Outfit, Plus Jakarta Sans, sans-serif';
+        ctx.fillText('🥋 GRADUAÇÃO', 104, 578);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '700 23px Plus Jakarta Sans, sans-serif';
+        ctx.fillText(statusBadgeText.slice(0, 28), W - 104, 578);
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 34px Outfit, Plus Jakarta Sans, sans-serif';
+        ctx.fillText(nextRankLabel.slice(0, 34), 104, 636);
+
+        // Barra de progresso da graduação
+        const barX = 104;
+        const barY = 674;
+        const barW = W - 208;
+        const barH = 26;
+        this.drawRoundedRect(ctx, barX, barY, barW, barH, 13);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
         ctx.fill();
 
-        const drawAvatarLayer = (img) => {
-            if (!img) return;
-            const scale = Math.min(stageMaxW / img.width, stageMaxH / img.height);
-            const dw = img.width * scale;
-            const dh = img.height * scale;
-            ctx.drawImage(img, (W - dw) / 2, stageTop + (stageMaxH - dh) / 2, dw, dh);
-        };
-        drawAvatarLayer(bodyImg);
-        drawAvatarLayer(hairImg);
-        drawAvatarLayer(prajiedImg);
+        if (progressPct > 0) {
+            const fillW = Math.max(26, (barW * progressPct) / 100);
+            this.drawRoundedRect(ctx, barX, barY, fillW, barH, 13);
+            const barGrad = ctx.createLinearGradient(barX, 0, barX + fillW, 0);
+            barGrad.addColorStop(0, '#f59e0b');
+            barGrad.addColorStop(1, '#fbbf24');
+            ctx.fillStyle = barGrad;
+            ctx.fill();
+        }
 
-        // 6. Card de Conquistas
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '700 22px Plus Jakarta Sans, sans-serif';
+        ctx.fillText(`Progresso atual: ${Math.round(progressPct)}%`, 104, 738);
+
+        // 6. Card de Frequência (Treinos no Mês, Total e Streak Semanal)
+        const totalMes = Number(frequencia.total_mes || 0);
+        const totalGeral = Number(frequencia.total_geral || 0);
+        const semanasSeguidas = Number(streak.semanas_consecutivas || 0);
+        const totalSemana = Number(streak.total_semana || 0);
+        const metaSemana = Number(streak.meta_semana || 3);
+
+        this.drawRoundedRect(ctx, 64, 802, W - 128, 290, 32);
+        ctx.fillStyle = 'rgba(22, 31, 46, 0.9)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#38bdf8';
+        ctx.font = '800 26px Outfit, Plus Jakarta Sans, sans-serif';
+        ctx.fillText('🔥 FREQUÊNCIA', 104, 860);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#fb923c';
+        ctx.font = '700 24px Plus Jakarta Sans, sans-serif';
+        ctx.fillText(`${semanasSeguidas} semana${semanasSeguidas === 1 ? '' : 's'} seguida${semanasSeguidas === 1 ? '' : 's'}`, W - 104, 860);
+
+        const freqBoxes = [
+            { label: 'Treinos no Mês', value: String(totalMes), color: '#fbbf24' },
+            { label: 'Semana Atual', value: `${totalSemana}/${metaSemana}`, color: '#34d399' },
+            { label: 'Total Geral', value: String(totalGeral), color: '#38bdf8' }
+        ];
+        const fBoxW = (W - 208 - 32) / 3;
+        freqBoxes.forEach((item, idx) => {
+            const fx = 104 + idx * (fBoxW + 16);
+            const fy = 894;
+            this.drawRoundedRect(ctx, fx, fy, fBoxW, 162, 22);
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
+            ctx.stroke();
+
+            ctx.textAlign = 'center';
+            ctx.fillStyle = item.color;
+            ctx.font = '800 50px Outfit, Plus Jakarta Sans, sans-serif';
+            ctx.fillText(item.value, fx + fBoxW / 2, fy + 86);
+
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '600 21px Plus Jakarta Sans, sans-serif';
+            ctx.fillText(item.label, fx + fBoxW / 2, fy + 132);
+        });
+
+        // 7. Card de Conquistas (até 6 conquistas desbloqueadas)
         const unlocked = conquistas.filter(c => c.desbloqueada);
-        this.drawRoundedRect(ctx, 64, 1370, W - 128, 410, 32);
+        this.drawRoundedRect(ctx, 64, 1124, W - 128, 650, 32);
         ctx.fillStyle = 'rgba(22, 31, 46, 0.9)';
         ctx.fill();
         ctx.lineWidth = 2;
@@ -2497,57 +2567,57 @@ const PainelAlunoApp = {
         ctx.textAlign = 'left';
         ctx.fillStyle = '#f59e0b';
         ctx.font = '800 28px Outfit, Plus Jakarta Sans, sans-serif';
-        ctx.fillText('🏆 CONQUISTAS', 104, 1432);
+        ctx.fillText('🏆 CONQUISTAS', 104, 1188);
 
         ctx.textAlign = 'right';
         ctx.fillStyle = '#cbd5e1';
         ctx.font = '700 24px Plus Jakarta Sans, sans-serif';
-        ctx.fillText(`${unlocked.length} de ${conquistas.length} desbloqueadas`, W - 104, 1432);
+        ctx.fillText(`${unlocked.length} de ${conquistas.length} desbloqueadas`, W - 104, 1188);
 
-        const listToShow = unlocked.slice(0, 4);
+        const listToShow = unlocked.slice(0, 6);
         if (listToShow.length === 0) {
             ctx.textAlign = 'center';
-            ctx.fillStyle = '#94a3b8';
-            ctx.font = '600 26px Plus Jakarta Sans, sans-serif';
-            ctx.fillText('Em busca da primeira conquista no tatame!', W / 2, 1600);
+            ctx.fillStyle = '#cbd5e1';
+            ctx.font = '600 28px Plus Jakarta Sans, sans-serif';
+            ctx.fillText('Em busca da primeira conquista no tatame!', W / 2, 1450);
         } else {
             const cols = 2;
             const cardW = (W - 208 - 20) / cols;
-            const cardH = 112;
+            const cardH = 148;
             listToShow.forEach((c, idx) => {
                 const col = idx % cols;
                 const row = Math.floor(idx / cols);
                 const bx = 104 + col * (cardW + 20);
-                const by = 1470 + row * (cardH + 18);
+                const by = 1230 + row * (cardH + 22);
 
-                this.drawRoundedRect(ctx, bx, by, cardW, cardH, 20);
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                this.drawRoundedRect(ctx, bx, by, cardW, cardH, 22);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
                 ctx.fill();
                 ctx.lineWidth = 1.5;
                 ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
                 ctx.stroke();
 
                 ctx.textAlign = 'left';
-                ctx.font = '36px sans-serif';
+                ctx.font = '42px sans-serif';
                 ctx.fillStyle = '#ffffff';
-                ctx.fillText(c.icone || '🏆', bx + 20, by + 68);
+                ctx.fillText(c.icone || '🏆', bx + 22, by + 88);
 
-                ctx.font = '700 23px Plus Jakarta Sans, sans-serif';
+                ctx.font = '700 24px Plus Jakarta Sans, sans-serif';
                 ctx.fillStyle = '#f8fafc';
                 const titulo = String(c.titulo || '').slice(0, 22);
-                ctx.fillText(titulo, bx + 74, by + 56);
+                ctx.fillText(titulo, bx + 84, by + 70);
 
-                ctx.font = '600 18px Plus Jakarta Sans, sans-serif';
+                ctx.font = '600 19px Plus Jakarta Sans, sans-serif';
                 ctx.fillStyle = '#fbbf24';
-                ctx.fillText('Conquistado', bx + 74, by + 86);
+                ctx.fillText('Conquistado', bx + 84, by + 104);
             });
         }
 
-        // 7. Rodapé
+        // 8. Rodapé
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '600 22px Plus Jakarta Sans, sans-serif';
-        ctx.fillText('PRO COMBATE • gestor.procombate.com', W / 2, 1855);
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '600 23px Plus Jakarta Sans, sans-serif';
+        ctx.fillText('PRO COMBATE • gestor.procombate.com', W / 2, 1852);
 
         const dataUrl = canvas.toDataURL('image/png');
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
