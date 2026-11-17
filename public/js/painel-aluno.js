@@ -401,7 +401,7 @@ const PainelAlunoApp = {
             this.switchView('wiki');
         });
         document.getElementById('mob-nav-evolucao')?.addEventListener('click', () => {
-            this.openEvolutionModal();
+            this.switchView('evolucao');
         });
         document.getElementById('mob-nav-faturas')?.addEventListener('click', () => {
             this.switchView('faturas');
@@ -2866,6 +2866,13 @@ const PainelAlunoApp = {
             const evAvatar = document.getElementById('evolucao-header-avatar-img');
             if (evName) evName.textContent = aluno.nome_completo || aluno.primeiro_nome || 'Atleta';
             if (evAvatar && aluno.foto_perfil_url) evAvatar.src = aluno.foto_perfil_url;
+
+            document.querySelectorAll('.dock-btn[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'evolucao');
+            });
+            document.querySelectorAll('.mobile-nav-item[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'evolucao');
+            });
 
             this.openEvolutionModal();
         } else if (this.currentView === 'faturas') {
