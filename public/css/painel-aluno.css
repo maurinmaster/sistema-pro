@@ -1839,58 +1839,60 @@ body {
     }
 
     .avatar-modal-stage .avatar-layer-hair {
-        width: 52px !important;
-        top: -1px !important;
-        left: 50% !important;
+        width: 39px !important;
+        top: -4px !important;
+        left: 49% !important;
         transform: translateX(-50%) !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-homem-2.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-homem-2 {
-        width: 56px !important;
-        top: -4px !important;
+        width: 41px !important;
+        top: -10px !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-homem-3.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-homem-3 {
-        width: 54px !important;
+        width: 42px !important;
         top: -4px !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-homem-4.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-homem-4 {
-        width: 52px !important;
+        width: 37px !important;
         top: -1px !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-mulher-1.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-mulher-1 {
-        width: 58px !important;
-        top: -2px !important;
+        width: 45px !important;
+        top: -18px !important;
+        transform: translateX(-40%) !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-mulher-2.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-mulher-2 {
-        width: 56px !important;
-        top: -3px !important;
+        width: 36px !important;
+        top: -7px !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-mulher-3.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-mulher-3 {
-        width: 52px !important;
-        top: -1px !important;
+        width: 38px !important;
+        top: -6px !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-mulher-4.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-mulher-4 {
-        width: 54px !important;
+        width: 41px !important;
         top: -2px !important;
     }
 
     .avatar-modal-stage .avatar-layer-hair[data-hair="cabelo-mulher-5.png"],
     .avatar-modal-stage .avatar-layer-hair.cabelo-mulher-5 {
-        width: 58px !important;
-        top: -3px !important;
+        width: 34px !important;
+        top: -9px !important;
+        transform: translateX(-40%) !important;
     }
 
     .avatar-modal-stage .avatar-layer-prajied {
@@ -7956,4 +7958,12 @@ body {
     .pwa-banner-badge {
         display: none;
     }
+}
+
+.mobile-brand-logo {
+    height: 40px;
+    width: auto;
+    max-width: 170px;
+    object-fit: contain;
+    display: block;
 }
