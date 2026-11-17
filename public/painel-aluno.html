@@ -794,15 +794,16 @@
                         </div>
                     </div>
 
-                    <!-- Ação Rápida de Skin -->
-                    <button type="button" class="btn-card-expand" id="btn-select-skin"
-                        title="Personalizar Avatar & Equipamento">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polyline points="15 3 21 3 21 9" />
-                            <polyline points="9 21 3 21 3 15" />
-                            <line x1="21" y1="3" x2="14" y2="10" />
-                            <line x1="3" y1="21" x2="10" y2="14" />
+                    <!-- Compartilhar Card no Instagram -->
+                    <button type="button" class="btn-card-expand" id="btn-share-card"
+                        title="Compartilhar Card no Instagram" aria-label="Compartilhar Card no Instagram">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="18" cy="5" r="3" />
+                            <circle cx="6" cy="12" r="3" />
+                            <circle cx="18" cy="19" r="3" />
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                         </svg>
                     </button>
                 </div>
@@ -1253,6 +1254,46 @@
     </div>
 
     <!-- ================================================================= -->
+    <!-- ================================================================= -->
+    <!-- POPUP DE COMPARTILHAMENTO DO CARD (INSTAGRAM STORIES)             -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-share-instagram" style="display: none;">
+        <div class="modal-card" style="max-width: 420px;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="stat-icon-wrap" style="width: 36px; height: 36px; border-radius: 10px; background: rgba(245, 158, 11, 0.16); color: #f59e0b; display: flex; align-items: center; justify-content: center;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                            <circle cx="18" cy="5" r="3" />
+                            <circle cx="6" cy="12" r="3" />
+                            <circle cx="18" cy="19" r="3" />
+                            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+                            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 16.5px; color: #f8fafc;">Compartilhar no Instagram</h3>
+                        <span style="font-size: 12px; color: #94a3b8;">Card pronto no formato Stories (9:16)</span>
+                    </div>
+                </div>
+                <button type="button" class="modal-close-btn" data-close="modal-share-instagram">&times;</button>
+            </div>
+            <div class="modal-body" style="display: flex; flex-direction: column; gap: 14px; align-items: center;">
+                <div id="share-preview-loading" style="padding: 40px 16px; color: #cbd5e1; font-size: 13px; text-align: center;">
+                    Gerando imagem personalizada...
+                </div>
+                <img id="share-preview-img" alt="Prévia do Card para Instagram" style="display: none; width: 100%; max-width: 240px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 12px 28px rgba(0,0,0,0.45);">
+                <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                    <button type="button" id="btn-share-native" class="btn-modal-save" style="width: 100%; background: linear-gradient(135deg, #f59e0b, #ea580c); border: none; color: #fff; font-weight: 700;">
+                        Compartilhar no Instagram / Apps
+                    </button>
+                    <button type="button" id="btn-share-download" class="btn-modal-save" style="width: 100%; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); color: #f8fafc; font-weight: 600;">
+                        Baixar Imagem (.png)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- POPUP DE ALERTA DE MENSALIDADE EM ATRASO                          -->
     <!-- ================================================================= -->
@@ -1802,7 +1843,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=5.3"></script></script>
+    <script src="/js/painel-aluno.js?v=5.4"></script></script>
 </body>
 
 </html>

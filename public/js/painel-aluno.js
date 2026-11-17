@@ -324,10 +324,18 @@ const PainelAlunoApp = {
             }
         });
 
-        // Abrir modal de personalização do avatar / skins
-        document.getElementById('btn-select-skin')?.addEventListener('click', () => {
-            this.openSkinsModal();
+        // Compartilhar Card para Instagram
+        document.getElementById('btn-share-card')?.addEventListener('click', () => {
+            this.openShareCardModal();
         });
+        document.getElementById('btn-share-native')?.addEventListener('click', () => {
+            this.shareCardNative();
+        });
+        document.getElementById('btn-share-download')?.addEventListener('click', () => {
+            this.downloadShareCard();
+        });
+
+        // Abrir modal de personalização do avatar / skins
         document.getElementById('fighter-avatar-img')?.addEventListener('click', () => {
             this.openSkinsModal();
         });
@@ -2293,6 +2301,309 @@ const PainelAlunoApp = {
             descEl.textContent = 'Você possui mensalidade vencida em aberto. Acesse a aba de Faturas ou clique em "Pagar Agora" para regularizar.';
         }
         popup.style.display = 'flex';
+    },
+
+    loadImageSafe(src) {
+        return new Promise((resolve) => {
+            if (!src) return resolve(null);
+            const img = new Image();
+            if (/^https?:\/\//i.test(src) && !src.startsWith(window.location.origin)) {
+                img.crossOrigin = 'anonymous';
+            }
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = src;
+        });
+    },
+
+    drawRoundedRect(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    },
+
+    async generateInstagramStoryImage() {
+        const W = 1080;
+        const H = 1920;
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d');
+
+        const aluno = this.alunoData?.aluno || {};
+        const plano = this.alunoData?.plano || null;
+        const graduacao = this.alunoData?.graduacao || {};
+        const conquistas = Array.isArray(this.alunoData?.conquistas) ? this.alunoData.conquistas : [];
+        const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
+        const beltC1 = gradMt?.cor_primaria || '#f59e0b';
+        const beltC2 = gradMt?.cor_secundaria || beltC1;
+
+        // 1. Fundo gradiente escuro + brilho radial na cor da faixa
+        const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+        bgGrad.addColorStop(0, '#090e1a');
+        bgGrad.addColorStop(0.5, '#111a2c');
+        bgGrad.addColorStop(1, '#090e1a');
+        ctx.fillStyle = bgGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        const glow = ctx.createRadialGradient(W / 2, 920, 40, W / 2, 920, 520);
+        glow.addColorStop(0, `${beltC1}44`);
+        glow.addColorStop(0.55, `${beltC2}18`);
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 380, W, 1080);
+
+        // 2. Carrega imagens em paralelo (Logo, Foto do Aluno, Camadas do Avatar)
+        const logoSrc = '/assets/icons/logo.png?v=2';
+        const photoSrc = document.getElementById('card-header-avatar-img')?.src || aluno.foto_perfil_url || '';
+        const bodySrc = document.getElementById('avatar-body-img')?.src || '/assets/avatar/homem-branco.png';
+        const hairEl = document.getElementById('avatar-hair-img');
+        const hairSrc = (hairEl && hairEl.style.display !== 'none') ? hairEl.src : '';
+        const prajiedWrap = document.getElementById('prajied-arm-container');
+        const prajiedEl = document.getElementById('avatar-prajied-img');
+        const prajiedSrc = (prajiedWrap && prajiedWrap.style.display !== 'none' && prajiedEl) ? prajiedEl.src : '';
+
+        const [logoImg, photoImg, bodyImg, hairImg, prajiedImg] = await Promise.all([
+            this.loadImageSafe(logoSrc),
+            this.loadImageSafe(photoSrc),
+            this.loadImageSafe(bodySrc),
+            this.loadImageSafe(hairSrc),
+            this.loadImageSafe(prajiedSrc)
+        ]);
+
+        // 3. Logo oficial no topo
+        if (logoImg) {
+            const maxLogoW = 360;
+            const maxLogoH = 120;
+            const ratio = Math.min(maxLogoW / logoImg.width, maxLogoH / logoImg.height);
+            const lw = logoImg.width * ratio;
+            const lh = logoImg.height * ratio;
+            ctx.drawImage(logoImg, (W - lw) / 2, 74, lw, lh);
+        } else {
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '800 48px Outfit, Plus Jakarta Sans, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('PRO COMBATE', W / 2, 140);
+        }
+
+        // 4. Card de Identidade (Foto do aluno + Nome + Faixa/Prajied + Modalidade)
+        this.drawRoundedRect(ctx, 64, 232, W - 128, 224, 32);
+        ctx.fillStyle = 'rgba(22, 31, 46, 0.88)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.stroke();
+
+        // Anel e foto circular do aluno
+        const cx = 176;
+        const cy = 344;
+        const rOuter = 74;
+        const ringGrad = ctx.createLinearGradient(cx - rOuter, cy - rOuter, cx + rOuter, cy + rOuter);
+        ringGrad.addColorStop(0, beltC1);
+        ringGrad.addColorStop(1, beltC2);
+        ctx.fillStyle = ringGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rOuter, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, rOuter - 6, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        if (photoImg) {
+            const scale = Math.max((rOuter * 2) / photoImg.width, (rOuter * 2) / photoImg.height);
+            const pw = photoImg.width * scale;
+            const ph = photoImg.height * scale;
+            ctx.drawImage(photoImg, cx - pw / 2, cy - ph / 2, pw, ph);
+        } else {
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(cx - rOuter, cy - rOuter, rOuter * 2, rOuter * 2);
+        }
+        ctx.restore();
+
+        // Texto do Atleta
+        const nomeAtleta = aluno.nome_completo || aluno.primeiro_nome || 'Atleta';
+        const faixaNome = gradMt?.nivel_nome || 'Iniciante';
+        const grauNum = gradMt?.ordem_hierarquica || 1;
+        const modNome = gradMt?.modalidade_nome || plano?.nome || 'Muay Thai';
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 40px Outfit, Plus Jakarta Sans, sans-serif';
+        ctx.fillText(nomeAtleta.slice(0, 26), 278, 318);
+
+        // Pill da faixa
+        const faixaTexto = `${faixaNome} • ${grauNum}º Grau`;
+        ctx.font = '700 25px Plus Jakarta Sans, sans-serif';
+        const pillW = Math.min(ctx.measureText(faixaTexto).width + 64, 680);
+        this.drawRoundedRect(ctx, 278, 338, pillW, 48, 24);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.16)';
+        ctx.fill();
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = beltC1;
+        ctx.stroke();
+
+        ctx.fillStyle = beltC1;
+        ctx.beginPath();
+        ctx.arc(306, 362, 8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#fef3c7';
+        ctx.fillText(faixaTexto, 326, 371);
+
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '600 24px Plus Jakarta Sans, sans-serif';
+        ctx.fillText(modNome.slice(0, 42), 278, 424);
+
+        // 5. Avatar Multicamadas Centralizado (Corpo + Cabelo + Prajied)
+        const stageTop = 490;
+        const stageMaxH = 840;
+        const stageMaxW = 760;
+
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+        ctx.beginPath();
+        ctx.ellipse(W / 2, 1318, 210, 28, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        const drawAvatarLayer = (img) => {
+            if (!img) return;
+            const scale = Math.min(stageMaxW / img.width, stageMaxH / img.height);
+            const dw = img.width * scale;
+            const dh = img.height * scale;
+            ctx.drawImage(img, (W - dw) / 2, stageTop + (stageMaxH - dh) / 2, dw, dh);
+        };
+        drawAvatarLayer(bodyImg);
+        drawAvatarLayer(hairImg);
+        drawAvatarLayer(prajiedImg);
+
+        // 6. Card de Conquistas
+        const unlocked = conquistas.filter(c => c.desbloqueada);
+        this.drawRoundedRect(ctx, 64, 1370, W - 128, 410, 32);
+        ctx.fillStyle = 'rgba(22, 31, 46, 0.9)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.22)';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#f59e0b';
+        ctx.font = '800 28px Outfit, Plus Jakarta Sans, sans-serif';
+        ctx.fillText('🏆 CONQUISTAS', 104, 1432);
+
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '700 24px Plus Jakarta Sans, sans-serif';
+        ctx.fillText(`${unlocked.length} de ${conquistas.length} desbloqueadas`, W - 104, 1432);
+
+        const listToShow = unlocked.slice(0, 4);
+        if (listToShow.length === 0) {
+            ctx.textAlign = 'center';
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '600 26px Plus Jakarta Sans, sans-serif';
+            ctx.fillText('Em busca da primeira conquista no tatame!', W / 2, 1600);
+        } else {
+            const cols = 2;
+            const cardW = (W - 208 - 20) / cols;
+            const cardH = 112;
+            listToShow.forEach((c, idx) => {
+                const col = idx % cols;
+                const row = Math.floor(idx / cols);
+                const bx = 104 + col * (cardW + 20);
+                const by = 1470 + row * (cardH + 18);
+
+                this.drawRoundedRect(ctx, bx, by, cardW, cardH, 20);
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.fill();
+                ctx.lineWidth = 1.5;
+                ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
+                ctx.stroke();
+
+                ctx.textAlign = 'left';
+                ctx.font = '36px sans-serif';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(c.icone || '🏆', bx + 20, by + 68);
+
+                ctx.font = '700 23px Plus Jakarta Sans, sans-serif';
+                ctx.fillStyle = '#f8fafc';
+                const titulo = String(c.titulo || '').slice(0, 22);
+                ctx.fillText(titulo, bx + 74, by + 56);
+
+                ctx.font = '600 18px Plus Jakarta Sans, sans-serif';
+                ctx.fillStyle = '#fbbf24';
+                ctx.fillText('Conquistado', bx + 74, by + 86);
+            });
+        }
+
+        // 7. Rodapé
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = '600 22px Plus Jakarta Sans, sans-serif';
+        ctx.fillText('PRO COMBATE • gestor.procombate.com', W / 2, 1855);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        return { dataUrl, blob };
+    },
+
+    async openShareCardModal() {
+        const modal = document.getElementById('modal-share-instagram');
+        const loading = document.getElementById('share-preview-loading');
+        const imgEl = document.getElementById('share-preview-img');
+        if (!modal) return;
+
+        modal.style.display = 'flex';
+        if (loading) loading.style.display = 'block';
+        if (imgEl) imgEl.style.display = 'none';
+
+        try {
+            const { dataUrl, blob } = await this.generateInstagramStoryImage();
+            this._shareImageDataUrl = dataUrl;
+            this._shareImageBlob = blob;
+            if (imgEl) {
+                imgEl.src = dataUrl;
+                imgEl.style.display = 'block';
+            }
+            if (loading) loading.style.display = 'none';
+        } catch (err) {
+            if (loading) loading.textContent = 'Não foi possível gerar a imagem agora.';
+        }
+    },
+
+    async shareCardNative() {
+        if (!this._shareImageBlob) return;
+        const file = new File([this._shareImageBlob], 'meu-card-procombate.png', { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            try {
+                await navigator.share({
+                    files: [file],
+                    title: 'Meu Progresso - PRO COMBATE',
+                    text: 'Confira minha graduação e conquistas no PRO COMBATE!'
+                });
+                return;
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+            }
+        }
+        this.downloadShareCard();
+    },
+
+    downloadShareCard() {
+        if (!this._shareImageDataUrl) return;
+        const a = document.createElement('a');
+        a.href = this._shareImageDataUrl;
+        a.download = 'meu-card-procombate.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
     },
 
     async saveTelefoneAluno() {
