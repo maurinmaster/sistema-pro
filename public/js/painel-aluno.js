@@ -231,6 +231,31 @@ const PainelAlunoApp = {
             this.saveMedidas();
         });
 
+        // Sub-container clicável de biometria (leva à Evolução se já tiver medidas, ou abre modal para registrar)
+        const bioClickable = document.getElementById('bio-summary-clickable');
+        if (bioClickable) {
+            const handleBioClick = () => {
+                const m = this.alunoData?.aluno?.medidas;
+                const hasMeasures = m && ((m.peso_kg !== null && m.peso_kg !== undefined) || (m.altura_cm !== null && m.altura_cm !== undefined));
+                if (hasMeasures) {
+                    this.switchView('evolucao');
+                } else {
+                    this.openMedidasModal();
+                }
+            };
+            bioClickable.addEventListener('click', handleBioClick);
+            bioClickable.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleBioClick();
+                }
+            });
+        }
+        document.getElementById('bio-empty-cta')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.openMedidasModal();
+        });
+
         // Abrir página de histórico e comparativo de evolução
         document.getElementById('btn-open-evolution')?.addEventListener('click', () => {
             this.switchView('evolucao');
@@ -710,8 +735,20 @@ const PainelAlunoApp = {
 
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
         const cardModalityEl = document.getElementById('card-athlete-modality');
+        const modalidadeLabel = gradMt?.modalidade_nome || plano?.nome || 'Muay Thai';
         if (cardModalityEl) {
-            cardModalityEl.textContent = gradMt?.modalidade_nome || plano?.nome || 'Muay Thai';
+            cardModalityEl.textContent = modalidadeLabel;
+        }
+        const trajectoryTitleEl = document.getElementById('trajectory-section-title');
+        if (trajectoryTitleEl) {
+            const modLower = String(modalidadeLabel || '').toLowerCase();
+            if (modLower.includes('muay') || modLower.includes('thai')) {
+                trajectoryTitleEl.textContent = 'Trajetória de Prajieds';
+            } else if (gradMt?.modalidade_nome) {
+                trajectoryTitleEl.textContent = 'Trajetória de Faixas';
+            } else {
+                trajectoryTitleEl.textContent = 'Histórico de Graduações';
+            }
         }
         if (gradMt) {
             if (cardPrajiedName) cardPrajiedName.textContent = gradMt.nivel_nome || 'Prajied Atual';
@@ -750,6 +787,12 @@ const PainelAlunoApp = {
         const pesoVal = aluno.medidas?.peso_kg;
         const alturaVal = aluno.medidas?.altura_cm;
         const imcVal = aluno.medidas?.imc;
+        const hasMeasures = (pesoVal !== null && pesoVal !== undefined) || (alturaVal !== null && alturaVal !== undefined);
+
+        const bioValuesEl = document.getElementById('bio-summary-values');
+        const bioEmptyCta = document.getElementById('bio-empty-cta');
+        if (bioValuesEl) bioValuesEl.style.display = hasMeasures ? 'grid' : 'none';
+        if (bioEmptyCta) bioEmptyCta.style.display = hasMeasures ? 'none' : 'flex';
 
         if (heightVal) heightVal.textContent = (alturaVal !== null && alturaVal !== undefined) ? alturaVal : '--';
         if (weightVal) weightVal.textContent = (pesoVal !== null && pesoVal !== undefined) ? pesoVal : '--';

@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.3">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.4">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -834,44 +834,47 @@
                         </div>
                     </div>
 
-                    <!-- Faixa Limpa de Resumo Biométrico Inline (Peso | Altura | IMC) -->
-                    <div class="bio-summary-strip">
-                        <div class="bio-summary-item">
-                            <span class="bio-inline-label">Peso:</span>
-                            <strong class="bio-inline-val"><span id="ruler-weight-val">--</span> kg</strong>
-                            <div class="chip-delta-sub" id="delta-peso-sub" style="display: none;">
-                                <span id="delta-peso-arrow">=</span>
-                                <span id="delta-peso-val">Sem variação</span>
+                    <!-- Sub-container clicável de Resumo Biométrico (leva para Evolução/Biometria) -->
+                    <div class="bio-summary-strip bio-summary-clickable" id="bio-summary-clickable" role="button" tabindex="0" title="Abrir histórico biométrico e evolução">
+                        <div class="bio-summary-values" id="bio-summary-values">
+                            <div class="bio-summary-item">
+                                <span class="bio-inline-label">Peso:</span>
+                                <strong class="bio-inline-val"><span id="ruler-weight-val">--</span> kg</strong>
+                                <div class="chip-delta-sub" id="delta-peso-sub" style="display: none;">
+                                    <span id="delta-peso-arrow">=</span>
+                                    <span id="delta-peso-val">Sem variação</span>
+                                </div>
+                            </div>
+
+                            <div class="bio-summary-item">
+                                <span class="bio-inline-label">Altura:</span>
+                                <strong class="bio-inline-val"><span id="ruler-height-val">--</span> cm</strong>
+                                <span class="chip-note-sub" id="athlete-wingspan-sub" style="display: none;">Envergadura: --</span>
+                            </div>
+
+                            <div class="bio-summary-item">
+                                <span class="bio-inline-label">IMC:</span>
+                                <strong class="bio-inline-val" id="bmi-number">--</strong>
+                                <span class="chip-status-tag" id="bmi-status-pill" style="display: none;">Não aferido</span>
                             </div>
                         </div>
 
-                        <div class="bio-summary-item">
-                            <span class="bio-inline-label">Altura:</span>
-                            <strong class="bio-inline-val"><span id="ruler-height-val">--</span> cm</strong>
-                            <span class="chip-note-sub" id="athlete-wingspan-sub" style="display: none;">Envergadura: --</span>
-                        </div>
-
-                        <div class="bio-summary-item">
-                            <span class="bio-inline-label">IMC:</span>
-                            <strong class="bio-inline-val" id="bmi-number">--</strong>
-                            <span class="chip-status-tag" id="bmi-status-pill" style="display: none;">Não aferido</span>
-                        </div>
+                        <button type="button" class="bio-empty-cta" id="bio-empty-cta" style="display: none;">
+                            <span>📏 Registrar primeiras medidas &rarr;</span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Barra Inferior de Ações e Link Ver Biometria -->
+                <!-- Barra Inferior de Ações Rápidas com peso visual equilibrado -->
                 <div class="athlete-bio-actions-bar">
                     <div class="meas-quick-actions">
                         <button type="button" class="btn-meas-action" id="btn-toggle-eval-details" aria-expanded="false" title="Ver Notas Técnicas do Professor">
                             <span>Notas Técnicas ↓</span>
                         </button>
-                        <button type="button" class="btn-meas-action" id="btn-modal-medidas" title="Lançar Nova Medição">
+                        <button type="button" class="btn-meas-action btn-meas-accent" id="btn-modal-medidas" title="Lançar Nova Medição">
                             <span>+ Medir</span>
                         </button>
                     </div>
-                    <button type="button" class="btn-ver-biometria-link" id="btn-open-evolution">
-                        <span>Ver Biometria &rarr;</span>
-                    </button>
                 </div>
 
                 <!-- Painel Recolhível de Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) -->
@@ -942,9 +945,12 @@
                         </div>
                     </div>
                 </div>
+            </section>
 
-                <!-- 3. Próxima Graduação & Status do Exame (Card em Destaque Compacto) -->
-                <div class="next-rank-card" id="card-next-rank-container">
+            <!-- ========================================================= -->
+            <!-- CARD INDEPENDENTE: PRÓXIMA GRADUAÇÃO & TRAJETÓRIA          -->
+            <!-- ========================================================= -->
+            <section class="next-rank-card standalone-panel-card" id="card-next-rank-container">
                     <div class="next-rank-head">
                         <div class="next-rank-title-group">
                             <span class="next-rank-tag">
@@ -991,10 +997,22 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                         </button>
                     </div>
-                </div>
 
-                <!-- 4. Carrossel Horizontal de Conquistas & Medalhas -->
-                <div class="achievements-section-wrap">
+                    <!-- Trajetória de Graduações (rótulo adaptado conforme modalidade) -->
+                    <div class="graduations-timeline-wrap">
+                        <div class="timeline-title-row">
+                            <span id="trajectory-section-title">Histórico de Graduações</span>
+                        </div>
+                        <div class="graduations-timeline" id="graduations-timeline-container">
+                            <!-- Linha do tempo inserida pelo JS -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ========================================================= -->
+                <!-- CARD INDEPENDENTE: CONQUISTAS & MEDALHAS                  -->
+                <!-- ========================================================= -->
+                <section class="achievements-section-wrap standalone-panel-card">
                     <div class="achievements-head-row">
                         <div class="achievements-title-group">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
@@ -1019,18 +1037,7 @@
                     <div class="achievements-carousel no-scrollbar" id="badges-container">
                         <!-- Preenchido dinamicamente pelo JS -->
                     </div>
-                </div>
-
-                <!-- 5. Trajetória de Faixas (Histórico Resumido de Graduações) -->
-                <div class="graduations-timeline-wrap">
-                    <div class="timeline-title-row">
-                        <span>Trajetória de Faixas</span>
-                    </div>
-                    <div class="graduations-timeline" id="graduations-timeline-container">
-                        <!-- Linha do tempo inserida pelo JS -->
-                    </div>
-                </div>
-            </section>
+                </section>
 
             <!-- ========================================================= -->
             <!-- CARD SEMANA ATUAL (Frequência & Régua dos 5 Dias)           -->
@@ -1795,7 +1802,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=5.2"></script>
+    <script src="/js/painel-aluno.js?v=5.3"></script></script>
 </body>
 
 </html>
