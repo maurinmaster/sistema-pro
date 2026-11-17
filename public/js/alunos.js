@@ -72,6 +72,17 @@ const AlunosModule = {
             btnNovo.addEventListener('click', () => this.openFormModal());
         }
 
+        // Botão e Formulário de Aviso Avulso por E-mail
+        const btnAbrirAviso = document.getElementById('btn-abrir-modal-aviso');
+        if (btnAbrirAviso) {
+            btnAbrirAviso.addEventListener('click', () => this.openEnviarAvisoModal());
+        }
+
+        const formEnviarAviso = document.getElementById('form-enviar-aviso-alunos');
+        if (formEnviarAviso) {
+            formEnviarAviso.addEventListener('submit', (e) => this.submitEnviarAviso(e));
+        }
+
         // Data de nascimento - detecção em tempo real de menor de idade
         const inputNasc = document.getElementById('aluno-nascimento');
         if (inputNasc) {
@@ -942,6 +953,81 @@ const AlunosModule = {
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = `⚠️ Esvaziar Lixeira`;
+            }
+        }
+    },
+
+    async openEnviarAvisoModal() {
+        const form = document.getElementById('form-enviar-aviso-alunos');
+        if (form) form.reset();
+
+        const selectDest = document.getElementById('aviso-destinatario');
+        if (selectDest) {
+            selectDest.innerHTML = `<option value="">Todos os alunos ativos (também aparece na caixa de avisos)</option>`;
+            try {
+                let lista = Array.isArray(this.alunosData) && this.alunosData.length > 0 ? this.alunosData : [];
+                if (lista.length === 0) {
+                    const res = await API.get('/alunos?status=ativo');
+                    if (res?.success && Array.isArray(res.data)) {
+                        lista = res.data;
+                    }
+                }
+                const comEmail = lista
+                    .filter(a => a && a.status === 'ativo' && a.email && String(a.email).includes('@'))
+                    .sort((a, b) => String(a.nome_completo || '').localeCompare(String(b.nome_completo || ''), 'pt-BR'));
+
+                for (const aluno of comEmail) {
+                    const opt = document.createElement('option');
+                    opt.value = String(aluno.id);
+                    opt.textContent = `${aluno.nome_completo} (${aluno.email})`;
+                    selectDest.appendChild(opt);
+                }
+            } catch (err) {
+                console.warn('Falha ao carregar lista de alunos para aviso:', err.message);
+            }
+        }
+
+        UI.openModal('modal-enviar-aviso-alunos');
+    },
+
+    async submitEnviarAviso(e) {
+        e.preventDefault();
+        const btn = document.getElementById('btn-submit-enviar-aviso');
+        const alunoId = document.getElementById('aviso-destinatario')?.value || '';
+        const tipo = document.getElementById('aviso-tipo')?.value || 'aviso';
+        const titulo = document.getElementById('aviso-titulo')?.value?.trim() || '';
+        const mensagem = document.getElementById('aviso-mensagem')?.value?.trim() || '';
+
+        if (!titulo || !mensagem) {
+            UI.showToast('Preencha o título e a mensagem do aviso.', 'warning');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+        }
+
+        try {
+            const res = await API.post('/alunos/avisos/enviar', {
+                aluno_id: alunoId || null,
+                tipo,
+                titulo,
+                mensagem
+            });
+
+            if (!res?.success) {
+                throw new Error(res?.error || 'Erro ao enviar aviso.');
+            }
+
+            UI.showToast(res.message || 'Aviso enviado por e-mail com sucesso!', 'success');
+            UI.closeModal('modal-enviar-aviso-alunos');
+        } catch (err) {
+            UI.showToast(err.message || 'Falha ao enviar aviso por e-mail.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Enviar Aviso por E-mail';
             }
         }
     }

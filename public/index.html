@@ -149,6 +149,13 @@
                         </svg>
                         <span>⚡ Check-in Rápido</span>
                     </button>
+                    <button class="btn btn-secondary" id="btn-abrir-modal-aviso" title="Enviar aviso por e-mail para os alunos">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        <span>Enviar Aviso</span>
+                    </button>
                     <button class="btn btn-primary" id="btn-novo-aluno">
                         <svg viewBox="0 0 24 24">
                             <line x1="12" y1="5" x2="12" y2="19" />
@@ -1240,6 +1247,61 @@
                     <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-reset-senha-aluno')">Cancelar</button>
                     <button type="submit" class="btn btn-primary" id="btn-salvar-nova-senha" style="background: linear-gradient(135deg, #f59e0b, #d97706); border: none;">
                         💾 Salvar Nova Senha
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: ENVIAR AVISO AVULSO POR E-MAIL      -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-enviar-aviso-alunos">
+        <div class="modal-box" style="max-width: 540px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#f97316" stroke-width="2">
+                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                            <polyline points="22,6 12,13 2,6" />
+                        </svg>
+                        Enviar Aviso por E-mail
+                    </h3>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                        Comunique novidades, avisos avulsos ou campanhas diretamente no e-mail dos alunos
+                    </div>
+                </div>
+                <button class="modal-close" onclick="UI.closeModal('modal-enviar-aviso-alunos')">&times;</button>
+            </div>
+            <form id="form-enviar-aviso-alunos">
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="aviso-destinatario">Destinatário</label>
+                        <select id="aviso-destinatario" class="form-control">
+                            <option value="">Todos os alunos ativos (também aparece na caixa de avisos)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="aviso-tipo">Categoria</label>
+                        <select id="aviso-tipo" class="form-control">
+                            <option value="aviso">Aviso Geral</option>
+                            <option value="campanha">Campanha / Evento</option>
+                            <option value="urgente">Aviso Importante</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label class="form-label" for="aviso-titulo">Assunto / Título</label>
+                        <input type="text" id="aviso-titulo" class="form-control" required maxlength="120" placeholder="Ex: Feriado sem treino / Seminário de Muay Thai">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 6px;">
+                        <label class="form-label" for="aviso-mensagem">Mensagem</label>
+                        <textarea id="aviso-mensagem" class="form-control" rows="5" required maxlength="4000" placeholder="Escreva o comunicado que será enviado para o e-mail dos alunos..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-enviar-aviso-alunos')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-enviar-aviso">
+                        Enviar Aviso por E-mail
                     </button>
                 </div>
             </form>
@@ -2784,7 +2846,7 @@
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/aluno-detalhes.js"></script>
-    <script src="/js/alunos.js?v=4.9"></script>
+    <script src="/js/alunos.js?v=5.0"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js"></script>

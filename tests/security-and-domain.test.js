@@ -405,6 +405,51 @@ test('Serviço de E-mail: Geração e Envio de Códigos Transacionais', async ()
     // Teste de e-mail de recuperação de senha
     const resReset = await emailService.sendPasswordResetEmail('novo.atleta@exemplo.com', 'Lucas Santos', '654321');
     assert.equal(resReset.success, true);
+
+    // Teste de sanitização HTML e construção de template de notificação
+    const htmlSeguro = emailService.buildBrandedEmailHtml({
+        badgeText: '<script>alert(1)</script>',
+        titulo: 'Aviso <b>Importante</b>',
+        saudacao: 'Olá, Lucas!',
+        mensagem: 'Treino amanhã\nConfirmado!',
+        detalhes: [{ label: 'Status', value: '<img src=x onerror=alert(1)>' }],
+        ctaLabel: 'Abrir Portal',
+        ctaUrl: 'javascript:alert(1)'
+    });
+    assert.equal(htmlSeguro.includes('<script>'), false);
+    assert.equal(htmlSeguro.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), true);
+    assert.equal(htmlSeguro.includes('javascript:alert(1)'), false);
+    assert.equal(htmlSeguro.includes('Treino amanhã<br>Confirmado!'), true);
+
+    // Teste de envio de notificação individual e em lote
+    const resNotif = await emailService.sendNotificationEmail({
+        toEmail: 'atleta@exemplo.com',
+        nomeDestinatario: 'Lucas Santos',
+        titulo: 'Avaliação Atualizada',
+        mensagem: 'Você atingiu 92% de aproveitamento.'
+    });
+    assert.equal(resNotif.success, true);
+
+    const resInvalid = await emailService.sendNotificationEmail({
+        toEmail: '',
+        titulo: 'Teste',
+        mensagem: 'Sem e-mail'
+    });
+    assert.equal(resInvalid.success, false);
+    assert.equal(resInvalid.skipped, true);
+
+    const resBulk = await emailService.sendBulkNotificationEmails([
+        { email: 'a@exemplo.com', nome_completo: 'Aluno A' },
+        { email: 'A@exemplo.com', nome_completo: 'Aluno A Duplicado' },
+        { email: 'b@exemplo.com', nome_completo: 'Aluno B' },
+        { email: '', nome_completo: 'Sem Email' }
+    ], {
+        titulo: 'Aviso Geral',
+        mensagem: 'Comunicado de teste.'
+    });
+    assert.equal(resBulk.total_destinatarios, 2);
+    assert.equal(resBulk.enviados, 2);
+    assert.equal(resBulk.falhas, 0);
 });
 
 test('Painel do Aluno: Consulta Consolidada, Histórico de Medidas e Comparativo de Evolução', async () => {

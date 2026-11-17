@@ -9,6 +9,29 @@ const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const { validateMinorGuardian, hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile } = require('../services/uploadStorage');
 const MatriculaService = require('../services/matriculaService');
+const emailService = require('../services/emailService');
+
+/**
+ * Dispara e-mail transacional para um aluno sem bloquear a resposta HTTP.
+ */
+async function notifyAlunoByEmail(alunoId, buildPayload) {
+    try {
+        const [rows] = await pool.query(
+            'SELECT nome_completo, email FROM alunos WHERE id = ? AND deleted_at IS NULL',
+            [alunoId]
+        );
+        if (rows.length === 0 || !rows[0].email) return;
+        const aluno = rows[0];
+        const payload = typeof buildPayload === 'function' ? buildPayload(aluno) : buildPayload;
+        await emailService.sendNotificationEmail({
+            ...payload,
+            toEmail: aluno.email,
+            nomeDestinatario: aluno.nome_completo
+        });
+    } catch (err) {
+        console.warn('[Alunos] Falha ao enviar e-mail de notificação:', err.message);
+    }
+}
 
 // Configuração do Multer para armazenamento de fotos de perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -884,6 +907,22 @@ router.post('/:id/avaliacoes-graduacao', authenticateToken, authorizeRoles('admi
             observacoes ? String(observacoes).trim() : null
         ]);
 
+        notifyAlunoByEmail(Number(req.params.id), {
+            badgeText: 'AVALIAÇÃO ATUALIZADA',
+            titulo: 'Atualização na Avaliação de Graduação',
+            assunto: 'Sua avaliação de graduação foi atualizada — PRO COMBATE',
+            mensagem: apto
+                ? `Parabéns! Sua avaliação de graduação foi atualizada e você atingiu ${percentualObtido}% de aproveitamento, estando APTO(A) para a próxima fase.`
+                : `Sua avaliação de graduação foi atualizada com ${percentualObtido}% de aproveitamento. Continue focado nos treinos para atingir o mínimo exigido (${minPct}%).`,
+            detalhes: [
+                { label: 'Aproveitamento', value: `${percentualObtido}%` },
+                { label: 'Mínimo Exigido', value: `${minPct}%` },
+                { label: 'Status', value: apto ? 'APTO para Graduação' : 'Em Evolução' },
+                { label: 'Observações', value: req.body?.observacoes ? String(req.body.observacoes).trim() : '' }
+            ],
+            ctaLabel: 'Ver Minha Evolução'
+        });
+
         res.json({
             success: true,
             message: apto 
@@ -960,6 +999,22 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             (aluno_id, professor_id, data_avaliacao, nota_clinch, nota_socos, nota_chutes, nota_postura, nota_clinch_sparring, nota_condicionamento, observacoes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [alunoId, professorId, dataAval, rawClinch, rawSocos, rawChutes, rawPostura, legacyClinch, legacyCond, cleanObs]);
+
+        notifyAlunoByEmail(Number(req.params.id), {
+            badgeText: 'AVALIAÇÃO TÉCNICA',
+            titulo: 'Nova Avaliação de Desempenho Registrada',
+            assunto: 'Nova avaliação técnica registrada — PRO COMBATE',
+            mensagem: 'Seu professor registrou uma nova avaliação técnica no seu perfil. Confira suas notas e acompanhe sua evolução no Portal do Aluno.',
+            detalhes: [
+                { label: 'Data da Avaliação', value: dataAval ? new Date(dataAval).toLocaleDateString('pt-BR') : '' },
+                { label: 'Clinch', value: `${rawClinch}/10` },
+                { label: 'Socos', value: `${rawSocos}/10` },
+                { label: 'Chutes', value: `${rawChutes}/10` },
+                { label: 'Postura', value: `${rawPostura}/10` },
+                { label: 'Observações', value: cleanObs || '' }
+            ],
+            ctaLabel: 'Ver Minha Evolução'
+        });
 
         res.status(201).json({
             success: true,
@@ -1120,6 +1175,18 @@ router.post('/:id/aprovar-promocao', authenticateToken, authorizeRoles('admin', 
         `, [aluno_id, modalidade_id, proxNivel.id, JSON.stringify(novosItens), totalPossivel]);
 
         await conn.commit();
+
+        notifyAlunoByEmail(Number(req.params.id), {
+            badgeText: 'GRADUAÇÃO APROVADA',
+            titulo: `Parabéns pela Nova Graduação: ${proxNivel.nome}`,
+            assunto: `Parabéns! Você avançou para ${proxNivel.nome} — PRO COMBATE`,
+            mensagem: `Sua dedicação nos treinos deu resultado! Você acaba de ser promovido(a) para "${proxNivel.nome}". Continue treinando firme!`,
+            detalhes: [
+                { label: 'Nova Graduação', value: proxNivel.nome }
+            ],
+            ctaLabel: 'Ver Conquistas no Portal'
+        });
+
         res.json({
             success: true,
             message: `Graduação aprovada com sucesso! Aluno promovido para "${proxNivel.nome}".`,
@@ -1333,6 +1400,86 @@ router.delete('/:id/permanente', authenticateToken, authorizeRoles('admin'), asy
         res.status(500).json({ success: false, error: 'Erro interno ao excluir aluno do banco de dados.' });
     } finally {
         conn.release();
+    }
+});
+
+// POST /api/alunos/avisos/enviar - Envio de avisos avulsos por e-mail (e painel para avisos gerais)
+router.post('/avisos/enviar', authenticateToken, authorizeRoles('admin', 'recepcao', 'professor'), async (req, res) => {
+    try {
+        const rawTitulo = typeof req.body?.titulo === 'string' ? req.body.titulo.trim() : '';
+        const rawMensagem = typeof req.body?.mensagem === 'string' ? req.body.mensagem.trim() : '';
+        const rawTipo = typeof req.body?.tipo === 'string' ? req.body.tipo.trim().toLowerCase() : 'aviso';
+        const rawAlunoId = req.body?.aluno_id;
+
+        if (!rawTitulo || rawTitulo.length > 120) {
+            return res.status(400).json({ success: false, error: 'Informe um título válido (até 120 caracteres).' });
+        }
+        if (!rawMensagem || rawMensagem.length > 4000) {
+            return res.status(400).json({ success: false, error: 'Informe uma mensagem válida (até 4000 caracteres).' });
+        }
+
+        const tiposPermitidos = ['aviso', 'campanha', 'urgente'];
+        const tipoAviso = tiposPermitidos.includes(rawTipo) ? rawTipo : 'aviso';
+        const badgeLabel = tipoAviso === 'urgente' ? 'AVISO IMPORTANTE' : tipoAviso === 'campanha' ? 'CAMPANHA / EVENTO' : 'AVISO DA ACADEMIA';
+
+        let recipients = [];
+        let isGeral = true;
+
+        if (rawAlunoId !== undefined && rawAlunoId !== null && String(rawAlunoId).trim() !== '') {
+            const alunoId = parseInt(rawAlunoId, 10);
+            if (isNaN(alunoId) || alunoId <= 0) {
+                return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
+            }
+            isGeral = false;
+            const [rows] = await pool.query(
+                "SELECT id, nome_completo, email FROM alunos WHERE id = ? AND deleted_at IS NULL",
+                [alunoId]
+            );
+            if (rows.length === 0) {
+                return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+            }
+            if (!rows[0].email || !rows[0].email.includes('@')) {
+                return res.status(400).json({ success: false, error: 'Este aluno não possui um e-mail válido cadastrado.' });
+            }
+            recipients = rows;
+        } else {
+            const [rows] = await pool.query(
+                "SELECT id, nome_completo, email FROM alunos WHERE status = 'ativo' AND deleted_at IS NULL AND email IS NOT NULL AND email != ''"
+            );
+            recipients = rows;
+        }
+
+        // Registra na caixa de avisos do portal quando for comunicado geral
+        if (isGeral) {
+            try {
+                await pool.query(
+                    `INSERT INTO avisos_campanhas (titulo, tipo, descricao, tag_destaque, ativo)
+                     VALUES (?, ?, ?, ?, 1)`,
+                    [rawTitulo, tipoAviso === 'campanha' ? 'campanha' : 'aviso', rawMensagem, badgeLabel]
+                );
+            } catch (avisoErr) {
+                console.warn('[Alunos] Falha ao registrar aviso em avisos_campanhas:', avisoErr.message);
+            }
+        }
+
+        const result = await emailService.sendBulkNotificationEmails(recipients, {
+            badgeText: badgeLabel,
+            titulo: rawTitulo,
+            assunto: `${rawTitulo} — PRO COMBATE`,
+            mensagem: rawMensagem,
+            ctaLabel: 'Acessar Portal do Aluno'
+        });
+
+        res.json({
+            success: true,
+            message: result.enviados > 0
+                ? `Aviso enviado com sucesso para ${result.enviados} aluno(s)!`
+                : 'Aviso registrado, porém nenhum aluno elegível possuía e-mail válido.',
+            data: result
+        });
+    } catch (err) {
+        console.error('Erro ao enviar aviso avulso por e-mail:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao enviar aviso por e-mail.' });
     }
 });
 

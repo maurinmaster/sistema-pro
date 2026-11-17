@@ -9,6 +9,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
+const emailService = require('../services/emailService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -594,6 +595,44 @@ router.post('/eventos/:id/convidar', authenticateToken, authorizeRoles('admin', 
             ]);
         } catch (avisoErr) {
             console.warn('[Exames] Falha ao registrar aviso:', avisoErr.message);
+        }
+
+        // Envia notificação por e-mail de forma não-bloqueante para os alunos convidados
+        try {
+            const alunoIds = [...new Set(
+                (Array.isArray(convites) ? convites : [])
+                    .map(c => Number(c?.aluno_id))
+                    .filter(id => Number.isInteger(id) && id > 0)
+            )];
+
+            if (alunoIds.length > 0) {
+                const placeholders = alunoIds.map(() => '?').join(',');
+                const [alunosEmail] = await pool.query(
+                    `SELECT id, nome_completo, email FROM alunos WHERE id IN (${placeholders}) AND email IS NOT NULL AND email != '' AND deleted_at IS NULL`,
+                    alunoIds
+                );
+
+                if (alunosEmail.length > 0) {
+                    const dataFmt = evento.data_evento ? new Date(evento.data_evento).toLocaleDateString('pt-BR') : 'A definir';
+                    emailService.sendBulkNotificationEmails(alunosEmail, {
+                        badgeText: 'CONVOCAÇÃO DE EXAME',
+                        titulo: `Convite Oficial: ${evento.titulo}`,
+                        assunto: `Convite para Exame de Graduação: ${evento.titulo} — PRO COMBATE`,
+                        mensagem: 'Parabéns! Você foi convocado(a) para participar do próximo Exame de Graduação. Acesse o Portal do Aluno para conferir todos os detalhes e confirmar sua inscrição.',
+                        detalhes: [
+                            { label: 'Exame', value: evento.titulo },
+                            { label: 'Data', value: dataFmt },
+                            { label: 'Horário', value: evento.horario_evento || '' },
+                            { label: 'Local', value: evento.local_evento || '' }
+                        ],
+                        ctaLabel: 'Confirmar no Portal do Aluno'
+                    }).catch(err => {
+                        console.warn('[Exames] Falha ao disparar e-mails de convite:', err.message);
+                    });
+                }
+            }
+        } catch (emailErr) {
+            console.warn('[Exames] Erro ao preparar e-mails de convite:', emailErr.message);
         }
 
         res.status(201).json({
