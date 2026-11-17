@@ -3146,10 +3146,12 @@ const PainelAlunoApp = {
         const container = document.getElementById('wiki-spa-belts-tabs');
         if (!container) return;
 
-        if (this.faixasProgresso.length === 0) {
+        if (this.faixasProgresso.length <= 1) {
             container.innerHTML = '';
+            container.style.display = 'none';
             return;
         }
+        container.style.display = 'flex';
 
         let totalGeral = 0;
         this.faixasProgresso.forEach(f => { totalGeral += (f.total_golpes || 0); });
@@ -3328,17 +3330,7 @@ const PainelAlunoApp = {
             return `
                 <div class="curriculum-strike-card">
                     <div class="curriculum-card-media" onclick="PainelAlunoApp.abrirPassoAPassoTecnica(${g.id})">
-                        ${beltBadgeHtml}
                         ${mediaHtml}
-                        <div class="curriculum-play-overlay">
-                            <div class="curriculum-play-icon">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                            </div>
-                        </div>
-                        <div class="curriculum-badge-steps">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                            ${totalPassos} ${totalPassos === 1 ? 'passo' : 'passos'}
-                        </div>
                     </div>
                     <div class="curriculum-card-body">
                         <div class="curriculum-card-meta" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
@@ -3350,6 +3342,12 @@ const PainelAlunoApp = {
                         </div>
                         <h3 class="curriculum-card-title">${nomeEsc}</h3>
                         <p class="curriculum-card-desc">${descEsc}</p>
+                        <div class="curriculum-card-footer">
+                            <span class="curriculum-steps-pill">${totalPassos} ${totalPassos === 1 ? 'passo' : 'passos'}</span>
+                            <button type="button" class="btn-ver-passo-a-passo" onclick="PainelAlunoApp.abrirPassoAPassoTecnica(${g.id})">
+                                Ver passo a passo &rarr;
+                            </button>
+                        </div>
                     </div>
                 </div>
             `;
@@ -3517,7 +3515,13 @@ const PainelAlunoApp = {
         }
 
         if (btnAnt) btnAnt.disabled = this.currentPassoIndex === 0;
-        if (btnProx) btnProx.disabled = this.currentPassoIndex === (total - 1);
+        if (btnProx) {
+            const isLast = this.currentPassoIndex >= (total - 1);
+            btnProx.disabled = false;
+            btnProx.classList.toggle('btn-tecnica-primary', !isLast);
+            btnProx.classList.toggle('btn-tecnica-finish', isLast);
+            btnProx.textContent = isLast ? 'Concluir Estudo ✓' : 'Próximo Passo →';
+        }
 
         if (dotsContainer) {
             dotsContainer.innerHTML = passos.map((_, idx) => `
@@ -3536,9 +3540,14 @@ const PainelAlunoApp = {
     },
 
     passoProximo() {
-        if (this.currentTecnicaVisualizacao && this.currentPassoIndex < (this.currentTecnicaVisualizacao.passos.length - 1)) {
+        if (!this.currentTecnicaVisualizacao) return;
+        const total = (this.currentTecnicaVisualizacao.passos || []).length;
+        if (this.currentPassoIndex < (total - 1)) {
             this.currentPassoIndex++;
             this.renderPassoTecnica();
+        } else {
+            const modal = document.getElementById('modal-visualizar-tecnica');
+            if (modal) modal.style.display = 'none';
         }
     },
 
