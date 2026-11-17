@@ -231,11 +231,6 @@ const PainelAlunoApp = {
             this.saveMedidas();
         });
 
-        // Botão QR Check-in no topo do card do atleta
-        document.getElementById('btn-hero-qr-checkin')?.addEventListener('click', () => {
-            this.openContaModal();
-        });
-
         // Abrir página de histórico e comparativo de evolução
         document.getElementById('btn-open-evolution')?.addEventListener('click', () => {
             this.switchView('evolucao');

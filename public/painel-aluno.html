@@ -770,7 +770,7 @@
                 </div>
             </div>
 
-            <!-- Barra Compacta Superior do Atleta (Foto + Nome + Prajied + QR Check-in) -->
+            <!-- Barra Compacta Superior do Atleta (Foto + Nome + Prajied) -->
             <div class="athlete-top-bar">
                 <div class="athlete-top-bar-left">
                     <div class="athlete-avatar-frame-wrap athlete-top-avatar" id="btn-open-skins-avatar" title="Avatar do Lutador">
@@ -789,15 +789,6 @@
                         </span>
                     </div>
                 </div>
-                <button type="button" class="btn-hero-qr-checkin" id="btn-hero-qr-checkin" title="Ver Matrícula e Dados da Conta">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="7" height="7" rx="1"/>
-                        <rect x="14" y="3" width="7" height="7" rx="1"/>
-                        <rect x="3" y="14" width="7" height="7" rx="1"/>
-                        <path d="M14 14h3v3h-3zM18 18h3v3h-3zM14 20h2M20 14v2"/>
-                    </svg>
-                    <span>QR Check-in</span>
-                </button>
             </div>
 
             <section class="athlete-main-card">
@@ -805,18 +796,11 @@
                 <div class="card-glow-bg"></div>
                 <div class="card-watermark">MT</div>
 
-                <!-- 1. Header do Card: Nome + Modalidade + Botão Skin -->
+                <!-- 1. Header do Card: Modalidade + Botão Skin (sem repetir o nome) -->
                 <div class="athlete-card-header">
                     <div class="athlete-header-left">
                         <div class="athlete-meta-info">
-                            <div class="athlete-name-row">
-                                <h2 class="athlete-card-name" id="card-athlete-name">Atleta</h2>
-                                <svg class="verified-icon" width="14" height="14" viewBox="0 0 24 24" fill="#f59e0b">
-                                    <path
-                                        d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-                                </svg>
-                            </div>
-                            <p class="athlete-card-modality" id="card-athlete-modality">Muay Thai</p>
+                            <p class="athlete-card-modality" id="card-athlete-modality" style="font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0;">Muay Thai</p>
                         </div>
                     </div>
 
@@ -1821,7 +1805,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=5.1"></script>
+    <script src="/js/painel-aluno.js?v=5.2"></script>
 </body>
 
 </html>
