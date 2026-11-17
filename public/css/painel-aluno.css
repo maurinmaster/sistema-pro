@@ -5490,14 +5490,16 @@ body {
     width: 100%;
 }
 
-/* Barra Compacta Superior do Atleta (acima do Hero Card) */
+/* Barra Compacta do Atleta dentro do Header do Card */
 .athlete-top-bar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
-    padding: 4px 2px;
+    gap: 10px;
+    margin-bottom: 0;
+    padding: 0;
+    flex: 1;
+    min-width: 0;
 }
 
 .athlete-top-bar-left {
@@ -5564,9 +5566,11 @@ body {
 
 .athlete-card-modality {
     margin: 2px 0 0 0;
-    font-size: 13px;
+    font-size: 11.5px;
     font-weight: 500;
     color: #94a3b8;
+    opacity: 0.9;
+    line-height: 1.25;
 }
 
 .bio-summary-strip {

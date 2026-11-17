@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.2">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.3">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -706,7 +706,7 @@
             <!-- Header Mobile do App (Conforme Design Nativo do App) -->
             <header class="mobile-top-header" id="mobile-top-header">
                 <div class="mobile-brand-group">
-                    <img src="/assets/icons/logo.png?v=1" alt="PRO COMBATE" class="mobile-brand-logo">
+                    <img src="/assets/icons/logo.png?v=2" alt="PRO COMBATE" class="mobile-brand-logo">
                 </div>
                 <div class="mobile-header-actions">
                     <button type="button" class="mobile-circle-btn mobile-install-pill pwa-install-trigger" id="mobile-btn-install-app"
@@ -766,37 +766,31 @@
                 </div>
             </div>
 
-            <!-- Barra Compacta Superior do Atleta (Foto + Nome + Prajied) -->
-            <div class="athlete-top-bar">
-                <div class="athlete-top-bar-left">
-                    <div class="athlete-avatar-frame-wrap athlete-top-avatar" id="btn-open-skins-avatar" title="Avatar do Lutador">
-                        <div class="avatar-ring" id="athlete-avatar-ring">
-                            <div class="avatar-inner">
-                                <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
-                            </div>
-                        </div>
-                        <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
-                    </div>
-                    <div class="athlete-top-info">
-                        <div class="athlete-top-name" id="card-top-athlete-name">Atleta</div>
-                        <span class="prajied-chip" id="card-prajied-chip">
-                            <span class="prajied-dot" id="card-prajied-dot"></span>
-                            <span id="card-prajied-name">Iniciante</span>
-                        </span>
-                    </div>
-                </div>
-            </div>
-
             <section class="athlete-main-card">
                 <!-- Efeitos de fundo (Glow & Watermark) -->
                 <div class="card-glow-bg"></div>
                 <div class="card-watermark">MT</div>
 
-                <!-- 1. Header do Card: Modalidade + Botão Skin (sem repetir o nome) -->
+                <!-- 1. Header do Card: Foto + Nome + Prajied + Modalidade + Botão Skin -->
                 <div class="athlete-card-header">
-                    <div class="athlete-header-left">
-                        <div class="athlete-meta-info">
-                            <p class="athlete-card-modality" id="card-athlete-modality" style="font-size: 14px; font-weight: 700; color: #f8fafc; margin: 0;">Muay Thai</p>
+                    <div class="athlete-top-bar">
+                        <div class="athlete-top-bar-left">
+                            <div class="athlete-avatar-frame-wrap athlete-top-avatar" id="btn-open-skins-avatar" title="Avatar do Lutador">
+                                <div class="avatar-ring" id="athlete-avatar-ring">
+                                    <div class="avatar-inner">
+                                        <img id="card-header-avatar-img" src="/assets/avatar/homem-branco.png" alt="Avatar">
+                                    </div>
+                                </div>
+                                <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
+                            </div>
+                            <div class="athlete-top-info">
+                                <div class="athlete-top-name" id="card-top-athlete-name">Atleta</div>
+                                <span class="prajied-chip" id="card-prajied-chip">
+                                    <span class="prajied-dot" id="card-prajied-dot"></span>
+                                    <span id="card-prajied-name">Iniciante</span>
+                                </span>
+                                <p class="athlete-card-modality" id="card-athlete-modality">Muay Thai</p>
+                            </div>
                         </div>
                     </div>
 
