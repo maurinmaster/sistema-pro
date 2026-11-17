@@ -681,7 +681,7 @@
         <main class="auth-card">
             <!-- Abas Rápidas: Cadastro | Login -->
             <div class="auth-nav-pills" id="nav-pills-bar">
-                <button type="button" class="nav-pill-btn active" id="tab-btn-cadastro" data-target="view-cadastro">
+                <button type="button" class="nav-pill-btn" id="tab-btn-cadastro" data-target="view-cadastro">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
@@ -690,7 +690,7 @@
                     </svg>
                     Criar Conta
                 </button>
-                <button type="button" class="nav-pill-btn" id="tab-btn-login" data-target="view-login">
+                <button type="button" class="nav-pill-btn active" id="tab-btn-login" data-target="view-login">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
                         <polyline points="10 17 15 12 10 7" />
@@ -703,7 +703,7 @@
             <!-- ========================================================= -->
             <!-- 1. TELA DE CADASTRO: TUDO EM UMA ÚNICA TELA               -->
             <!-- ========================================================= -->
-            <section class="auth-view active" id="view-cadastro">
+            <section class="auth-view" id="view-cadastro">
                 <form id="form-cadastro" novalidate>
                     <!-- Foto de Perfil / Câmera Integrada -->
                     <div class="profile-photo-section">
@@ -866,7 +866,7 @@
             <!-- ========================================================= -->
             <!-- 2. TELA DE LOGIN                                         -->
             <!-- ========================================================= -->
-            <section class="auth-view" id="view-login">
+            <section class="auth-view active" id="view-login">
                 <form id="form-login" novalidate>
                     <div class="form-group">
                         <label class="form-label" for="login-email">Seu E-mail <span class="required">*</span></label>
@@ -1063,7 +1063,7 @@
     </div>
 
     <!-- Script de Gestão de Autenticação -->
-    <script src="/js/cadastro.js?v=4.5"></script>
+    <script src="/js/cadastro.js?v=4.6"></script>
 </body>
 
 </html>

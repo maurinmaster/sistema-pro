@@ -54,7 +54,7 @@ const WikiAlunoApp = {
             if (confirm('Deseja realmente sair da sua conta?')) {
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('user');
-                window.location.href = '/login';
+                window.location.href = '/';
             }
         });
 

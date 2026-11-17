@@ -128,15 +128,7 @@ const AuthModule = {
         API.clearSession();
         this.currentUser = null;
 
-        // Limpa perfil na sidebar
-        const userName = document.querySelector('.sidebar-footer .user-name');
-        const userRole = document.querySelector('.sidebar-footer .user-role');
-        const userAvatar = document.querySelector('.sidebar-footer .user-avatar');
-        if (userName) userName.textContent = 'Não autenticado';
-        if (userRole) userRole.textContent = 'Sessão encerrada';
-        if (userAvatar) userAvatar.textContent = '--';
-
-        this.showLoginModal(msg || 'Sua sessão foi encerrada com sucesso.');
+        window.location.href = '/';
     },
 
     showLoginModal(msg = null) {

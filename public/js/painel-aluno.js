@@ -550,7 +550,7 @@ const PainelAlunoApp = {
         if (confirm('Deseja realmente sair da sua conta?')) {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            window.location.href = '/';
         }
     },
 
@@ -582,7 +582,7 @@ const PainelAlunoApp = {
 
             // Se ainda assim for 401/403 sem dados e sem query param, redireciona ao login
             if ((res.status === 401 || res.status === 403) && !queryAlunoId) {
-                window.location.href = '/login';
+                window.location.href = '/';
                 return;
             }
 

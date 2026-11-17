@@ -86,7 +86,9 @@ const AuthApp = {
             tabLogin?.classList.add('active');
             tabCadastro?.classList.remove('active');
             if (headerSub) headerSub.textContent = 'Entre com seu e-mail e senha cadastrados';
-            window.location.hash = '#login';
+            if (window.location.pathname === '/' && window.location.hash) {
+                history.replaceState(null, '', '/');
+            }
         } else if (viewId === 'view-reset') {
             pillsBar.style.display = 'none';
             if (headerSub) headerSub.textContent = 'Redefinição de senha de acesso';
@@ -107,12 +109,12 @@ const AuthApp = {
         const hash = window.location.hash.toLowerCase();
         const path = window.location.pathname.toLowerCase();
 
-        if (path === '/login' || hash === '#login') {
-            this.switchView('view-login');
+        if (path === '/cadastro' || hash === '#cadastro') {
+            this.switchView('view-cadastro');
         } else if (path === '/esqueci-senha' || path === '/reset-senha' || hash === '#reset') {
             this.switchView('view-reset');
         } else {
-            this.switchView('view-cadastro');
+            this.switchView('view-login');
         }
     },
 
@@ -581,7 +583,7 @@ const AuthApp = {
                 if (data.user && data.user.cargo === 'aluno') {
                     window.location.href = '/painel';
                 } else {
-                    window.location.href = '/';
+                    window.location.href = '/admin';
                 }
             }, 800);
 

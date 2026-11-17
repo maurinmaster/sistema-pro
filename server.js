@@ -117,7 +117,7 @@ app.get('/uploads/:folder/:filename', async (req, res, next) => {
 });
 
 // Arquivos estáticos do frontend Vanilla
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // Rotas da API
 const authRoutes = require('./routes/auth');
@@ -154,9 +154,14 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Rotas amigáveis para Autenticação de Alunos (Cadastro em tela única, Login e Reset de Senha)
-app.get(['/cadastro', '/login', '/esqueci-senha', '/reset-senha'], (req, res) => {
+// Rota principal e rotas amigáveis de Autenticação (Login na raiz /, Cadastro, Reset de Senha)
+app.get(['/', '/login', '/cadastro', '/esqueci-senha', '/reset-senha'], (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
+});
+
+// Rota do Painel Administrativo (Gestão)
+app.get(['/admin', '/dashboard', '/gestao'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Rota amigável para o Painel do Aluno
@@ -171,7 +176,7 @@ app.get(['/painel/wiki', '/wiki-aluno'], (req, res) => {
 
 // Fallback para SPA (compatível com Express 5)
 app.use((req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    res.sendFile(path.join(__dirname, 'public', 'cadastro.html'));
 });
 
 // Tratador global de erros (evita vazamento de stack traces)
