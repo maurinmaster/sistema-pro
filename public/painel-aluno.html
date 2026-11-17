@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.4">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.5">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -1512,55 +1512,62 @@
     </div>
 
     <!-- ================================================================= -->
-    <!-- MODAL POP-UP OBRIGATÓRIO: CONVOCAÇÃO & CIÊNCIA DO EXAME            -->
-    <!-- (Só fecha se o atleta marcar expressamente a ciência da graduação)  -->
+    <!-- BALÃO CLICÁVEL: ELEGIBILIDADE PARA PRÓXIMA GRADUAÇÃO              -->
     <!-- ================================================================= -->
-    <div class="modal-backdrop modal-backdrop-static" id="modal-convocacao-exame" data-static-backdrop="true" style="display: none;">
-        <div class="modal-card modal-medium modal-convocacao-card" style="max-width: 600px;">
+    <div class="convocacao-balloon-toast" id="convocacao-balloon" role="button" tabindex="0" style="display: none;">
+        <div class="convocacao-balloon-icon">🏆</div>
+        <div class="convocacao-balloon-text">
+            <strong id="convocacao-balloon-title">Você está elegível para a próxima graduação!</strong>
+            <span id="convocacao-balloon-sub">Toque aqui para ver detalhes e inscrição</span>
+        </div>
+        <button type="button" class="convocacao-balloon-close" id="btn-close-convocacao-balloon" aria-label="Fechar balão">&times;</button>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL REMODELADO: CONVOCAÇÃO / ELEGIBILIDADE PARA GRADUAÇÃO       -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-convocacao-exame" style="display: none;">
+        <div class="modal-card modal-convocacao-card">
             <div class="modal-header modal-convocacao-header">
-                <div style="display: flex; align-items: center; gap: 14px;">
-                    <div class="convocacao-trophy-icon">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2">
+                <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+                    <div class="convocacao-trophy-icon" style="width: 40px; height: 40px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2">
                             <circle cx="12" cy="8" r="6" />
                             <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
                         </svg>
                     </div>
-                    <div>
-                        <div class="convocacao-badge-top">
-                            <span class="convocacao-pulse-dot"></span>
-                            <span>CONVOCAÇÃO OFICIAL PARA GRADUAÇÃO</span>
-                        </div>
-                        <h3 class="convocacao-title" id="modal-convocacao-titulo">Parabéns! Você está Elegível</h3>
-                        <p class="convocacao-subtitle">Seu progresso marcial atingiu os critérios para o próximo grau!</p>
+                    <div style="min-width: 0;">
+                        <h3 class="convocacao-title" id="modal-convocacao-titulo" style="font-size: 16px; margin: 0;">Você está Elegível!</h3>
+                        <p class="convocacao-subtitle" style="font-size: 12px; margin: 2px 0 0 0; color: #cbd5e1;">Critérios atingidos para o próximo grau</p>
                     </div>
                 </div>
+                <button type="button" class="modal-close-btn" id="btn-fechar-convocacao-x" data-close="modal-convocacao-exame" aria-label="Fechar">&times;</button>
             </div>
 
             <div class="modal-body modal-convocacao-body">
-                <!-- Card com Informações do Exame -->
-                <div class="convocacao-details-box">
-                    <div class="convocacao-event-title-row">
-                        <h4 id="modal-convocacao-evento-titulo" class="convocacao-event-name">Exame de Graduação Oficial</h4>
+                <div class="convocacao-details-box" style="padding: 12px;">
+                    <div class="convocacao-event-title-row" style="margin-bottom: 10px;">
+                        <h4 id="modal-convocacao-evento-titulo" class="convocacao-event-name" style="font-size: 14.5px; margin: 0;">Exame de Graduação Oficial</h4>
                         <span id="modal-convocacao-modalidade" class="convocacao-modality-pill">Muay Thai</span>
                     </div>
 
-                    <div class="convocacao-ranks-flow">
+                    <div class="convocacao-ranks-flow" style="margin-bottom: 10px;">
                         <div class="rank-step-box">
-                            <span class="rank-step-label">Graduação Atual</span>
+                            <span class="rank-step-label">Atual</span>
                             <strong id="modal-convocacao-grad-atual" class="rank-step-val">Prajied Branco</strong>
                         </div>
                         <div class="rank-step-arrow">➜</div>
                         <div class="rank-step-box rank-step-target">
-                            <span class="rank-step-label">Próxima Graduação</span>
+                            <span class="rank-step-label">Próxima</span>
                             <strong id="modal-convocacao-grad-pretendida" class="rank-step-val-highlight">Ponta Vermelha</strong>
                         </div>
                     </div>
 
-                    <div class="convocacao-grid-info">
+                    <div class="convocacao-grid-info" style="gap: 8px;">
                         <div class="info-pill-item">
                             <span class="info-icon">📅</span>
                             <div>
-                                <span class="info-lbl">Data do Exame</span>
+                                <span class="info-lbl">Data</span>
                                 <strong id="modal-convocacao-data" class="info-val">--/--/----</strong>
                             </div>
                         </div>
@@ -1581,49 +1588,36 @@
                         <div class="info-pill-item">
                             <span class="info-icon">💰</span>
                             <div>
-                                <span class="info-lbl">Taxa de Inscrição</span>
+                                <span class="info-lbl">Taxa</span>
                                 <strong id="modal-convocacao-taxa" class="info-val info-val-green">R$ 0,00</strong>
                             </div>
                         </div>
                     </div>
 
-                    <div class="convocacao-guidelines-box">
-                        <span class="guidelines-title">🥋 Orientações da Banca Examinadora:</span>
-                        <p id="modal-convocacao-instrucoes" class="guidelines-desc">
-                            Compareça com uniforme oficial limpo, equipamentos de proteção e 15 minutos de antecedência.
-                        </p>
-                    </div>
+                    <p id="modal-convocacao-instrucoes" class="guidelines-desc" style="margin: 10px 0 0 0; font-size: 12px; color: #cbd5e1;">
+                        Compareça com uniforme oficial limpo e 15 minutos de antecedência.
+                    </p>
                 </div>
 
-                <!-- Box de Termo de Ciência Obrigatório -->
-                <div class="convocacao-term-box" id="box-termo-ciencia-container">
-                    <label class="convocacao-term-label" for="check-convocacao-ciente">
-                        <input type="checkbox" id="check-convocacao-ciente" class="convocacao-checkbox">
-                        <span class="convocacao-term-text">
-                            <strong>Declaro estar ciente da graduação</strong>, da data, horário, local e dos requisitos técnicos exigidos pela banca do Centro de Treinamento.
-                        </span>
-                    </label>
-                    <div class="convocacao-lock-alert" id="convocacao-lock-msg">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                        <span>Marque a caixa acima para confirmar sua ciência e desbloquear a tela.</span>
-                    </div>
-                </div>
+                <!-- Caixa para não abrir mais -->
+                <label for="check-convocacao-nao-mostrar" style="display: flex; align-items: center; gap: 8px; margin: 12px 0; font-size: 12.5px; color: #cbd5e1; cursor: pointer;">
+                    <input type="checkbox" id="check-convocacao-nao-mostrar" style="width: 16px; height: 16px; accent-color: #f59e0b;">
+                    <span>Não mostrar este aviso novamente</span>
+                </label>
 
-                <!-- Rodapé de Ações: Só liberadas após marcar -->
-                <div class="convocacao-actions-row">
-                    <button type="button" class="btn-convocacao-secondary" id="btn-convocacao-ciente" disabled>
-                        <span>Estou Ciente e Continuar</span>
+                <div class="convocacao-actions-row" style="display: flex; gap: 8px;">
+                    <button type="button" class="btn-convocacao-secondary" id="btn-convocacao-ciente" style="flex: 1;">
+                        <span>Fechar</span>
                     </button>
-                    <button type="button" class="btn-convocacao-primary" id="btn-convocacao-inscrever" disabled>
-                        <span>🥋 Inscrever-se Agora / Ver Pagamento</span>
+                    <button type="button" class="btn-convocacao-primary" id="btn-convocacao-inscrever" style="flex: 1.5;">
+                        <span>Inscrever-se / Pagar</span>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                     </button>
                 </div>
 
-                <!-- Opção para desistência/recusa caso não possa participar -->
-                <div style="margin-top: 14px; text-align: center; border-top: 1px dashed rgba(245, 158, 11, 0.15); padding-top: 10px;">
-                    <button type="button" id="btn-convocacao-nao-posso" style="background: none; border: none; color: #94a3b8; font-size: 11.5px; text-decoration: underline; cursor: pointer; transition: color 0.2s ease;">
-                        Não posso participar deste exame de graduação
+                <div style="margin-top: 10px; text-align: center;">
+                    <button type="button" id="btn-convocacao-nao-posso" style="background: none; border: none; color: #cbd5e1; font-size: 11.5px; text-decoration: underline; cursor: pointer;">
+                        Não posso participar deste exame
                     </button>
                 </div>
             </div>
@@ -1834,7 +1828,7 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=5.5"></script></script>
+    <script src="/js/painel-aluno.js?v=5.6"></script></script></script>
 </body>
 
 </html>

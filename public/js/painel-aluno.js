@@ -181,32 +181,25 @@ const PainelAlunoApp = {
             });
         });
 
-        // Eventos do Modal de Convocação & Ciência Obrigatória do Exame
-        const checkConvocacao = document.getElementById('check-convocacao-ciente');
-        const btnConvocacaoCiente = document.getElementById('btn-convocacao-ciente');
-        const btnConvocacaoInscrever = document.getElementById('btn-convocacao-inscrever');
-        const lockMsg = document.getElementById('convocacao-lock-msg');
-
-        checkConvocacao?.addEventListener('change', (e) => {
-            const isChecked = e.target.checked;
-            if (btnConvocacaoCiente) btnConvocacaoCiente.disabled = !isChecked;
-            if (btnConvocacaoInscrever) btnConvocacaoInscrever.disabled = !isChecked;
-            if (lockMsg) lockMsg.style.display = isChecked ? 'none' : 'flex';
+        // Eventos do Balão e Modal de Convocação / Elegibilidade do Exame
+        document.getElementById('convocacao-balloon')?.addEventListener('click', () => {
+            if (this.alunoData?.exame_proximo) {
+                this.abrirModalConvocacao(this.alunoData.exame_proximo, this.alunoData.graduacao, this.alunoData.aluno);
+            }
+        });
+        document.getElementById('btn-close-convocacao-balloon')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const balloon = document.getElementById('convocacao-balloon');
+            if (balloon) balloon.style.display = 'none';
         });
 
-        btnConvocacaoCiente?.addEventListener('click', () => {
-            if (!checkConvocacao || !checkConvocacao.checked) {
-                alert('Você precisa marcar a caixa de ciência para continuar.');
-                return;
-            }
+        document.getElementById('btn-convocacao-ciente')?.addEventListener('click', () => {
             this.confirmarCienciaExame();
         });
-
-        btnConvocacaoInscrever?.addEventListener('click', () => {
-            if (!checkConvocacao || !checkConvocacao.checked) {
-                alert('Você precisa marcar a caixa de ciência para continuar.');
-                return;
-            }
+        document.getElementById('btn-fechar-convocacao-x')?.addEventListener('click', () => {
+            this.confirmarCienciaExame();
+        });
+        document.getElementById('btn-convocacao-inscrever')?.addEventListener('click', () => {
             this.confirmarCienciaExame();
             this.abrirFluxoInscricaoExame();
         });
@@ -2059,13 +2052,34 @@ const PainelAlunoApp = {
     // -------------------------------------------------------------------------
     // MODAL AVISOS E CAMPANHAS
     // -------------------------------------------------------------------------
+    getCombinedAvisos() {
+        const baseAvisos = Array.isArray(this.alunoData?.avisos_campanhas)
+            ? [...this.alunoData.avisos_campanhas]
+            : [];
+        const exame = this.alunoData?.exame_proximo;
+        const grad = this.alunoData?.graduacao;
+        if (exame && exame.convite_status !== 'pago' && exame.convite_status !== 'recusado') {
+            const proxNome = grad?.proxima_graduacao?.nivel_nome || 'o próximo grau';
+            baseAvisos.unshift({
+                id: `exame_elig_${exame.id}`,
+                tipo: 'graduacao',
+                tag_destaque: 'Elegível para Graduação',
+                titulo: `Você está elegível: ${exame.titulo || 'Exame de Graduação'}`,
+                descricao: `Seu progresso atingiu os critérios para avançar para ${proxNome}. Toque para ver os detalhes e se inscrever.`,
+                data_evento: exame.data_evento || null,
+                _isExameConvocacao: true
+            });
+        }
+        return baseAvisos;
+    },
+
     getAvisosSignature(avisos) {
         if (!Array.isArray(avisos) || avisos.length === 0) return '';
         return avisos.map(a => `${a.id || ''}:${a.titulo || ''}:${a.data_evento || ''}`).join('|');
     },
 
     updateNoticesBadgeState() {
-        const avisos = this.alunoData?.avisos_campanhas || [];
+        const avisos = this.getCombinedAvisos();
         const sig = this.getAvisosSignature(avisos);
         let readSig = '';
         try {
@@ -2084,7 +2098,7 @@ const PainelAlunoApp = {
         const list = document.getElementById('avisos-full-list');
         if (!modal || !list) return;
 
-        const avisos = this.alunoData?.avisos_campanhas || [];
+        const avisos = this.getCombinedAvisos();
 
         // Apaga o ponto vermelho de notificação imediatamente e persiste leitura
         document.querySelectorAll('.mobile-badge-dot, .notification-badge').forEach(dot => {
@@ -2107,17 +2121,28 @@ const PainelAlunoApp = {
                 const tituloEsc = this.escapeHtml(a.titulo || '');
                 const descEsc = this.escapeHtml(a.descricao || '');
                 const dataEsc = a.data_evento ? this.escapeHtml(new Date(a.data_evento).toLocaleDateString('pt-BR')) : '';
+                const actionBtn = a._isExameConvocacao
+                    ? `<button type="button" class="btn-abrir-convocacao-aviso" style="margin-top: 10px; background: linear-gradient(135deg, #f59e0b, #ea580c); color: #fff; border: none; border-radius: 8px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">Ver Convocação / Inscrição</button>`
+                    : '';
                 return `
-                <div style="background: #14171d; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08);">
+                <div style="background: #14171d; border-radius: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid ${a._isExameConvocacao ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.08)'};">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">${tipoEsc} • ${tagEsc}</span>
-                        ${dataEsc ? `<span style="font-size: 11px; color: #94a3b8;">Data: ${dataEsc}</span>` : ''}
+                        <span style="font-size: 11px; font-weight: 700; color: ${a._isExameConvocacao ? '#f59e0b' : '#38bdf8'}; text-transform: uppercase;">${tipoEsc} • ${tagEsc}</span>
+                        ${dataEsc ? `<span style="font-size: 11px; color: #cbd5e1;">Data: ${dataEsc}</span>` : ''}
                     </div>
                     <h4 style="color: #ffffff; font-size: 15px; margin-bottom: 6px;">${tituloEsc}</h4>
                     <p style="color: #cbd5e1; font-size: 13px; line-height: 1.45;">${descEsc}</p>
+                    ${actionBtn}
                 </div>
             `;
             }).join('');
+
+            list.querySelector('.btn-abrir-convocacao-aviso')?.addEventListener('click', () => {
+                modal.style.display = 'none';
+                if (this.alunoData?.exame_proximo) {
+                    this.abrirModalConvocacao(this.alunoData.exame_proximo, this.alunoData.graduacao, this.alunoData.aluno);
+                }
+            });
         }
 
         modal.style.display = 'flex';
@@ -4006,18 +4031,30 @@ const PainelAlunoApp = {
             if (btnText) btnText.textContent = '🥋 Inscrever-se no Exame de Graduação';
         }
 
-        // Verifica se o atleta já marcou ciência expressa ou desistência deste exame
+        // Verifica se o atleta marcou para não mostrar mais ou registrou desistência deste exame
         const alunoId = aluno?.id || 1;
         const exameId = exame.id;
-        const chaveCiencia = `graduacao_ciente_${alunoId}_${exameId}`;
-        const chaveRecusa = `graduacao_recusada_${alunoId}_${exameId}`;
-        const jaCiente = localStorage.getItem(chaveCiencia) === 'true';
-        const jaRecusou = localStorage.getItem(chaveRecusa) === 'true';
+        const naoMostrar = localStorage.getItem(`graduacao_nao_mostrar_${alunoId}_${exameId}`) === 'true';
+        const jaRecusou = localStorage.getItem(`graduacao_recusada_${alunoId}_${exameId}`) === 'true';
 
-        // Se o atleta recusou (no banco OU localmente) OU já está pago OU já confirmou ciência: NUNCA abre o pop-up!
-        if (!jaCiente && !jaRecusou && conviteStatus !== 'pago' && conviteStatus !== 'recusado') {
-            this.abrirModalConvocacao(exame, graduacao, aluno);
+        // Em vez de abrir o modal de vez, exibe um balão clicável (se não marcado "não mostrar")
+        if (!naoMostrar && !jaRecusou && conviteStatus !== 'pago' && conviteStatus !== 'recusado') {
+            this.showConvocacaoBalloon(exame, graduacao);
+        } else {
+            const balloon = document.getElementById('convocacao-balloon');
+            if (balloon) balloon.style.display = 'none';
         }
+    },
+
+    showConvocacaoBalloon(exame, graduacao) {
+        const balloon = document.getElementById('convocacao-balloon');
+        if (!balloon || !exame) return;
+        const titleEl = document.getElementById('convocacao-balloon-title');
+        const subEl = document.getElementById('convocacao-balloon-sub');
+        const proxNome = graduacao?.proxima_graduacao?.nivel_nome || 'o próximo grau';
+        if (titleEl) titleEl.textContent = `Elegível para ${proxNome}!`;
+        if (subEl) subEl.textContent = `${exame.titulo || 'Exame de Graduação'} • Toque para abrir`;
+        balloon.style.display = 'flex';
     },
 
     abrirModalConvocacao(exame, graduacao, aluno) {
@@ -4035,10 +4072,7 @@ const PainelAlunoApp = {
         const localEl = document.getElementById('modal-convocacao-local');
         const taxaEl = document.getElementById('modal-convocacao-taxa');
         const instEl = document.getElementById('modal-convocacao-instrucoes');
-        const checkCiente = document.getElementById('check-convocacao-ciente');
-        const btnCiente = document.getElementById('btn-convocacao-ciente');
-        const btnModalInscrever = document.getElementById('btn-convocacao-inscrever');
-        const lockMsg = document.getElementById('convocacao-lock-msg');
+        const checkNaoMostrar = document.getElementById('check-convocacao-nao-mostrar');
 
         if (tituloEl) tituloEl.textContent = exame.titulo || 'Exame de Graduação Oficial';
         if (modEl) modEl.textContent = graduacao?.atual?.modalidade_nome || 'Muay Thai';
@@ -4062,14 +4096,13 @@ const PainelAlunoApp = {
         }
 
         if (instEl) {
-            instEl.textContent = exame.descricao || 'Compareça com seu uniforme oficial limpo, luvas/proteções e antecedência de 15 minutos.';
+            instEl.textContent = exame.descricao || 'Compareça com seu uniforme oficial limpo, equipamentos e 15 minutos de antecedência.';
         }
 
-        // Reseta estado do checkbox e botões: Pop-up SÓ SAI SE MARCAR!
-        if (checkCiente) checkCiente.checked = false;
-        if (btnCiente) btnCiente.disabled = true;
-        if (btnModalInscrever) btnModalInscrever.disabled = true;
-        if (lockMsg) lockMsg.style.display = 'flex';
+        const alunoId = aluno?.id || this.alunoData?.aluno?.id || 1;
+        if (checkNaoMostrar) {
+            checkNaoMostrar.checked = localStorage.getItem(`graduacao_nao_mostrar_${alunoId}_${exame.id}`) === 'true';
+        }
 
         modal.style.display = 'flex';
     },
@@ -4077,12 +4110,14 @@ const PainelAlunoApp = {
     confirmarCienciaExame() {
         const alunoId = this.alunoData?.aluno?.id || 1;
         const exameId = this.alunoData?.exame_proximo?.id;
-        if (exameId) {
-            localStorage.setItem(`graduacao_ciente_${alunoId}_${exameId}`, 'true');
+        const checkNaoMostrar = document.getElementById('check-convocacao-nao-mostrar');
+        if (exameId && checkNaoMostrar?.checked) {
+            localStorage.setItem(`graduacao_nao_mostrar_${alunoId}_${exameId}`, 'true');
+            const balloon = document.getElementById('convocacao-balloon');
+            if (balloon) balloon.style.display = 'none';
         }
         const modal = document.getElementById('modal-convocacao-exame');
         if (modal) modal.style.display = 'none';
-        this.showToast('Ciência confirmada com sucesso! Bons treinos.', 'success');
     },
 
     async abrirFluxoInscricaoExame() {
