@@ -149,6 +149,12 @@
                         </svg>
                         <span>⚡ Check-in Rápido</span>
                     </button>
+                    <button class="btn btn-secondary" id="btn-abrir-modal-whatsapp" title="Configurar número de WhatsApp (Baileys)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                        </svg>
+                        <span>WhatsApp</span>
+                    </button>
                     <button class="btn btn-secondary" id="btn-abrir-modal-aviso" title="Enviar aviso por e-mail para os alunos">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
@@ -1030,6 +1036,10 @@
                             <label>WhatsApp / Telefone <span class="required">*</span></label>
                             <input type="text" id="aluno-whatsapp" class="form-input" placeholder="(11) 98888-7777"
                                 required>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer; font-weight: 500;">
+                                <input type="checkbox" id="aluno-receber-whatsapp" checked style="width: 15px; height: 15px; accent-color: #22c55e; cursor: pointer;">
+                                <span>Receber mensagens automáticas via WhatsApp</span>
+                            </label>
                         </div>
                         <div class="form-group">
                             <label>E-mail (Login do Aluno) <span class="required">*</span></label>
@@ -1305,6 +1315,65 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CONFIGURAÇÃO DO WHATSAPP (BAILEYS)  -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-config-whatsapp">
+        <div class="modal-box" style="max-width: 500px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#22c55e" stroke-width="2">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                        </svg>
+                        WhatsApp do Sistema (Baileys)
+                    </h3>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                        Conecte um número para enviar atualizações de avaliação, inscrições e pagamentos
+                    </div>
+                </div>
+                <button class="modal-close" id="btn-fechar-modal-whatsapp">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px;">Status da Conexão</div>
+                        <div id="wa-status-text" style="font-size: 14px; font-weight: 700; color: #ffffff; margin-top: 4px;">Verificando...</div>
+                        <div id="wa-phone-text" style="font-size: 12px; color: #22c55e; margin-top: 2px;"></div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-wa-conectar" style="background: #16a34a; border-color: #16a34a;">Conectar</button>
+                        <button type="button" class="btn btn-secondary btn-sm" id="btn-wa-desconectar" style="display: none;">Desconectar</button>
+                    </div>
+                </div>
+
+                <div id="wa-error-box" style="display: none; background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; padding: 10px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 14px;"></div>
+
+                <div id="wa-qr-container" style="display: none; text-align: center; background: #ffffff; padding: 16px; border-radius: 12px; margin-bottom: 16px;">
+                    <img id="wa-qr-img" src="" alt="QR Code WhatsApp" style="width: 220px; height: 220px; margin: 0 auto; display: block;">
+                    <p style="color: #0f172a; font-size: 12px; font-weight: 600; margin: 10px 0 0 0;">
+                        Abra o WhatsApp no celular &rarr; Aparelhos conectados &rarr; Conectar um aparelho
+                    </p>
+                </div>
+
+                <div id="wa-teste-box" style="display: none; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px;">
+                    <div style="font-size: 13px; font-weight: 700; color: #ffffff; margin-bottom: 10px;">Enviar Mensagem de Teste</div>
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label class="form-label" for="wa-teste-telefone">WhatsApp de Destino (com DDD)</label>
+                        <input type="text" id="wa-teste-telefone" class="form-control" placeholder="(11) 99999-9999">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label" for="wa-teste-mensagem">Mensagem</label>
+                        <input type="text" id="wa-teste-mensagem" class="form-control" value="✅ Teste de envio automático PRO COMBATE via Baileys!">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btn-wa-enviar-teste" style="width: 100%; justify-content: center;">
+                        Enviar Mensagem de Teste
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2846,7 +2915,7 @@
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js"></script>
     <script src="/js/aluno-detalhes.js"></script>
-    <script src="/js/alunos.js?v=5.0"></script>
+    <script src="/js/alunos.js?v=5.1"></script>
     <script src="/js/dashboard.js"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js"></script>

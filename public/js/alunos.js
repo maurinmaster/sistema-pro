@@ -83,6 +83,28 @@ const AlunosModule = {
             formEnviarAviso.addEventListener('submit', (e) => this.submitEnviarAviso(e));
         }
 
+        // Botões do Modal de WhatsApp (Baileys)
+        const btnAbrirWa = document.getElementById('btn-abrir-modal-whatsapp');
+        if (btnAbrirWa) {
+            btnAbrirWa.addEventListener('click', () => this.openWhatsAppModal());
+        }
+        const btnFecharWa = document.getElementById('btn-fechar-modal-whatsapp');
+        if (btnFecharWa) {
+            btnFecharWa.addEventListener('click', () => this.closeWhatsAppModal());
+        }
+        const btnWaConectar = document.getElementById('btn-wa-conectar');
+        if (btnWaConectar) {
+            btnWaConectar.addEventListener('click', () => this.conectarWhatsApp());
+        }
+        const btnWaDesconectar = document.getElementById('btn-wa-desconectar');
+        if (btnWaDesconectar) {
+            btnWaDesconectar.addEventListener('click', () => this.desconectarWhatsApp());
+        }
+        const btnWaTeste = document.getElementById('btn-wa-enviar-teste');
+        if (btnWaTeste) {
+            btnWaTeste.addEventListener('click', () => this.enviarTesteWhatsApp());
+        }
+
         // Data de nascimento - detecção em tempo real de menor de idade
         const inputNasc = document.getElementById('aluno-nascimento');
         if (inputNasc) {
@@ -466,6 +488,8 @@ const AlunosModule = {
         `;
         document.getElementById('matricula-initial-section').style.display = 'block';
         document.getElementById('minor-alert-box').style.display = 'none';
+        const chkWa = document.getElementById('aluno-receber-whatsapp');
+        if (chkWa) chkWa.checked = true;
         this.updateGraduacaoSelect('');
         UI.openModal('modal-aluno');
     },
@@ -481,6 +505,8 @@ const AlunosModule = {
             document.getElementById('aluno-nascimento').value = aluno.data_nascimento ? aluno.data_nascimento.slice(0, 10) : '';
             document.getElementById('aluno-genero').value = aluno.genero || 'M';
             document.getElementById('aluno-whatsapp').value = aluno.telefone_whatsapp || '';
+            const chkWa = document.getElementById('aluno-receber-whatsapp');
+            if (chkWa) chkWa.checked = aluno.receber_whatsapp !== 0 && aluno.receber_whatsapp !== false;
             document.getElementById('aluno-email').value = aluno.email || '';
             document.getElementById('aluno-status').value = aluno.status || 'ativo';
             document.getElementById('aluno-foto').value = aluno.foto_perfil_url || '';
@@ -588,6 +614,7 @@ const AlunosModule = {
             data_nascimento: document.getElementById('aluno-nascimento').value,
             genero: document.getElementById('aluno-genero').value,
             telefone_whatsapp: document.getElementById('aluno-whatsapp').value,
+            receber_whatsapp: document.getElementById('aluno-receber-whatsapp')?.checked !== false,
             email,
             ...(id ? {} : { senha }),
             status: document.getElementById('aluno-status').value,
@@ -1028,6 +1055,155 @@ const AlunosModule = {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Enviar Aviso por E-mail';
+            }
+        }
+    },
+
+    waPollTimer: null,
+
+    async openWhatsAppModal() {
+        UI.openModal('modal-config-whatsapp');
+        await this.refreshWhatsAppStatus();
+        if (this.waPollTimer) clearInterval(this.waPollTimer);
+        this.waPollTimer = setInterval(() => this.refreshWhatsAppStatus(), 2500);
+    },
+
+    closeWhatsAppModal() {
+        if (this.waPollTimer) {
+            clearInterval(this.waPollTimer);
+            this.waPollTimer = null;
+        }
+        UI.closeModal('modal-config-whatsapp');
+    },
+
+    renderWhatsAppStatus(data) {
+        const statusText = document.getElementById('wa-status-text');
+        const phoneText = document.getElementById('wa-phone-text');
+        const btnConectar = document.getElementById('btn-wa-conectar');
+        const btnDesconectar = document.getElementById('btn-wa-desconectar');
+        const qrContainer = document.getElementById('wa-qr-container');
+        const qrImg = document.getElementById('wa-qr-img');
+        const testeBox = document.getElementById('wa-teste-box');
+        const errBox = document.getElementById('wa-error-box');
+
+        if (!statusText) return;
+
+        const st = data?.status || 'disconnected';
+        if (errBox) {
+            if (data?.lastError) {
+                errBox.textContent = data.lastError;
+                errBox.style.display = 'block';
+            } else {
+                errBox.style.display = 'none';
+            }
+        }
+
+        if (st === 'connected') {
+            statusText.textContent = 'Conectado e pronto para envios';
+            statusText.style.color = '#22c55e';
+            if (phoneText) phoneText.textContent = data.connectedPhone ? `Número: +${data.connectedPhone}` : '';
+            if (btnConectar) btnConectar.style.display = 'none';
+            if (btnDesconectar) btnDesconectar.style.display = 'inline-flex';
+            if (qrContainer) qrContainer.style.display = 'none';
+            if (testeBox) testeBox.style.display = 'block';
+        } else if (st === 'qr') {
+            statusText.textContent = 'Aguardando leitura do QR Code';
+            statusText.style.color = '#f59e0b';
+            if (phoneText) phoneText.textContent = '';
+            if (btnConectar) btnConectar.style.display = 'none';
+            if (btnDesconectar) btnDesconectar.style.display = 'inline-flex';
+            if (qrContainer && qrImg && data.qrCodeDataUrl) {
+                qrImg.src = data.qrCodeDataUrl;
+                qrContainer.style.display = 'block';
+            }
+            if (testeBox) testeBox.style.display = 'none';
+        } else if (st === 'connecting') {
+            statusText.textContent = 'Iniciando conexão...';
+            statusText.style.color = '#38bdf8';
+            if (phoneText) phoneText.textContent = '';
+            if (btnConectar) btnConectar.style.display = 'none';
+            if (btnDesconectar) btnDesconectar.style.display = 'inline-flex';
+            if (qrContainer) qrContainer.style.display = 'none';
+            if (testeBox) testeBox.style.display = 'none';
+        } else {
+            statusText.textContent = 'Desconectado';
+            statusText.style.color = '#94a3b8';
+            if (phoneText) phoneText.textContent = '';
+            if (btnConectar) btnConectar.style.display = 'inline-flex';
+            if (btnDesconectar) btnDesconectar.style.display = 'none';
+            if (qrContainer) qrContainer.style.display = 'none';
+            if (testeBox) testeBox.style.display = 'none';
+        }
+    },
+
+    async refreshWhatsAppStatus() {
+        try {
+            const res = await API.get('/whatsapp/status');
+            if (res?.success) {
+                this.renderWhatsAppStatus(res.data);
+            }
+        } catch (err) {
+            const errBox = document.getElementById('wa-error-box');
+            if (errBox) {
+                errBox.textContent = err.message || 'Apenas administradores podem configurar o WhatsApp.';
+                errBox.style.display = 'block';
+            }
+        }
+    },
+
+    async conectarWhatsApp() {
+        const btn = document.getElementById('btn-wa-conectar');
+        if (btn) btn.disabled = true;
+        try {
+            const res = await API.post('/whatsapp/conectar', {});
+            if (res?.success) {
+                this.renderWhatsAppStatus(res.data);
+            }
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao conectar WhatsApp.', 'error');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    },
+
+    async desconectarWhatsApp() {
+        if (!confirm('Deseja desconectar o WhatsApp do sistema?')) return;
+        try {
+            const res = await API.post('/whatsapp/desconectar', {});
+            if (res?.success) {
+                this.renderWhatsAppStatus(res.data);
+                UI.showToast('WhatsApp desconectado com sucesso.', 'info');
+            }
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao desconectar WhatsApp.', 'error');
+        }
+    },
+
+    async enviarTesteWhatsApp() {
+        const telefone = document.getElementById('wa-teste-telefone')?.value?.trim() || '';
+        const mensagem = document.getElementById('wa-teste-mensagem')?.value?.trim() || '';
+        const btn = document.getElementById('btn-wa-enviar-teste');
+
+        if (!telefone) {
+            UI.showToast('Informe um número de WhatsApp com DDD para teste.', 'warning');
+            return;
+        }
+
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+        }
+
+        try {
+            const res = await API.post('/whatsapp/teste', { telefone, mensagem });
+            if (!res?.success) throw new Error(res?.error || 'Falha ao enviar teste.');
+            UI.showToast(res.message || 'Mensagem de teste enviada!', 'success');
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao enviar mensagem de teste.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Enviar Mensagem de Teste';
             }
         }
     }

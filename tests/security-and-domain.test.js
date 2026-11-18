@@ -452,6 +452,25 @@ test('Serviço de E-mail: Geração e Envio de Códigos Transacionais', async ()
     assert.equal(resBulk.falhas, 0);
 });
 
+test('Serviço de WhatsApp (Baileys): Normalização, Status e Envio Seguro', async () => {
+    const whatsappService = require('../services/whatsappService');
+
+    assert.equal(whatsappService.normalizePhoneToDigits('(11) 98888-7777'), '5511988887777');
+    assert.equal(whatsappService.normalizePhoneToDigits('5511988887777'), '5511988887777');
+    assert.equal(whatsappService.normalizePhoneToDigits('12345'), null);
+
+    const status = whatsappService.getStatus();
+    assert.equal(status.status, 'disconnected');
+
+    const skipRes = await whatsappService.sendTextMessage('(11) 98888-7777', 'Teste');
+    assert.equal(skipRes.success, false);
+    assert.equal(skipRes.skipped, true);
+
+    const baileys = await whatsappService.loadBaileys();
+    assert.equal(typeof baileys.default, 'function');
+    assert.equal(typeof baileys.useMultiFileAuthState, 'function');
+});
+
 test('Painel do Aluno: Consulta Consolidada, Histórico de Medidas e Comparativo de Evolução', async () => {
     const painelRoutes = require('../routes/painelAluno');
     assert.ok(painelRoutes);

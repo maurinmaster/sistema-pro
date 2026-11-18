@@ -9,4 +9,5 @@ thumbs.db
 .agents/
 certs/*.pem
 certs/*.key
+storage/whatsapp-auth/
 

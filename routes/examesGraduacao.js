@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -672,6 +673,25 @@ router.post('/convites/:conviteId/confirmar-manual', authenticateToken, authoriz
             return res.status(404).json({ success: false, error: 'Convite não encontrado.' });
         }
 
+        try {
+            const [infoRows] = await pool.query(`
+                SELECT c.aluno_id, c.valor, eg.titulo AS evento_titulo
+                FROM evento_graduacao_convites c
+                JOIN eventos_graduacao eg ON eg.id = c.evento_id
+                WHERE c.id = ? LIMIT 1
+            `, [conviteId]);
+            if (infoRows.length > 0) {
+                const info = infoRows[0];
+                const valorFmt = Number(info.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                whatsappService.notifyAluno(info.aluno_id, (aluno) => {
+                    const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+                    return `✅ *PRO COMBATE — Inscrição e Pagamento Confirmados*\n\nOlá, *${primeiroNome}*!\nSua inscrição e pagamento para o exame *${info.evento_titulo}* (${valorFmt}) foram confirmados.\n\nSua vaga está garantida! Bons treinos! 🥋`;
+                });
+            }
+        } catch (wErr) {
+            console.warn('[Exames] Falha ao notificar WhatsApp:', wErr.message);
+        }
+
         res.json({ success: true, message: 'Inscrição confirmada e marcada como paga com sucesso!' });
     } catch (err) {
         console.error('Erro ao confirmar pagamento manual:', err);
@@ -870,6 +890,12 @@ async function executarAceiteConvite({ conviteId, alunoId, billingType = 'PIX' }
         cobranca.status,
         conviteId
     ]);
+
+    whatsappService.notifyAluno(alunoId, (aluno) => {
+        const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+        const valorFmt = Number(cobranca.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        return `🥋 *PRO COMBATE — Inscrição no Exame Registrada*\n\nOlá, *${primeiroNome}*!\nSua inscrição no exame de graduação foi registrada (taxa: ${valorFmt}).\nConclua o pagamento no Portal do Aluno para garantir sua vaga!`;
+    });
 
     return {
         success: true,
@@ -1277,6 +1303,12 @@ router.post(['/exames/:conviteId/pagar-cartao', '/exames/convites/:conviteId/pag
             convite.id
         ]);
 
+        const valorFmt = Number(convite.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        whatsappService.notifyAluno(convite.aluno_id, (aluno) => {
+            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+            return `✅ *PRO COMBATE — Pagamento e Inscrição Confirmados*\n\nOlá, *${primeiroNome}*!\nRecebemos o pagamento de *${valorFmt}* no cartão (${cardBrand} final ${last4}) para o exame *${convite.evento_titulo}*.\n\nSua vaga está garantida! 🥋`;
+        });
+
         return res.json({
             success: true,
             pago: true,
@@ -1327,6 +1359,24 @@ router.post('/webhook-asaas', async (req, res) => {
                     WHERE asaas_payment_id = ?
                 `, [payment.id]);
                 console.log(`[Webhook Asaas] Convite atualizado para PAGO com sucesso para paymentId: ${payment.id}`);
+                try {
+                    const [infoRows] = await pool.query(`
+                        SELECT c.aluno_id, c.valor, eg.titulo AS evento_titulo
+                        FROM evento_graduacao_convites c
+                        JOIN eventos_graduacao eg ON eg.id = c.evento_id
+                        WHERE c.asaas_payment_id = ? LIMIT 1
+                    `, [payment.id]);
+                    if (infoRows.length > 0) {
+                        const info = infoRows[0];
+                        const valorFmt = Number(info.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                        whatsappService.notifyAluno(info.aluno_id, (aluno) => {
+                            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+                            return `✅ *PRO COMBATE — Pagamento de Exame Confirmado*\n\nOlá, *${primeiroNome}*!\nSeu pagamento de *${valorFmt}* para o exame *${info.evento_titulo}* foi confirmado com sucesso.\n\nSua vaga está garantida! 🥋`;
+                        });
+                    }
+                } catch (wErr) {
+                    console.warn('[Webhook Asaas] Falha ao notificar WhatsApp:', wErr.message);
+                }
             } else if (event === 'PAYMENT_OVERDUE') {
                 await pool.query(`
                     UPDATE evento_graduacao_convites

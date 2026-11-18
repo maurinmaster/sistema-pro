@@ -144,6 +144,8 @@ app.use('/api/wiki-golpes', wikiGolpesRoutes);
 const examesGraduacaoRoutes = require('./routes/examesGraduacao');
 app.use('/api/exames', examesGraduacaoRoutes);
 app.use('/api/aluno', examesGraduacaoRoutes);
+const whatsappRoutes = require('./routes/whatsapp');
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Healthcheck
 app.get('/api/health', (req, res) => {
@@ -213,6 +215,10 @@ if (require.main === module) {
         console.log(`📍 Local HTTP:       http://localhost:${PORT}`);
         console.log(`📱 Rede Local HTTP:  http://192.168.3.7:${PORT}`);
         console.log(`📋 Auto-Cadastro:    http://192.168.3.7:${PORT}/cadastro`);
+
+        const whatsappService = require('./services/whatsappService');
+        whatsappService.ensureWhatsAppColumn().catch(() => {});
+        whatsappService.initAutoReconnect();
     });
 
     // 2. Servidor HTTPS seguro para desbloquear Câmera ao Vivo no celular (Porta 3443)

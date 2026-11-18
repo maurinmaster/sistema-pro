@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const MatriculaService = require('../services/matriculaService');
+const whatsappService = require('../services/whatsappService');
 
 // POST /api/planos/matriculas (ou /api/matriculas) - Criar ou renovar matrícula (admin e recepcao)
 router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
@@ -26,6 +27,12 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
         });
 
         await conn.commit();
+
+        whatsappService.notifyAluno(Number(aluno_id), (aluno) => {
+            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+            return `🥋 *PRO COMBATE — Inscrição / Matrícula Confirmada*\n\nOlá, *${primeiroNome}*!\nSua matrícula foi confirmada com sucesso no sistema. Seja bem-vindo(a) aos treinos!\n• *Vencimento:* Todo dia ${dia_vencimento}\n\nVocê pode acompanhar suas faturas e evolução no Portal do Aluno.`;
+        });
+
         res.status(201).json({ success: true, message: 'Matrícula efetuada com sucesso!' });
     } catch (err) {
         await conn.rollback();

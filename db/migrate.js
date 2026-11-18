@@ -622,6 +622,9 @@ async function runMigrations() {
         await ensureColumn('alunos', 'deleted_at', 'DATETIME NULL DEFAULT NULL AFTER updated_at');
         await pool.query('ALTER TABLE alunos ADD INDEX idx_alunos_deleted_at (deleted_at)').catch(() => {});
 
+        // 19b. Preferência de recebimento de mensagens via WhatsApp
+        await ensureColumn('alunos', 'receber_whatsapp', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER telefone_whatsapp');
+
         // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
         const [alunosSemGrad] = await pool.query(`
             SELECT a.id FROM alunos a

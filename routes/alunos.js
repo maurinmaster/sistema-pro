@@ -10,6 +10,7 @@ const { validateMinorGuardian, hasValidImageSignature } = require('../services/d
 const { persistUploadedFile, removeUploadedFile } = require('../services/uploadStorage');
 const MatriculaService = require('../services/matriculaService');
 const emailService = require('../services/emailService');
+const whatsappService = require('../services/whatsappService');
 
 /**
  * Dispara e-mail transacional para um aluno sem bloquear a resposta HTTP.
@@ -122,6 +123,7 @@ router.get('/', authenticateToken, async (req, res) => {
                 a.genero,
                 a.email,
                 a.telefone_whatsapp,
+                COALESCE(a.receber_whatsapp, 1) AS receber_whatsapp,
                 a.responsavel_nome,
                 a.responsavel_telefone,
                 a.tipo_sanguineo,
@@ -492,6 +494,7 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
             observacoes_medicas,
             foto_perfil_url,
             status = 'ativo',
+            receber_whatsapp,
             // Opcionais na criação inicial
             modalidade_id,
             graduacao_nivel_id,
@@ -552,15 +555,17 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
         }
 
         const passwordHash = await bcrypt.hash(rawSenha, 10);
+        const receberWhatsappFlag = (receber_whatsapp === false || receber_whatsapp === 0 || receber_whatsapp === '0') ? 0 : 1;
+        await whatsappService.ensureWhatsAppColumn();
 
         // Insere aluno
         const [result] = await conn.query(`
             INSERT INTO alunos (
-                nome_completo, cpf, data_nascimento, genero, email, senha_app_hash, telefone_whatsapp,
+                nome_completo, cpf, data_nascimento, genero, email, senha_app_hash, telefone_whatsapp, receber_whatsapp,
                 responsavel_nome, responsavel_cpf, responsavel_telefone,
                 contato_emergencia_nome, contato_emergencia_fone, tipo_sanguineo, observacoes_medicas,
                 foto_perfil_url, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             nome_completo.trim(),
             cpf ? cpf.trim() : null,
@@ -569,6 +574,7 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
             normalizedEmail,
             passwordHash,
             telefone_whatsapp.trim(),
+            receberWhatsappFlag,
             responsavel_nome ? responsavel_nome.trim() : null,
             responsavel_cpf ? responsavel_cpf.trim() : null,
             responsavel_telefone ? responsavel_telefone.trim() : null,
@@ -666,7 +672,8 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             tipo_sanguineo,
             observacoes_medicas,
             foto_perfil_url,
-            status
+            status,
+            receber_whatsapp
         } = req.body;
 
         if (!nome_completo || !data_nascimento || !telefone_whatsapp) {
@@ -684,6 +691,9 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             });
         }
 
+        const receberWhatsappFlag = (receber_whatsapp === false || receber_whatsapp === 0 || receber_whatsapp === '0') ? 0 : 1;
+        await whatsappService.ensureWhatsAppColumn();
+
         const [result] = await pool.query(`
             UPDATE alunos SET
                 nome_completo = ?,
@@ -692,6 +702,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
                 genero = ?,
                 email = ?,
                 telefone_whatsapp = ?,
+                receber_whatsapp = ?,
                 responsavel_nome = ?,
                 responsavel_cpf = ?,
                 responsavel_telefone = ?,
@@ -709,6 +720,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             genero || 'Outro',
             normalizedEmail,
             telefone_whatsapp.trim(),
+            receberWhatsappFlag,
             responsavel_nome ? responsavel_nome.trim() : null,
             responsavel_cpf ? responsavel_cpf.trim() : null,
             responsavel_telefone ? responsavel_telefone.trim() : null,
@@ -923,6 +935,13 @@ router.post('/:id/avaliacoes-graduacao', authenticateToken, authorizeRoles('admi
             ctaLabel: 'Ver Minha Evolução'
         });
 
+        whatsappService.notifyAluno(Number(req.params.id), (aluno) => {
+            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+            const statusTxt = apto ? '✅ APTO para Graduação' : '📈 Em Evolução';
+            const obsTxt = req.body?.observacoes ? `\n📝 *Obs:* ${String(req.body.observacoes).trim()}` : '';
+            return `🥋 *PRO COMBATE — Avaliação Atualizada*\n\nOlá, *${primeiroNome}*!\nSua avaliação de graduação foi atualizada:\n• *Aproveitamento:* ${percentualObtido}%\n• *Mínimo Exigido:* ${minPct}%\n• *Status:* ${statusTxt}${obsTxt}\n\nAcesse o Portal do Aluno para acompanhar sua evolução.`;
+        });
+
         res.json({
             success: true,
             message: apto 
@@ -1014,6 +1033,12 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
                 { label: 'Observações', value: cleanObs || '' }
             ],
             ctaLabel: 'Ver Minha Evolução'
+        });
+
+        whatsappService.notifyAluno(Number(req.params.id), (aluno) => {
+            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+            const obsTxt = cleanObs ? `\n📝 *Obs:* ${cleanObs}` : '';
+            return `🥋 *PRO COMBATE — Avaliação Técnica*\n\nOlá, *${primeiroNome}*!\nSeu professor registrou uma nova avaliação de desempenho:\n• *Clinch:* ${rawClinch}/10\n• *Socos:* ${rawSocos}/10\n• *Chutes:* ${rawChutes}/10\n• *Postura:* ${rawPostura}/10${obsTxt}\n\nConfira seu histórico completo no Portal do Aluno.`;
         });
 
         res.status(201).json({

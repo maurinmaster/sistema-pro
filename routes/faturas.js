@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const PaymentLogService = require('../services/paymentLogService');
+const whatsappService = require('../services/whatsappService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 // GET /api/faturas - Listagem geral de faturas com filtros (admin e recepcao)
@@ -155,7 +156,7 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
         const { id } = req.params;
         const { metodo_pagamento = 'pix', valor_pago, observacoes } = req.body;
 
-        const [faturas] = await pool.query('SELECT valor_original FROM faturas WHERE id = ?', [id]);
+        const [faturas] = await pool.query('SELECT aluno_id, valor_original FROM faturas WHERE id = ?', [id]);
         if (faturas.length === 0) {
             return res.status(404).json({ success: false, error: 'Fatura não encontrada.' });
         }
@@ -172,6 +173,14 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
                 observacoes = COALESCE(?, observacoes)
             WHERE id = ?
         `, [metodo_pagamento, valor, observacoes || null, id]);
+
+        if (faturas[0].aluno_id) {
+            const valorFmt = Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            whatsappService.notifyAluno(faturas[0].aluno_id, (aluno) => {
+                const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+                return `✅ *PRO COMBATE — Pagamento Confirmado*\n\nOlá, *${primeiroNome}*!\nConfirmamos o recebimento da sua mensalidade:\n• *Valor:* ${valorFmt}\n• *Forma:* ${String(metodo_pagamento).toUpperCase()}\n\nObrigado e bons treinos! 🥊`;
+            });
+        }
 
         res.json({ success: true, message: 'Pagamento registrado com sucesso!' });
     } catch (err) {
@@ -229,6 +238,22 @@ router.post('/webhook-asaas', async (req, res) => {
 
                 if (resUpdate.affectedRows > 0) {
                     console.log(`[Webhook Asaas Faturas] Fatura quitada via Asaas: ${payment.id}`);
+                    try {
+                        const [fatRows] = await pool.query(
+                            'SELECT aluno_id, valor_pago, valor_original FROM faturas WHERE asaas_payment_id = ? LIMIT 1',
+                            [payment.id]
+                        );
+                        if (fatRows.length > 0 && fatRows[0].aluno_id) {
+                            const vPago = fatRows[0].valor_pago ?? fatRows[0].valor_original ?? valorPago ?? 0;
+                            const valorFmt = Number(vPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                            whatsappService.notifyAluno(fatRows[0].aluno_id, (aluno) => {
+                                const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
+                                return `✅ *PRO COMBATE — Pagamento Confirmado*\n\nOlá, *${primeiroNome}*!\nSeu pagamento via ${metodoValido.toUpperCase()} foi compensado com sucesso:\n• *Valor:* ${valorFmt}\n\nObrigado e bons treinos! 🥊`;
+                            });
+                        }
+                    } catch (wErr) {
+                        console.warn('[Webhook Asaas Faturas] Falha ao notificar WhatsApp:', wErr.message);
+                    }
                 }
             }
         }
