@@ -11,28 +11,7 @@ const { persistUploadedFile, removeUploadedFile } = require('../services/uploadS
 const MatriculaService = require('../services/matriculaService');
 const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
-
-/**
- * Dispara e-mail transacional para um aluno sem bloquear a resposta HTTP.
- */
-async function notifyAlunoByEmail(alunoId, buildPayload) {
-    try {
-        const [rows] = await pool.query(
-            'SELECT nome_completo, email FROM alunos WHERE id = ? AND deleted_at IS NULL',
-            [alunoId]
-        );
-        if (rows.length === 0 || !rows[0].email) return;
-        const aluno = rows[0];
-        const payload = typeof buildPayload === 'function' ? buildPayload(aluno) : buildPayload;
-        await emailService.sendNotificationEmail({
-            ...payload,
-            toEmail: aluno.email,
-            nomeDestinatario: aluno.nome_completo
-        });
-    } catch (err) {
-        console.warn('[Alunos] Falha ao enviar e-mail de notificação:', err.message);
-    }
-}
+const notificationConfigService = require('../services/notificationConfigService');
 
 // Configuração do Multer para armazenamento de fotos de perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -639,6 +618,21 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
         }
 
         await conn.commit();
+
+        notificationConfigService.dispatchEvent('novo_cadastro_aluno', {
+            alunoId,
+            variables: {
+                nome: nome_completo.trim(),
+                email: normalizedEmail,
+                telefone: telefone_whatsapp.trim()
+            },
+            detalhes: [
+                { label: 'Aluno', value: nome_completo.trim() },
+                { label: 'E-mail', value: normalizedEmail },
+                { label: 'WhatsApp', value: telefone_whatsapp.trim() }
+            ]
+        });
+
         res.status(201).json({ success: true, message: 'Aluno cadastrado com sucesso!', id: alunoId });
     } catch (err) {
         if (conn) await conn.rollback().catch(() => {});
@@ -765,6 +759,17 @@ router.patch('/:id/status', authenticateToken, authorizeRoles('admin', 'recepcao
             return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
         }
 
+        notificationConfigService.dispatchEvent('status_matricula_alterado', {
+            alunoId: Number(id),
+            variables: {
+                status: String(status).toUpperCase(),
+                detalhe: 'Status cadastral atualizado pela administração.'
+            },
+            detalhes: [
+                { label: 'Status Cadastral', value: String(status).toUpperCase() }
+            ]
+        });
+
         res.json({ success: true, message: `Status do aluno alterado para ${status}.` });
     } catch (err) {
         console.error('Erro ao alterar status:', err);
@@ -808,7 +813,7 @@ router.post('/:id/graduacoes', authenticateToken, authorizeRoles('admin', 'profe
         ]);
 
         // Inicializa as especificações da nova graduação em aluno_avaliacoes_graduacao
-        const [nivelRows] = await conn.query('SELECT requisitos_lista_json, total_itens, porcentagem_minima FROM graduacoes_niveis WHERE id = ?', [graduacao_nivel_id]);
+        const [nivelRows] = await conn.query('SELECT nome, requisitos_lista_json, total_itens, porcentagem_minima FROM graduacoes_niveis WHERE id = ?', [graduacao_nivel_id]);
         if (nivelRows.length > 0) {
             let reqs = [];
             try {
@@ -843,6 +848,14 @@ router.post('/:id/graduacoes', authenticateToken, authorizeRoles('admin', 'profe
         }
 
         await conn.commit();
+
+        const novaGradNome = nivelRows[0]?.nome || 'Nova Graduação';
+        notificationConfigService.dispatchEvent('promocao_graduacao', {
+            alunoId: Number(aluno_id),
+            variables: { graduacao: novaGradNome },
+            detalhes: [{ label: 'Nova Graduação', value: novaGradNome }]
+        });
+
         res.json({ success: true, message: 'Graduação lançada e atualizada com sucesso!' });
     } catch (err) {
         await conn.rollback();
@@ -919,27 +932,21 @@ router.post('/:id/avaliacoes-graduacao', authenticateToken, authorizeRoles('admi
             observacoes ? String(observacoes).trim() : null
         ]);
 
-        notifyAlunoByEmail(Number(req.params.id), {
-            badgeText: 'AVALIAÇÃO ATUALIZADA',
-            titulo: 'Atualização na Avaliação de Graduação',
-            assunto: 'Sua avaliação de graduação foi atualizada — PRO COMBATE',
-            mensagem: apto
-                ? `Parabéns! Sua avaliação de graduação foi atualizada e você atingiu ${percentualObtido}% de aproveitamento, estando APTO(A) para a próxima fase.`
-                : `Sua avaliação de graduação foi atualizada com ${percentualObtido}% de aproveitamento. Continue focado nos treinos para atingir o mínimo exigido (${minPct}%).`,
+        const obsTexto = req.body?.observacoes ? String(req.body.observacoes).trim() : '';
+        notificationConfigService.dispatchEvent('avaliacao_graduacao', {
+            alunoId: Number(req.params.id),
+            variables: {
+                percentual: String(percentualObtido),
+                minimo: String(minPct),
+                status: apto ? 'APTO para Graduação' : 'Em Evolução',
+                observacoes: obsTexto ? `📝 Obs: ${obsTexto}` : ''
+            },
             detalhes: [
                 { label: 'Aproveitamento', value: `${percentualObtido}%` },
                 { label: 'Mínimo Exigido', value: `${minPct}%` },
                 { label: 'Status', value: apto ? 'APTO para Graduação' : 'Em Evolução' },
-                { label: 'Observações', value: req.body?.observacoes ? String(req.body.observacoes).trim() : '' }
-            ],
-            ctaLabel: 'Ver Minha Evolução'
-        });
-
-        whatsappService.notifyAluno(Number(req.params.id), (aluno) => {
-            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-            const statusTxt = apto ? '✅ APTO para Graduação' : '📈 Em Evolução';
-            const obsTxt = req.body?.observacoes ? `\n📝 *Obs:* ${String(req.body.observacoes).trim()}` : '';
-            return `🥋 *PRO COMBATE — Avaliação Atualizada*\n\nOlá, *${primeiroNome}*!\nSua avaliação de graduação foi atualizada:\n• *Aproveitamento:* ${percentualObtido}%\n• *Mínimo Exigido:* ${minPct}%\n• *Status:* ${statusTxt}${obsTxt}\n\nAcesse o Portal do Aluno para acompanhar sua evolução.`;
+                { label: 'Observações', value: obsTexto }
+            ]
         });
 
         res.json({
@@ -1019,11 +1026,15 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [alunoId, professorId, dataAval, rawClinch, rawSocos, rawChutes, rawPostura, legacyClinch, legacyCond, cleanObs]);
 
-        notifyAlunoByEmail(Number(req.params.id), {
-            badgeText: 'AVALIAÇÃO TÉCNICA',
-            titulo: 'Nova Avaliação de Desempenho Registrada',
-            assunto: 'Nova avaliação técnica registrada — PRO COMBATE',
-            mensagem: 'Seu professor registrou uma nova avaliação técnica no seu perfil. Confira suas notas e acompanhe sua evolução no Portal do Aluno.',
+        notificationConfigService.dispatchEvent('avaliacao_desempenho', {
+            alunoId: Number(req.params.id),
+            variables: {
+                clinch: String(rawClinch),
+                socos: String(rawSocos),
+                chutes: String(rawChutes),
+                postura: String(rawPostura),
+                observacoes: cleanObs ? `📝 Obs: ${cleanObs}` : ''
+            },
             detalhes: [
                 { label: 'Data da Avaliação', value: dataAval ? new Date(dataAval).toLocaleDateString('pt-BR') : '' },
                 { label: 'Clinch', value: `${rawClinch}/10` },
@@ -1031,14 +1042,7 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
                 { label: 'Chutes', value: `${rawChutes}/10` },
                 { label: 'Postura', value: `${rawPostura}/10` },
                 { label: 'Observações', value: cleanObs || '' }
-            ],
-            ctaLabel: 'Ver Minha Evolução'
-        });
-
-        whatsappService.notifyAluno(Number(req.params.id), (aluno) => {
-            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-            const obsTxt = cleanObs ? `\n📝 *Obs:* ${cleanObs}` : '';
-            return `🥋 *PRO COMBATE — Avaliação Técnica*\n\nOlá, *${primeiroNome}*!\nSeu professor registrou uma nova avaliação de desempenho:\n• *Clinch:* ${rawClinch}/10\n• *Socos:* ${rawSocos}/10\n• *Chutes:* ${rawChutes}/10\n• *Postura:* ${rawPostura}/10${obsTxt}\n\nConfira seu histórico completo no Portal do Aluno.`;
+            ]
         });
 
         res.status(201).json({
@@ -1201,15 +1205,12 @@ router.post('/:id/aprovar-promocao', authenticateToken, authorizeRoles('admin', 
 
         await conn.commit();
 
-        notifyAlunoByEmail(Number(req.params.id), {
-            badgeText: 'GRADUAÇÃO APROVADA',
-            titulo: `Parabéns pela Nova Graduação: ${proxNivel.nome}`,
-            assunto: `Parabéns! Você avançou para ${proxNivel.nome} — PRO COMBATE`,
-            mensagem: `Sua dedicação nos treinos deu resultado! Você acaba de ser promovido(a) para "${proxNivel.nome}". Continue treinando firme!`,
+        notificationConfigService.dispatchEvent('promocao_graduacao', {
+            alunoId: Number(req.params.id),
+            variables: { graduacao: proxNivel.nome },
             detalhes: [
                 { label: 'Nova Graduação', value: proxNivel.nome }
-            ],
-            ctaLabel: 'Ver Conquistas no Portal'
+            ]
         });
 
         res.json({
@@ -1278,6 +1279,12 @@ router.post('/:id/resetar-senha', authenticateToken, authorizeRoles('admin', 'pr
             SET revogado = 1 
             WHERE usuario_id IN (SELECT id FROM usuarios_alunos WHERE aluno_id = ?)
         `, [alunoId]);
+
+        notificationConfigService.dispatchEvent('senha_redefinida_admin', {
+            alunoId,
+            variables: { email: alunoEmail },
+            detalhes: [{ label: 'E-mail de Acesso', value: alunoEmail }]
+        });
 
         res.json({
             success: true,

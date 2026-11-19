@@ -387,7 +387,7 @@ class EmailService {
         mensagem = '',
         detalhes = [],
         ctaLabel = 'Acessar Portal do Aluno',
-        ctaUrl = process.env.PORTAL_URL || 'https://gestor.procombate.com/portal-aluno.html'
+        ctaUrl = process.env.PORTAL_URL || 'https://gestor.procombate.com'
     }) {
         const cleanEmail = typeof toEmail === 'string' ? toEmail.trim() : '';
         if (!cleanEmail || !cleanEmail.includes('@')) {
@@ -412,7 +412,8 @@ class EmailService {
             ? '\n\n' + detalhes.filter(d => d && d.label && d.value !== undefined).map(d => `${d.label}: ${d.value}`).join('\n')
             : '';
 
-        const text = `${saudacao}\n\n${titulo}\n${mensagem}${detalhesTexto}\n\nAcesse o Portal do Aluno: ${ctaUrl}\n\nPRO COMBATE`;
+        const ctaTexto = ctaUrl ? `\n\nAcesse o Portal do Aluno: ${ctaUrl}` : '';
+        const text = `${saudacao}\n\n${titulo}\n${mensagem}${detalhesTexto}${ctaTexto}\n\nPRO COMBATE`;
 
         try {
             const info = await this.sendMail({

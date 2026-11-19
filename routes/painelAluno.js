@@ -11,6 +11,7 @@ const fs = require('fs');
 const multer = require('multer');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
+const notificationConfigService = require('../services/notificationConfigService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
@@ -2174,6 +2175,16 @@ router.post('/faturas/:id/pagar-cartao', optionalAuth, async (req, res) => {
             cobranca.id || fat.asaas_payment_id,
             fat.id
         ]);
+
+        const valorFmt = Number(fat.valor_original || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        notificationConfigService.dispatchEvent('pagamento_mensalidade', {
+            alunoId: fat.aluno_id,
+            variables: { valor: valorFmt, metodo: `Cartão (${cardBrand} final ${last4})` },
+            detalhes: [
+                { label: 'Valor', value: valorFmt },
+                { label: 'Forma de Pagamento', value: `Cartão (${cardBrand} •••• ${last4})` }
+            ]
+        });
 
         return res.json({
             success: true,

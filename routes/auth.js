@@ -12,6 +12,7 @@ const { authenticateToken, createRateLimiter, JWT_SECRET } = require('../middlew
 const { calculateAge, validateMinorGuardian, hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile } = require('../services/uploadStorage');
 const emailService = require('../services/emailService');
+const notificationConfigService = require('../services/notificationConfigService');
 
 // Diretório para armazenamento de fotos de biometria e perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -552,6 +553,20 @@ router.post('/cadastro-aluno', cadastroRateLimiter, async (req, res) => {
         } catch (mailErr) {
             console.error('Falha ao enviar e-mail de verificação para', normalizedEmail, mailErr.message);
         }
+
+        notificationConfigService.dispatchEvent('novo_cadastro_aluno', {
+            alunoId,
+            variables: {
+                nome: finalNomeCompleto,
+                email: normalizedEmail,
+                telefone: telefone_whatsapp.trim()
+            },
+            detalhes: [
+                { label: 'Aluno', value: finalNomeCompleto },
+                { label: 'E-mail', value: normalizedEmail },
+                { label: 'WhatsApp', value: telefone_whatsapp.trim() }
+            ]
+        });
 
         res.status(201).json({
             success: true,

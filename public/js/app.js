@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.PlanosModule) await PlanosModule.init();
     if (window.WikiModule) WikiModule.init();
     if (window.ExamesModule) await ExamesModule.init();
+    if (window.MensagensConfigModule) MensagensConfigModule.init();
 
     // Roteamento de Menus / Tabs Principais
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
@@ -26,6 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Bloqueio de rota no frontend para perfis sem permissão
             if (targetSection === 'financeiro' && window.AuthModule && !AuthModule.can('manage_financeiro')) {
                 UI.showToast('Acesso restrito: seu perfil de Professor não tem permissão para acessar o módulo financeiro.', 'warning');
+                return;
+            }
+            if (targetSection === 'mensagens' && window.AuthModule && !AuthModule.can('manage_mensagens')) {
+                UI.showToast('Acesso restrito: apenas administradores podem configurar mensagens do sistema.', 'warning');
                 return;
             }
 
@@ -47,7 +52,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'graduacoes': { title: 'Catálogo de Graduações & Exames', desc: 'Faixas, critérios de evolução e quadro de honra' },
                 'exames': { title: 'Exames de Graduação & Convocação', desc: 'Eventos de graduação, convocação de atletas aptos e controle financeiro' },
                 'financeiro': { title: 'Planos & Gestão Financeira', desc: 'Gestão comercial de planos de treino, mensalidades e faturamento' },
-                'wiki': { title: 'Biblioteca de Golpes & Movimentos (Wiki)', desc: 'Caderno técnico com passo a passo ilustrado, fotos e descrições de execução' }
+                'wiki': { title: 'Biblioteca de Golpes & Movimentos (Wiki)', desc: 'Caderno técnico com passo a passo ilustrado, fotos e descrições de execução' },
+                'mensagens': { title: 'Configurações de Mensagens & Notificações', desc: 'Gerencie serviços automáticos, textos predefinidos, alertas para admin e envio do link do sistema' }
             };
 
             const info = titleMap[targetSection] || { title: 'Sistema PRO', desc: '' };
@@ -64,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (targetSection === 'graduacoes' && window.GraduacoesModule) GraduacoesModule.loadCatalogo();
             if (targetSection === 'wiki' && window.WikiModule) WikiModule.loadGolpes();
             if (targetSection === 'exames' && window.ExamesModule) ExamesModule.loadAll();
+            if (targetSection === 'mensagens' && window.MensagensConfigModule) MensagensConfigModule.loadAll();
 
             // Em telas mobile, fecha o menu após navegar
             if (window.innerWidth <= 868) {

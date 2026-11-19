@@ -471,6 +471,66 @@ test('Serviço de WhatsApp (Baileys): Normalização, Status e Envio Seguro', as
     assert.equal(typeof baileys.useMultiFileAuthState, 'function');
 });
 
+test('Configurações de Mensagens: Catálogo, Validação, Templates e Link do Portal', () => {
+    const notificationConfigService = require('../services/notificationConfigService');
+
+    const catalog = notificationConfigService.getCatalog();
+    assert.equal(catalog.length, 12);
+
+    const presets = notificationConfigService.getManualPresets();
+    assert.ok(presets.length >= 6);
+    assert.equal(presets.some(p => p.id === 'link_portal'), true);
+
+    // Renderização com placeholder {link}
+    const comPlaceholder = notificationConfigService.renderTemplate(
+        'Olá {nome}! Valor: {valor}. Acesse {link}',
+        { nome: 'Lucas', valor: 'R$ 120,00' },
+        { includeLink: true, portalUrl: 'https://gestor.procombate.com/' }
+    );
+    assert.equal(comPlaceholder, 'Olá Lucas! Valor: R$ 120,00. Acesse https://gestor.procombate.com');
+
+    // Renderização sem placeholder {link} mas com includeLink: true deve anexar no final
+    const anexado = notificationConfigService.renderTemplate(
+        'Olá {nome}! Pagamento aprovado.',
+        { nome: 'Maria' },
+        { includeLink: true, portalUrl: 'https://gestor.procombate.com' }
+    );
+    assert.equal(anexado.includes('https://gestor.procombate.com'), true);
+
+    // Renderização com includeLink: false deve remover {link}
+    const semLink = notificationConfigService.renderTemplate(
+        'Olá {nome}! Veja aqui: {link}',
+        { nome: 'Carlos' },
+        { includeLink: false, portalUrl: 'https://gestor.procombate.com' }
+    );
+    assert.equal(semLink.includes('https://gestor.procombate.com'), false);
+    assert.equal(semLink.includes('{link}'), false);
+
+    // Validação deve rejeitar URL perigosa e ignorar chaves desconhecidas
+    const normalized = notificationConfigService.validateAndNormalizeConfig({
+        portal_url: 'javascript:alert(1)',
+        incluir_link_padrao: false,
+        admin_whatsapp: ' 11999998888 ',
+        regras: {
+            chave_inexistente: { aluno_whatsapp: true },
+            avaliacao_graduacao: {
+                aluno_whatsapp: false,
+                aluno_email: true,
+                incluir_link: false,
+                mensagem_aluno: 'Custom {nome}'
+            }
+        }
+    });
+    assert.equal(normalized.portal_url, 'https://gestor.procombate.com');
+    assert.equal(normalized.incluir_link_padrao, false);
+    assert.equal(normalized.admin_whatsapp, '11999998888');
+    assert.equal(normalized.regras.chave_inexistente, undefined);
+    assert.equal(normalized.regras.avaliacao_graduacao.aluno_whatsapp, false);
+    assert.equal(normalized.regras.avaliacao_graduacao.aluno_email, true);
+    assert.equal(normalized.regras.avaliacao_graduacao.incluir_link, false);
+    assert.equal(normalized.regras.avaliacao_graduacao.mensagem_aluno, 'Custom {nome}');
+});
+
 test('Painel do Aluno: Consulta Consolidada, Histórico de Medidas e Comparativo de Evolução', async () => {
     const painelRoutes = require('../routes/painelAluno');
     assert.ok(painelRoutes);

@@ -9,8 +9,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
-const emailService = require('../services/emailService');
-const whatsappService = require('../services/whatsappService');
+const notificationConfigService = require('../services/notificationConfigService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -598,7 +597,7 @@ router.post('/eventos/:id/convidar', authenticateToken, authorizeRoles('admin', 
             console.warn('[Exames] Falha ao registrar aviso:', avisoErr.message);
         }
 
-        // Envia notificação por e-mail de forma não-bloqueante para os alunos convidados
+        // Envia notificações configuradas (WhatsApp e/ou E-mail) de forma não-bloqueante para os alunos convidados
         try {
             const alunoIds = [...new Set(
                 (Array.isArray(convites) ? convites : [])
@@ -607,33 +606,27 @@ router.post('/eventos/:id/convidar', authenticateToken, authorizeRoles('admin', 
             )];
 
             if (alunoIds.length > 0) {
-                const placeholders = alunoIds.map(() => '?').join(',');
-                const [alunosEmail] = await pool.query(
-                    `SELECT id, nome_completo, email FROM alunos WHERE id IN (${placeholders}) AND email IS NOT NULL AND email != '' AND deleted_at IS NULL`,
-                    alunoIds
-                );
-
-                if (alunosEmail.length > 0) {
-                    const dataFmt = evento.data_evento ? new Date(evento.data_evento).toLocaleDateString('pt-BR') : 'A definir';
-                    emailService.sendBulkNotificationEmails(alunosEmail, {
-                        badgeText: 'CONVOCAÇÃO DE EXAME',
-                        titulo: `Convite Oficial: ${evento.titulo}`,
-                        assunto: `Convite para Exame de Graduação: ${evento.titulo} — PRO COMBATE`,
-                        mensagem: 'Parabéns! Você foi convocado(a) para participar do próximo Exame de Graduação. Acesse o Portal do Aluno para conferir todos os detalhes e confirmar sua inscrição.',
+                const dataFmt = evento.data_evento ? new Date(evento.data_evento).toLocaleDateString('pt-BR') : 'A definir';
+                Promise.allSettled(
+                    alunoIds.map(id => notificationConfigService.dispatchEvent('convite_exame', {
+                        alunoId: id,
+                        variables: {
+                            evento: evento.titulo,
+                            data: dataFmt,
+                            horario: evento.horario_evento || 'A definir',
+                            local: evento.local_evento || 'PRO COMBATE'
+                        },
                         detalhes: [
                             { label: 'Exame', value: evento.titulo },
                             { label: 'Data', value: dataFmt },
                             { label: 'Horário', value: evento.horario_evento || '' },
                             { label: 'Local', value: evento.local_evento || '' }
-                        ],
-                        ctaLabel: 'Confirmar no Portal do Aluno'
-                    }).catch(err => {
-                        console.warn('[Exames] Falha ao disparar e-mails de convite:', err.message);
-                    });
-                }
+                        ]
+                    }))
+                ).catch(() => {});
             }
         } catch (emailErr) {
-            console.warn('[Exames] Erro ao preparar e-mails de convite:', emailErr.message);
+            console.warn('[Exames] Erro ao preparar notificações de convite:', emailErr.message);
         }
 
         res.status(201).json({
@@ -683,9 +676,14 @@ router.post('/convites/:conviteId/confirmar-manual', authenticateToken, authoriz
             if (infoRows.length > 0) {
                 const info = infoRows[0];
                 const valorFmt = Number(info.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                whatsappService.notifyAluno(info.aluno_id, (aluno) => {
-                    const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-                    return `✅ *PRO COMBATE — Inscrição e Pagamento Confirmados*\n\nOlá, *${primeiroNome}*!\nSua inscrição e pagamento para o exame *${info.evento_titulo}* (${valorFmt}) foram confirmados.\n\nSua vaga está garantida! Bons treinos! 🥋`;
+                notificationConfigService.dispatchEvent('pagamento_exame', {
+                    alunoId: info.aluno_id,
+                    variables: { evento: info.evento_titulo, valor: valorFmt, metodo: 'Confirmação Manual' },
+                    detalhes: [
+                        { label: 'Exame', value: info.evento_titulo },
+                        { label: 'Valor', value: valorFmt },
+                        { label: 'Método', value: 'Confirmação Manual' }
+                    ]
                 });
             }
         } catch (wErr) {
@@ -891,10 +889,14 @@ async function executarAceiteConvite({ conviteId, alunoId, billingType = 'PIX' }
         conviteId
     ]);
 
-    whatsappService.notifyAluno(alunoId, (aluno) => {
-        const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-        const valorFmt = Number(cobranca.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        return `🥋 *PRO COMBATE — Inscrição no Exame Registrada*\n\nOlá, *${primeiroNome}*!\nSua inscrição no exame de graduação foi registrada (taxa: ${valorFmt}).\nConclua o pagamento no Portal do Aluno para garantir sua vaga!`;
+    const valorTaxaFmt = Number(cobranca.value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    notificationConfigService.dispatchEvent('inscricao_exame', {
+        alunoId,
+        variables: { evento: convite.evento_titulo || 'Exame de Graduação', valor: valorTaxaFmt },
+        detalhes: [
+            { label: 'Exame', value: convite.evento_titulo || 'Exame de Graduação' },
+            { label: 'Taxa', value: valorTaxaFmt }
+        ]
     });
 
     return {
@@ -1069,6 +1071,24 @@ router.post('/exames/:conviteId/recusar', optionalAuth, async (req, res) => {
             return res.status(404).json({ success: false, error: 'Convite não encontrado ou não pertence a este aluno.' });
         }
 
+        try {
+            const [evRows] = await pool.query(`
+                SELECT eg.titulo FROM evento_graduacao_convites c
+                JOIN eventos_graduacao eg ON eg.id = c.evento_id
+                WHERE c.id = ? LIMIT 1
+            `, [conviteId]);
+            notificationConfigService.dispatchEvent('recusa_exame', {
+                alunoId,
+                variables: { evento: evRows[0]?.titulo || 'Exame de Graduação', motivo: cleanMotivo },
+                detalhes: [
+                    { label: 'Exame', value: evRows[0]?.titulo || 'Exame de Graduação' },
+                    { label: 'Motivo', value: cleanMotivo }
+                ]
+            });
+        } catch (wErr) {
+            console.warn('[Exames] Falha ao notificar recusa:', wErr.message);
+        }
+
         res.json({ success: true, message: 'Resposta registrada com sucesso. Seu professor foi notificado.' });
     } catch (err) {
         console.error('Erro ao recusar convite:', err);
@@ -1140,6 +1160,20 @@ router.post('/exames/:eventoId/recusar-evento', optionalAuth, async (req, res) =
                     status, data_convite, data_resposta, motivo_recusa
                 ) VALUES (?, ?, ?, ?, ?, 100, 'Convocação recusada pelo atleta', ?, 'recusado', NOW(), NOW(), ?)
             `, [eventoId, alunoId, modId, gradAtualId, gradPretId, ev.taxa_inscricao, cleanMotivo]);
+        }
+
+        try {
+            const [evInfo] = await pool.query('SELECT titulo FROM eventos_graduacao WHERE id = ? LIMIT 1', [eventoId]);
+            notificationConfigService.dispatchEvent('recusa_exame', {
+                alunoId,
+                variables: { evento: evInfo[0]?.titulo || 'Exame de Graduação', motivo: cleanMotivo },
+                detalhes: [
+                    { label: 'Exame', value: evInfo[0]?.titulo || 'Exame de Graduação' },
+                    { label: 'Motivo', value: cleanMotivo }
+                ]
+            });
+        } catch (wErr) {
+            console.warn('[Exames] Falha ao notificar desistência:', wErr.message);
         }
 
         res.json({ success: true, message: 'Desistência registrada com sucesso. Seu professor foi notificado.' });
@@ -1304,9 +1338,14 @@ router.post(['/exames/:conviteId/pagar-cartao', '/exames/convites/:conviteId/pag
         ]);
 
         const valorFmt = Number(convite.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        whatsappService.notifyAluno(convite.aluno_id, (aluno) => {
-            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-            return `✅ *PRO COMBATE — Pagamento e Inscrição Confirmados*\n\nOlá, *${primeiroNome}*!\nRecebemos o pagamento de *${valorFmt}* no cartão (${cardBrand} final ${last4}) para o exame *${convite.evento_titulo}*.\n\nSua vaga está garantida! 🥋`;
+        notificationConfigService.dispatchEvent('pagamento_exame', {
+            alunoId: convite.aluno_id,
+            variables: { evento: convite.evento_titulo, valor: valorFmt, metodo: `Cartão (${cardBrand} final ${last4})` },
+            detalhes: [
+                { label: 'Exame', value: convite.evento_titulo },
+                { label: 'Valor', value: valorFmt },
+                { label: 'Método', value: `Cartão (${cardBrand} •••• ${last4})` }
+            ]
         });
 
         return res.json({
@@ -1369,9 +1408,14 @@ router.post('/webhook-asaas', async (req, res) => {
                     if (infoRows.length > 0) {
                         const info = infoRows[0];
                         const valorFmt = Number(info.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                        whatsappService.notifyAluno(info.aluno_id, (aluno) => {
-                            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-                            return `✅ *PRO COMBATE — Pagamento de Exame Confirmado*\n\nOlá, *${primeiroNome}*!\nSeu pagamento de *${valorFmt}* para o exame *${info.evento_titulo}* foi confirmado com sucesso.\n\nSua vaga está garantida! 🥋`;
+                        notificationConfigService.dispatchEvent('pagamento_exame', {
+                            alunoId: info.aluno_id,
+                            variables: { evento: info.evento_titulo, valor: valorFmt, metodo: String(payment.billingType || 'PIX / Asaas') },
+                            detalhes: [
+                                { label: 'Exame', value: info.evento_titulo },
+                                { label: 'Valor', value: valorFmt },
+                                { label: 'Método', value: String(payment.billingType || 'PIX / Asaas') }
+                            ]
                         });
                     }
                 } catch (wErr) {

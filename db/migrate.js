@@ -625,6 +625,19 @@ async function runMigrations() {
         // 19b. Preferência de recebimento de mensagens via WhatsApp
         await ensureColumn('alunos', 'receber_whatsapp', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER telefone_whatsapp');
 
+        // 19c. Configurações centralizadas de envio de mensagens (WhatsApp e E-mail)
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS configuracoes_mensagens (
+                id INT UNSIGNED PRIMARY KEY DEFAULT 1,
+                portal_url VARCHAR(255) NOT NULL DEFAULT 'https://gestor.procombate.com',
+                incluir_link_padrao TINYINT(1) NOT NULL DEFAULT 1,
+                admin_whatsapp VARCHAR(255) NULL DEFAULT NULL,
+                admin_email VARCHAR(255) NULL DEFAULT NULL,
+                regras_json LONGTEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
         // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
         const [alunosSemGrad] = await pool.query(`
             SELECT a.id FROM alunos a

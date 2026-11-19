@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const PaymentLogService = require('../services/paymentLogService');
-const whatsappService = require('../services/whatsappService');
+const notificationConfigService = require('../services/notificationConfigService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 // GET /api/faturas - Listagem geral de faturas com filtros (admin e recepcao)
@@ -176,9 +176,14 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
 
         if (faturas[0].aluno_id) {
             const valorFmt = Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            whatsappService.notifyAluno(faturas[0].aluno_id, (aluno) => {
-                const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-                return `✅ *PRO COMBATE — Pagamento Confirmado*\n\nOlá, *${primeiroNome}*!\nConfirmamos o recebimento da sua mensalidade:\n• *Valor:* ${valorFmt}\n• *Forma:* ${String(metodo_pagamento).toUpperCase()}\n\nObrigado e bons treinos! 🥊`;
+            const metodoFmt = String(metodo_pagamento).toUpperCase();
+            notificationConfigService.dispatchEvent('pagamento_mensalidade', {
+                alunoId: faturas[0].aluno_id,
+                variables: { valor: valorFmt, metodo: metodoFmt },
+                detalhes: [
+                    { label: 'Valor', value: valorFmt },
+                    { label: 'Forma de Pagamento', value: metodoFmt }
+                ]
             });
         }
 
@@ -246,9 +251,14 @@ router.post('/webhook-asaas', async (req, res) => {
                         if (fatRows.length > 0 && fatRows[0].aluno_id) {
                             const vPago = fatRows[0].valor_pago ?? fatRows[0].valor_original ?? valorPago ?? 0;
                             const valorFmt = Number(vPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                            whatsappService.notifyAluno(fatRows[0].aluno_id, (aluno) => {
-                                const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-                                return `✅ *PRO COMBATE — Pagamento Confirmado*\n\nOlá, *${primeiroNome}*!\nSeu pagamento via ${metodoValido.toUpperCase()} foi compensado com sucesso:\n• *Valor:* ${valorFmt}\n\nObrigado e bons treinos! 🥊`;
+                            const metodoFmt = metodoValido.toUpperCase();
+                            notificationConfigService.dispatchEvent('pagamento_mensalidade', {
+                                alunoId: fatRows[0].aluno_id,
+                                variables: { valor: valorFmt, metodo: metodoFmt },
+                                detalhes: [
+                                    { label: 'Valor', value: valorFmt },
+                                    { label: 'Forma de Pagamento', value: metodoFmt }
+                                ]
                             });
                         }
                     } catch (wErr) {

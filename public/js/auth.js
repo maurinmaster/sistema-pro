@@ -193,6 +193,17 @@ const AuthModule = {
         // Controle de visibilidade de menus por cargo
         const navFinanceiro = document.getElementById('nav-financeiro');
         const btnNovoAluno = document.getElementById('btn-novo-aluno');
+        const navMensagens = document.getElementById('nav-mensagens');
+
+        if (navMensagens) {
+            navMensagens.style.display = u.cargo === 'admin' ? 'flex' : 'none';
+        }
+        if (u.cargo !== 'admin') {
+            const viewMensagens = document.getElementById('view-mensagens');
+            if (viewMensagens && viewMensagens.classList.contains('active')) {
+                document.getElementById('nav-dashboard')?.click();
+            }
+        }
 
         if (u.cargo === 'professor') {
             // Professor foca no pedagógico e não tem acesso ao módulo financeiro
@@ -224,6 +235,8 @@ const AuthModule = {
                 return ['admin', 'recepcao'].includes(cargo);
             case 'promote_faixas':
                 return ['admin', 'professor'].includes(cargo);
+            case 'manage_mensagens':
+                return cargo === 'admin';
             case 'checkin':
                 return ['admin', 'recepcao', 'professor'].includes(cargo);
             default:

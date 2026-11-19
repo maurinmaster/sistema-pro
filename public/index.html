@@ -100,6 +100,14 @@
                     <span>Wiki de Golpes</span>
                     <span class="nav-badge" id="total-golpes-count" style="display: none;">0</span>
                 </a>
+                <a class="nav-item" data-view="mensagens" id="nav-mensagens" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        <line x1="8" y1="9" x2="16" y2="9" />
+                        <line x1="8" y1="13" x2="13" y2="13" />
+                    </svg>
+                    <span>Config. Mensagens</span>
+                </a>
             </nav>
 
             <div class="sidebar-footer" style="flex-direction: column; align-items: stretch; gap: 10px;">
@@ -988,6 +996,167 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ======================================================== -->
+                <!-- SEÇÃO 8: CONFIGURAÇÕES DE ENVIO DE MENSAGENS (ADMIN)     -->
+                <!-- ======================================================== -->
+                <section class="view-section" id="view-mensagens">
+                    <!-- Cabeçalho de Ações e Conexão WhatsApp -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0;">Configurações de Envio de Mensagens</h2>
+                            <p style="font-size: 13px; color: var(--text-muted); margin: 4px 0 0 0;">
+                                Escolha os serviços que notificam Alunos e Admin por WhatsApp/E-mail, edite textos predefinidos e envie o link do sistema
+                            </p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <span id="msg-page-wa-status" style="font-size: 12px; font-weight: 700; padding: 7px 12px; border-radius: 999px; background: rgba(148, 163, 184, 0.14); color: #94a3b8;">
+                                WhatsApp: Verificando...
+                            </span>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-msg-abrir-whatsapp">
+                                Configurar WhatsApp (QR Code)
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-msg-restaurar-tudo">
+                                Restaurar Padrões
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btn-msg-salvar-config">
+                                Salvar Configurações
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Card: Configurações Gerais, Link do Portal e Destinatários Admin -->
+                    <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                        <h3 style="font-size: 15px; font-weight: 700; color: #ffffff; margin: 0 0 14px 0;">
+                            Configurações Gerais, Link da Página &amp; Contatos do Administrador
+                        </h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+                            <div class="form-group" style="margin: 0;">
+                                <label class="form-label" for="msg-cfg-portal-url">Link da Página / Portal</label>
+                                <input type="url" id="msg-cfg-portal-url" class="form-input" value="https://gestor.procombate.com" placeholder="https://gestor.procombate.com">
+                                <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer;">
+                                    <input type="checkbox" id="msg-cfg-incluir-link" checked style="width: 15px; height: 15px; accent-color: #f97316; cursor: pointer;">
+                                    <span>Incluir link da página (gestor.procombate.com) automaticamente</span>
+                                </label>
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label class="form-label" for="msg-cfg-admin-whatsapp">WhatsApp do Admin para Alertas</label>
+                                <input type="text" id="msg-cfg-admin-whatsapp" class="form-input" placeholder="(11) 99999-9999 (separe vários por vírgula)">
+                                <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Recebe alertas marcados para Admin (novos cadastros, pagamentos, recusas, etc.).</span>
+                            </div>
+                            <div class="form-group" style="margin: 0;">
+                                <label class="form-label" for="msg-cfg-admin-email">E-mail do Admin para Alertas</label>
+                                <input type="text" id="msg-cfg-admin-email" class="form-input" placeholder="admin@procombate.com (separe vários por vírgula)">
+                                <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Recebe alertas por e-mail quando habilitados nos serviços abaixo.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Abas Internas: Serviços Automáticos vs Envio Avulso / Link -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-primary" id="btn-tab-msg-servicos">
+                            Menu de Serviços &amp; Textos Predefinidos
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="btn-tab-msg-manual">
+                            Enviar Mensagem Avulsa / Link do Sistema
+                        </button>
+                    </div>
+
+                    <!-- ABA 1: MENU DE SERVIÇOS AUTOMÁTICOS -->
+                    <div id="tab-msg-servicos">
+                        <div class="card" style="padding: 14px 18px; margin-bottom: 16px;">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: space-between;">
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="msg-filtro-publico-bar">
+                                    <button type="button" class="btn btn-primary btn-sm" data-msg-filter="todos">Todos os Serviços</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" data-msg-filter="aluno">Para Alunos</button>
+                                    <button type="button" class="btn btn-secondary btn-sm" data-msg-filter="admin">Para Admin</button>
+                                </div>
+                                <div style="min-width: 240px; flex: 1; max-width: 360px;">
+                                    <input type="text" id="msg-filtro-busca" class="form-input" placeholder="Filtrar serviço por nome ou categoria...">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="lista-servicos-mensagens" style="display: flex; flex-direction: column; gap: 14px;">
+                            <!-- Renderizado dinamicamente via MensagensConfigModule -->
+                        </div>
+                    </div>
+
+                    <!-- ABA 2: ENVIO MANUAL / LINK DO PORTAL COM TEXTOS PREDEFINIDOS -->
+                    <div id="tab-msg-manual" style="display: none;">
+                        <div class="card" style="padding: 20px;">
+                            <h3 style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 0 0 14px 0;">
+                                Envio Rápido de Mensagem ou Link (gestor.procombate.com)
+                            </h3>
+                            <form id="form-msg-manual">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 14px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" for="msg-manual-preset">Texto Predefinido</label>
+                                        <select id="msg-manual-preset" class="form-select"></select>
+                                    </div>
+                                    <div class="form-group" style="margin: 0;">
+                                        <label class="form-label" for="msg-manual-destino">Destinatário</label>
+                                        <select id="msg-manual-destino" class="form-select">
+                                            <option value="todos_alunos">Todos os Alunos Ativos</option>
+                                            <option value="aluno">Um Aluno Específico</option>
+                                            <option value="admin">Administrador(es) Configurados</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group" id="msg-manual-aluno-wrap" style="margin: 0; display: none;">
+                                        <label class="form-label" for="msg-manual-aluno-id">Selecionar Aluno</label>
+                                        <select id="msg-manual-aluno-id" class="form-select"></select>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; gap: 18px; flex-wrap: wrap; padding: 12px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; margin-bottom: 14px;">
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #ffffff; cursor: pointer;">
+                                        <input type="checkbox" id="msg-manual-wa" checked style="width: 16px; height: 16px; accent-color: #22c55e;">
+                                        <span>Enviar via WhatsApp (Baileys)</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #ffffff; cursor: pointer;">
+                                        <input type="checkbox" id="msg-manual-email" checked style="width: 16px; height: 16px; accent-color: #38bdf8;">
+                                        <span>Enviar via E-mail</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #ffffff; cursor: pointer;">
+                                        <input type="checkbox" id="msg-manual-incluir-link" checked style="width: 16px; height: 16px; accent-color: #f97316;">
+                                        <span>Incluir link da página (gestor.procombate.com)</span>
+                                    </label>
+                                    <label id="msg-manual-portal-wrap" style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #ffffff; cursor: pointer;">
+                                        <input type="checkbox" id="msg-manual-publicar-portal" style="width: 16px; height: 16px; accent-color: #eab308;">
+                                        <span>Publicar também na Caixa de Avisos do Portal</span>
+                                    </label>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 14px;">
+                                    <label class="form-label" for="msg-manual-titulo">Título / Assunto</label>
+                                    <input type="text" id="msg-manual-titulo" class="form-input" required maxlength="120" placeholder="Assunto da mensagem ou do e-mail">
+                                </div>
+
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                                    <div class="form-group" style="margin: 0;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                            <label class="form-label" for="msg-manual-texto" style="margin: 0;">Mensagem (use {nome} e {link})</label>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="btn-msg-manual-inserir-link" style="padding: 3px 8px; font-size: 11px;">
+                                                + Inserir Link gestor.procombate.com
+                                            </button>
+                                        </div>
+                                        <textarea id="msg-manual-texto" class="form-input" rows="7" required maxlength="2500" style="resize: vertical; font-family: inherit;"></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" style="display: block; margin-bottom: 6px;">Pré-visualização da Mensagem</label>
+                                        <div id="msg-manual-preview" style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 14px; font-size: 13px; color: #e2e8f0; white-space: pre-wrap; min-height: 158px; line-height: 1.55;"></div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                                    <button type="submit" class="btn btn-primary" id="btn-enviar-msg-manual">
+                                        Enviar Mensagem Agora
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </section>
@@ -2913,7 +3082,7 @@
     <!-- Scripts da Aplicação (Vanilla JS) -->
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
-    <script src="/js/auth.js"></script>
+    <script src="/js/auth.js?v=1.1"></script>
     <script src="/js/aluno-detalhes.js"></script>
     <script src="/js/alunos.js?v=5.1"></script>
     <script src="/js/dashboard.js"></script>
@@ -2922,7 +3091,8 @@
     <script src="/js/planos.js?v=4.9"></script>
     <script src="/js/wiki.js?v=4.5"></script>
     <script src="/js/exames.js?v=3.7"></script>
-    <script src="/js/app.js?v=3.7"></script>
+    <script src="/js/mensagens-config.js?v=1.0"></script>
+    <script src="/js/app.js?v=3.8"></script>
 </body>
 
 </html>

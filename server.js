@@ -146,6 +146,8 @@ app.use('/api/exames', examesGraduacaoRoutes);
 app.use('/api/aluno', examesGraduacaoRoutes);
 const whatsappRoutes = require('./routes/whatsapp');
 app.use('/api/whatsapp', whatsappRoutes);
+const mensagensConfigRoutes = require('./routes/mensagensConfig');
+app.use('/api/mensagens-config', mensagensConfigRoutes);
 
 // Healthcheck
 app.get('/api/health', (req, res) => {
@@ -219,6 +221,9 @@ if (require.main === module) {
         const whatsappService = require('./services/whatsappService');
         whatsappService.ensureWhatsAppColumn().catch(() => {});
         whatsappService.initAutoReconnect();
+
+        const notificationConfigService = require('./services/notificationConfigService');
+        notificationConfigService.ensureTable().catch(() => {});
     });
 
     // 2. Servidor HTTPS seguro para desbloquear Câmera ao Vivo no celular (Porta 3443)

@@ -3,7 +3,25 @@ const router = express.Router();
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const MatriculaService = require('../services/matriculaService');
-const whatsappService = require('../services/whatsappService');
+const notificationConfigService = require('../services/notificationConfigService');
+
+async function notifyMatriculaStatus(matriculaId, status, detalhe) {
+    try {
+        const [rows] = await pool.query('SELECT aluno_id FROM matriculas WHERE id = ? LIMIT 1', [matriculaId]);
+        if (rows.length > 0 && rows[0].aluno_id) {
+            notificationConfigService.dispatchEvent('status_matricula_alterado', {
+                alunoId: rows[0].aluno_id,
+                variables: { status, detalhe },
+                detalhes: [
+                    { label: 'Situação', value: status },
+                    { label: 'Detalhes', value: detalhe }
+                ]
+            });
+        }
+    } catch (err) {
+        console.warn('[Matriculas] Falha ao preparar notificação de status:', err.message);
+    }
+}
 
 // POST /api/planos/matriculas (ou /api/matriculas) - Criar ou renovar matrícula (admin e recepcao)
 router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
@@ -28,9 +46,12 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
 
         await conn.commit();
 
-        whatsappService.notifyAluno(Number(aluno_id), (aluno) => {
-            const primeiroNome = String(aluno.nome_completo || '').trim().split(/\s+/)[0] || 'Atleta';
-            return `🥋 *PRO COMBATE — Inscrição / Matrícula Confirmada*\n\nOlá, *${primeiroNome}*!\nSua matrícula foi confirmada com sucesso no sistema. Seja bem-vindo(a) aos treinos!\n• *Vencimento:* Todo dia ${dia_vencimento}\n\nVocê pode acompanhar suas faturas e evolução no Portal do Aluno.`;
+        notificationConfigService.dispatchEvent('matricula_confirmada', {
+            alunoId: Number(aluno_id),
+            variables: { dia_vencimento: String(dia_vencimento) },
+            detalhes: [
+                { label: 'Dia de Vencimento', value: `Todo dia ${dia_vencimento}` }
+            ]
         });
 
         res.status(201).json({ success: true, message: 'Matrícula efetuada com sucesso!' });
@@ -69,6 +90,7 @@ router.post('/:id/trancar', authenticateToken, authorizeRoles('admin', 'recepcao
         }
 
         await conn.commit();
+        notifyMatriculaStatus(id, 'Matrícula Trancada', String(motivo).trim());
         res.json({
             success: true,
             message: 'Matrícula trancada com sucesso. O acesso aos treinos foi suspenso temporariamente.'
@@ -96,6 +118,7 @@ router.post('/:id/destrancar', authenticateToken, authorizeRoles('admin', 'recep
         }
 
         await conn.commit();
+        notifyMatriculaStatus(id, 'Matrícula Reativada', 'Seu acesso aos treinos foi restabelecido.');
         res.json({
             success: true,
             message: 'Matrícula destrancada com sucesso! O acesso do aluno aos treinos foi restabelecido.'
@@ -134,6 +157,7 @@ router.post('/:id/cancelar', authenticateToken, authorizeRoles('admin', 'recepca
         }
 
         await conn.commit();
+        notifyMatriculaStatus(id, 'Matrícula Cancelada', String(motivo).trim());
         res.json({
             success: true,
             message: 'Matrícula cancelada com sucesso.'
@@ -174,6 +198,7 @@ router.post('/:id/trocar-plano', authenticateToken, authorizeRoles('admin', 'rec
         }
 
         await conn.commit();
+        notifyMatriculaStatus(id, 'Plano Alterado', motivo ? String(motivo).trim() : 'Troca de plano realizada com sucesso.');
         res.json(result.data);
     } catch (err) {
         await conn.rollback();
