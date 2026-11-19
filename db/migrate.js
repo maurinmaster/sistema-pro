@@ -638,6 +638,24 @@ async function runMigrations() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
+        // 19d. Log histórico de envios de E-mail e WhatsApp
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS mensagens_envios_logs (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                canal ENUM('email', 'whatsapp') NOT NULL,
+                tipo VARCHAR(60) NOT NULL DEFAULT 'sistema',
+                destinatario VARCHAR(180) NOT NULL,
+                assunto VARCHAR(200) NULL DEFAULT NULL,
+                status ENUM('enviado', 'simulado', 'ignorado', 'erro') NOT NULL,
+                erro_detalhe VARCHAR(500) NULL DEFAULT NULL,
+                message_id VARCHAR(180) NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_msg_logs_created (created_at),
+                INDEX idx_msg_logs_canal_status (canal, status),
+                INDEX idx_msg_logs_dest (destinatario)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
         // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
         const [alunosSemGrad] = await pool.query(`
             SELECT a.id FROM alunos a

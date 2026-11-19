@@ -224,6 +224,9 @@ if (require.main === module) {
 
         const notificationConfigService = require('./services/notificationConfigService');
         notificationConfigService.ensureTable().catch(() => {});
+
+        const messageLogService = require('./services/messageLogService');
+        messageLogService.ensureTable().catch(() => {});
     });
 
     // 2. Servidor HTTPS seguro para desbloquear Câmera ao Vivo no celular (Porta 3443)

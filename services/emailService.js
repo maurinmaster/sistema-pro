@@ -4,6 +4,7 @@
  */
 
 const nodemailer = require('nodemailer');
+const messageLogService = require('./messageLogService');
 
 class EmailService {
     constructor() {
@@ -151,7 +152,7 @@ class EmailService {
             subject,
             text: textContent,
             html: htmlContent
-        }, codigo);
+        }, codigo, 'verificacao_email');
     }
 
     /**
@@ -248,13 +249,18 @@ class EmailService {
             subject,
             text: textContent,
             html: htmlContent
-        }, codigo);
+        }, codigo, 'recuperacao_senha');
     }
 
     /**
      * Helper de envio real ou fallback para log
      */
-    async sendMail(mailOptions, codigo) {
+    async sendMail(mailOptions, codigo, tipo = 'email') {
+        const rawSubject = mailOptions?.subject || '';
+        const safeSubject = codigo
+            ? String(rawSubject).split(String(codigo)).join('******')
+            : rawSubject;
+
         if (!this.transporter) {
             console.log(`\n======================================================`);
             console.log(`[SIMULAÇÃO DE EMAIL] Destinatário: ${mailOptions.to}`);
@@ -262,6 +268,13 @@ class EmailService {
             console.log(`[SIMULAÇÃO DE EMAIL] CÓDIGO:       >>> ${codigo} <<<`);
             console.log(`💡 Para envio real, preencha SMTP_HOST, SMTP_PORT, SMTP_USER e SMTP_PASS no .env`);
             console.log(`======================================================\n`);
+            messageLogService.recordLog({
+                canal: 'email',
+                tipo,
+                destinatario: mailOptions.to,
+                assunto: safeSubject,
+                status: 'simulado'
+            }).catch(() => {});
             return {
                 success: true,
                 simulated: true,
@@ -272,6 +285,14 @@ class EmailService {
         try {
             const info = await this.transporter.sendMail(mailOptions);
             console.log(`✅ [EmailService] E-mail enviado com sucesso para ${mailOptions.to} (ID: ${info.messageId})`);
+            messageLogService.recordLog({
+                canal: 'email',
+                tipo,
+                destinatario: mailOptions.to,
+                assunto: safeSubject,
+                status: 'enviado',
+                message_id: info?.messageId || null
+            }).catch(() => {});
             return {
                 success: true,
                 simulated: false,
@@ -279,6 +300,17 @@ class EmailService {
             };
         } catch (err) {
             console.error(`❌ [EmailService] Erro ao enviar e-mail para ${mailOptions.to}:`, err.message);
+            const safeErr = codigo
+                ? String(err.message || '').split(String(codigo)).join('******')
+                : err.message;
+            messageLogService.recordLog({
+                canal: 'email',
+                tipo,
+                destinatario: mailOptions.to,
+                assunto: safeSubject,
+                status: 'erro',
+                erro_detalhe: safeErr
+            }).catch(() => {});
             throw err;
         }
     }
@@ -422,7 +454,7 @@ class EmailService {
                 subject,
                 text,
                 html
-            });
+            }, null, 'notificacao');
             return { success: true, messageId: info?.messageId || null };
         } catch (err) {
             console.warn(`[EmailService] Falha ao enviar notificação para ${cleanEmail}:`, err.message);

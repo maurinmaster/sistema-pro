@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode');
 const pool = require('../db/connection');
+const messageLogService = require('./messageLogService');
 
 const AUTH_DIR = path.join(__dirname, '../storage/whatsapp-auth');
 
@@ -251,12 +252,39 @@ class WhatsAppService {
         return this.getStatus();
     }
 
-    async sendTextMessage(phone, text) {
+    extractSummary(text) {
+        if (!text) return null;
+        const firstLine = String(text)
+            .split(/\r?\n/)
+            .map(l => l.trim())
+            .find(Boolean) || '';
+        return firstLine.replace(/\*+/g, '').slice(0, 120) || null;
+    }
+
+    async sendTextMessage(phone, text, tipo = 'whatsapp') {
+        const summary = this.extractSummary(text);
+
         if (this.status !== 'connected' || !this.sock) {
+            messageLogService.recordLog({
+                canal: 'whatsapp',
+                tipo,
+                destinatario: String(phone || 'desconhecido'),
+                assunto: summary,
+                status: 'ignorado',
+                erro_detalhe: 'WhatsApp não conectado.'
+            }).catch(() => {});
             return { success: false, skipped: true, reason: 'WhatsApp não conectado.' };
         }
         const digits = this.normalizePhoneToDigits(phone);
         if (!digits) {
+            messageLogService.recordLog({
+                canal: 'whatsapp',
+                tipo,
+                destinatario: String(phone || 'desconhecido'),
+                assunto: summary,
+                status: 'ignorado',
+                erro_detalhe: 'Número de WhatsApp inválido ou ausente.'
+            }).catch(() => {});
             return { success: false, skipped: true, reason: 'Número de WhatsApp inválido ou ausente.' };
         }
         const cleanText = typeof text === 'string' ? text.trim() : '';
@@ -276,9 +304,25 @@ class WhatsAppService {
             }
 
             await this.sock.sendMessage(targetJid, { text: cleanText });
+            messageLogService.recordLog({
+                canal: 'whatsapp',
+                tipo,
+                destinatario: digits,
+                assunto: summary,
+                status: 'enviado',
+                message_id: targetJid
+            }).catch(() => {});
             return { success: true, jid: targetJid };
         } catch (err) {
             console.warn(`[WhatsApp] Falha ao enviar mensagem para ${digits}:`, err.message);
+            messageLogService.recordLog({
+                canal: 'whatsapp',
+                tipo,
+                destinatario: digits,
+                assunto: summary,
+                status: 'erro',
+                erro_detalhe: err.message
+            }).catch(() => {});
             return { success: false, error: err.message };
         }
     }
@@ -295,11 +339,19 @@ class WhatsAppService {
             }
             const aluno = rows[0];
             if (aluno.receber_whatsapp === 0 || aluno.receber_whatsapp === false) {
+                messageLogService.recordLog({
+                    canal: 'whatsapp',
+                    tipo: 'whatsapp_aluno',
+                    destinatario: aluno.telefone_whatsapp || aluno.nome_completo,
+                    assunto: 'Envio automático bloqueado por preferência',
+                    status: 'ignorado',
+                    erro_detalhe: 'Aluno optou por não receber WhatsApp.'
+                }).catch(() => {});
                 return { success: false, skipped: true, reason: 'Aluno optou por não receber WhatsApp.' };
             }
 
             const text = typeof messageBuilder === 'function' ? messageBuilder(aluno) : messageBuilder;
-            return await this.sendTextMessage(aluno.telefone_whatsapp, text);
+            return await this.sendTextMessage(aluno.telefone_whatsapp, text, 'whatsapp_aluno');
         } catch (err) {
             console.warn('[WhatsApp] Erro ao notificar aluno:', err.message);
             return { success: false, error: err.message };

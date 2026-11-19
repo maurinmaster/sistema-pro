@@ -1055,13 +1055,17 @@
                         </div>
                     </div>
 
-                    <!-- Abas Internas: Serviços Automáticos vs Envio Avulso / Link -->
+                    <!-- Abas Internas: Serviços Automáticos vs Envio Avulso / Link vs Log de Envios -->
                     <div style="display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap;">
                         <button type="button" class="btn btn-primary" id="btn-tab-msg-servicos">
                             Menu de Serviços &amp; Textos Predefinidos
                         </button>
                         <button type="button" class="btn btn-secondary" id="btn-tab-msg-manual">
                             Enviar Mensagem Avulsa / Link do Sistema
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="btn-tab-msg-logs">
+                            Log de Envios &amp; Cadastros Pendentes
+                            <span id="badge-msg-pendentes" style="display: none; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #ef4444; color: #ffffff; font-size: 11px; font-weight: 700;">0</span>
                         </button>
                     </div>
 
@@ -1157,6 +1161,85 @@
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+
+                    <!-- ABA 3: LOG DE ENVIOS & CADASTROS PENDENTES -->
+                    <div id="tab-msg-logs" style="display: none;">
+                        <!-- Card 1: Cadastros com E-mail Pendente de Confirmação -->
+                        <div class="card" style="padding: 20px; margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                                <div>
+                                    <h3 style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 0;">
+                                        Cadastros com E-mail Pendente de Confirmação
+                                    </h3>
+                                    <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
+                                        Verifique se o aluno digitou o e-mail errado, reenvie o código ou ative o acesso manualmente
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                                    <input type="text" id="msg-pendentes-busca" class="form-input" placeholder="Buscar nome, e-mail ou WhatsApp..." style="min-width: 230px;">
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-msg-recarregar-logs">
+                                        Atualizar
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="lista-cadastros-pendentes" style="display: flex; flex-direction: column; gap: 10px;">
+                                <!-- Carregado via MensagensConfigModule -->
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Histórico de Envios (E-mail & WhatsApp) -->
+                        <div class="card" style="padding: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 14px;">
+                                <div>
+                                    <h3 style="font-size: 16px; font-weight: 700; color: #ffffff; margin: 0;">
+                                        Histórico de Envios (E-mail &amp; WhatsApp)
+                                    </h3>
+                                    <p style="font-size: 12px; color: var(--text-muted); margin: 4px 0 0 0;">
+                                        Últimos envios registrados pelo servidor (aceitos pelo SMTP, simulados, ignorados ou com erro)
+                                    </p>
+                                </div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <span id="logs-stat-enviados" style="font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: rgba(34, 197, 94, 0.16); color: #4ade80;">Enviados (30d): 0</span>
+                                    <span id="logs-stat-erros" style="font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: rgba(239, 68, 68, 0.16); color: #fca5a5;">Erros (30d): 0</span>
+                                    <span id="logs-stat-ignorados" style="font-size: 11px; font-weight: 700; padding: 5px 10px; border-radius: 999px; background: rgba(245, 158, 11, 0.16); color: #fbbf24;">Ignorados (30d): 0</span>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+                                <select id="msg-logs-canal" class="form-select" style="max-width: 170px;">
+                                    <option value="">Todos os Canais</option>
+                                    <option value="email">E-mail</option>
+                                    <option value="whatsapp">WhatsApp</option>
+                                </select>
+                                <select id="msg-logs-status" class="form-select" style="max-width: 170px;">
+                                    <option value="">Todos os Status</option>
+                                    <option value="enviado">Enviado</option>
+                                    <option value="erro">Erro</option>
+                                    <option value="ignorado">Ignorado</option>
+                                    <option value="simulado">Simulado</option>
+                                </select>
+                                <input type="text" id="msg-logs-busca" class="form-input" placeholder="Filtrar por destinatário, assunto ou erro..." style="flex: 1; min-width: 220px;">
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data / Hora</th>
+                                            <th>Canal</th>
+                                            <th>Destinatário</th>
+                                            <th>Assunto / Tipo</th>
+                                            <th>Status</th>
+                                            <th>Detalhes / Erro</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-logs-envios-corpo">
+                                        <!-- Carregado via MensagensConfigModule -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -3091,7 +3174,7 @@
     <script src="/js/planos.js?v=4.9"></script>
     <script src="/js/wiki.js?v=4.5"></script>
     <script src="/js/exames.js?v=3.7"></script>
-    <script src="/js/mensagens-config.js?v=1.0"></script>
+    <script src="/js/mensagens-config.js?v=1.1"></script>
     <script src="/js/app.js?v=3.8"></script>
 </body>
 

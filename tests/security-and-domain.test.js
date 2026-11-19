@@ -531,6 +531,37 @@ test('Configurações de Mensagens: Catálogo, Validação, Templates e Link do 
     assert.equal(normalized.regras.avaliacao_graduacao.mensagem_aluno, 'Custom {nome}');
 });
 
+test('Log de Mensagens: Sanitização e Registro Não-Bloqueante', async () => {
+    const messageLogService = require('../services/messageLogService');
+
+    const sanitized = messageLogService.sanitizeLogPayload({
+        canal: 'invalido',
+        tipo: 'a'.repeat(100),
+        destinatario: 'd'.repeat(250),
+        assunto: 's'.repeat(250),
+        status: 'desconhecido',
+        erro_detalhe: 'e'.repeat(700),
+        message_id: 'm'.repeat(250)
+    });
+
+    assert.equal(sanitized.canal, 'email');
+    assert.equal(sanitized.status, 'erro');
+    assert.equal(sanitized.tipo.length, 60);
+    assert.equal(sanitized.destinatario.length, 180);
+    assert.equal(sanitized.assunto.length, 200);
+    assert.equal(sanitized.erro_detalhe.length, 500);
+    assert.equal(sanitized.message_id.length, 180);
+
+    // Registro não deve lançar exceção mesmo com banco local offline
+    await messageLogService.recordLog({
+        canal: 'whatsapp',
+        tipo: 'teste',
+        destinatario: '5511999998888',
+        assunto: 'Teste não bloqueante',
+        status: 'enviado'
+    });
+});
+
 test('Painel do Aluno: Consulta Consolidada, Histórico de Medidas e Comparativo de Evolução', async () => {
     const painelRoutes = require('../routes/painelAluno');
     assert.ok(painelRoutes);

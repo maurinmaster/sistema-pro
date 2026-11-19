@@ -23,6 +23,7 @@ const MensagensConfigModule = {
         // Abas internas
         document.getElementById('btn-tab-msg-servicos')?.addEventListener('click', () => this.switchTab('servicos'));
         document.getElementById('btn-tab-msg-manual')?.addEventListener('click', () => this.switchTab('manual'));
+        document.getElementById('btn-tab-msg-logs')?.addEventListener('click', () => this.switchTab('logs'));
 
         // Filtros de serviços
         document.getElementById('msg-filtro-publico-bar')?.addEventListener('click', (e) => {
@@ -125,23 +126,66 @@ const MensagensConfigModule = {
             e.preventDefault();
             this.submitManualMessage();
         });
+
+        // Eventos da aba de Log de Envios e Cadastros Pendentes
+        document.getElementById('btn-msg-recarregar-logs')?.addEventListener('click', () => this.loadLogsAndPendentes());
+        document.getElementById('msg-logs-canal')?.addEventListener('change', () => this.loadLogs());
+        document.getElementById('msg-logs-status')?.addEventListener('change', () => this.loadLogs());
+
+        let logSearchTimer = null;
+        document.getElementById('msg-logs-busca')?.addEventListener('input', () => {
+            clearTimeout(logSearchTimer);
+            logSearchTimer = setTimeout(() => this.loadLogs(), 250);
+        });
+
+        let pendSearchTimer = null;
+        document.getElementById('msg-pendentes-busca')?.addEventListener('input', () => {
+            clearTimeout(pendSearchTimer);
+            pendSearchTimer = setTimeout(() => this.loadPendentes(), 250);
+        });
+
+        document.getElementById('lista-cadastros-pendentes')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-pendente-action]');
+            if (!btn) return;
+            const action = btn.getAttribute('data-pendente-action');
+            const usuarioId = Number(btn.getAttribute('data-usuario-id'));
+            if (!usuarioId) return;
+
+            if (action === 'reenviar') {
+                this.reenviarCodigoPendente(usuarioId, btn);
+            } else if (action === 'corrigir') {
+                const emailAtual = btn.getAttribute('data-email-atual') || '';
+                this.corrigirEmailPendente(usuarioId, emailAtual);
+            } else if (action === 'ativar') {
+                this.ativarContaPendente(usuarioId, btn);
+            }
+        });
     },
 
     switchTab(tab) {
         const isServicos = tab === 'servicos';
+        const isManual = tab === 'manual';
+        const isLogs = tab === 'logs';
+
         const btnServ = document.getElementById('btn-tab-msg-servicos');
         const btnMan = document.getElementById('btn-tab-msg-manual');
+        const btnLogs = document.getElementById('btn-tab-msg-logs');
         const paneServ = document.getElementById('tab-msg-servicos');
         const paneMan = document.getElementById('tab-msg-manual');
+        const paneLogs = document.getElementById('tab-msg-logs');
 
         if (btnServ) btnServ.className = isServicos ? 'btn btn-primary' : 'btn btn-secondary';
-        if (btnMan) btnMan.className = !isServicos ? 'btn btn-primary' : 'btn btn-secondary';
+        if (btnMan) btnMan.className = isManual ? 'btn btn-primary' : 'btn btn-secondary';
+        if (btnLogs) btnLogs.className = isLogs ? 'btn btn-primary' : 'btn btn-secondary';
         if (paneServ) paneServ.style.display = isServicos ? 'block' : 'none';
-        if (paneMan) paneMan.style.display = !isServicos ? 'block' : 'none';
+        if (paneMan) paneMan.style.display = isManual ? 'block' : 'none';
+        if (paneLogs) paneLogs.style.display = isLogs ? 'block' : 'none';
 
-        if (!isServicos) {
+        if (isManual) {
             this.loadManualAlunos();
             this.updateManualPreview();
+        } else if (isLogs) {
+            this.loadLogsAndPendentes();
         }
     },
 
@@ -171,6 +215,7 @@ const MensagensConfigModule = {
             this.renderServicesList();
             this.populateManualPresets();
             this.loadManualAlunos();
+            this.loadPendentes();
         } catch (err) {
             UI.showToast(err.message || 'Erro ao carregar configurações de mensagens.', 'error');
         }
@@ -591,6 +636,227 @@ const MensagensConfigModule = {
                 btn.textContent = 'Enviar Mensagem Agora';
             }
         }
+    },
+
+    async loadLogsAndPendentes() {
+        await Promise.allSettled([this.loadPendentes(), this.loadLogs()]);
+    },
+
+    async loadPendentes() {
+        const container = document.getElementById('lista-cadastros-pendentes');
+        const busca = document.getElementById('msg-pendentes-busca')?.value?.trim() || '';
+        try {
+            const qs = busca ? `?busca=${encodeURIComponent(busca)}` : '';
+            const res = await API.get(`/mensagens-config/pendentes${qs}`);
+            if (!res?.success) throw new Error(res?.error || 'Falha ao carregar pendentes.');
+
+            const lista = Array.isArray(res.data) ? res.data : [];
+            const badge = document.getElementById('badge-msg-pendentes');
+            if (badge && !busca) {
+                if (lista.length > 0) {
+                    badge.textContent = String(lista.length);
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+
+            if (container) this.renderPendentes(lista);
+        } catch (err) {
+            if (container) {
+                container.innerHTML = `<div style="padding: 16px; text-align: center; color: #fca5a5;">${UI.escapeHtml(err.message || 'Erro ao carregar pendentes.')}</div>`;
+            }
+        }
+    },
+
+    renderPendentes(lista) {
+        const container = document.getElementById('lista-cadastros-pendentes');
+        if (!container) return;
+
+        if (!Array.isArray(lista) || lista.length === 0) {
+            container.innerHTML = `<div style="padding: 18px; text-align: center; color: var(--text-muted); background: rgba(255,255,255,0.02); border-radius: 10px;">Nenhum cadastro pendente de confirmação de e-mail no momento.</div>`;
+            return;
+        }
+
+        container.innerHTML = lista.map(item => {
+            const uid = Number(item.usuario_id);
+            const dataCad = item.created_at ? new Date(item.created_at).toLocaleString('pt-BR') : '-';
+            const ultimoEnvio = item.ultimo_envio_codigo ? new Date(item.ultimo_envio_codigo).toLocaleString('pt-BR') : 'Nenhum';
+            const tentativas = Number(item.tentativas_codigo || 0);
+
+            return `
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;">
+                    <div style="min-width: 230px; flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <strong style="color: #ffffff; font-size: 14px;">${UI.escapeHtml(item.nome_completo)}</strong>
+                            <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(245, 158, 11, 0.16); color: #fbbf24;">Aguardando Confirmação</span>
+                        </div>
+                        <div style="font-size: 13px; color: #38bdf8; margin-top: 4px; word-break: break-all;">
+                            ${UI.escapeHtml(item.email)}
+                        </div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+                            WhatsApp: ${UI.escapeHtml(item.telefone_whatsapp || 'Não informado')} • Cadastrado em: ${UI.escapeHtml(dataCad)} • Códigos gerados: ${tentativas} (Último: ${UI.escapeHtml(ultimoEnvio)})
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-pendente-action="corrigir"
+                            data-usuario-id="${uid}"
+                            data-email-atual="${UI.escapeHtml(item.email)}">
+                            Corrigir E-mail
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                            data-pendente-action="reenviar"
+                            data-usuario-id="${uid}">
+                            Reenviar Código
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm"
+                            data-pendente-action="ativar"
+                            data-usuario-id="${uid}"
+                            style="background: #16a34a; border-color: #16a34a;">
+                            Ativar Conta
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    async reenviarCodigoPendente(usuarioId, btnEl) {
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.textContent = 'Enviando...';
+        }
+        try {
+            const res = await API.post(`/mensagens-config/pendentes/${usuarioId}/reenviar`, {});
+            if (!res?.success) throw new Error(res?.error || 'Falha ao reenviar código.');
+            UI.showToast(res.message, res.enviado ? 'success' : 'warning');
+            await this.loadLogsAndPendentes();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao reenviar código.', 'error');
+        } finally {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = 'Reenviar Código';
+            }
+        }
+    },
+
+    async corrigirEmailPendente(usuarioId, emailAtual) {
+        const novoEmail = prompt('Digite o e-mail corrigido para este aluno:', emailAtual || '');
+        if (novoEmail === null) return;
+        const cleanEmail = novoEmail.trim();
+        if (!cleanEmail) return;
+
+        try {
+            const res = await API.post(`/mensagens-config/pendentes/${usuarioId}/corrigir-email`, {
+                novo_email: cleanEmail,
+                reenviar_codigo: true
+            });
+            if (!res?.success) throw new Error(res?.error || 'Falha ao corrigir e-mail.');
+            UI.showToast(res.message, res.enviado ? 'success' : 'warning');
+            await this.loadLogsAndPendentes();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao corrigir e-mail.', 'error');
+        }
+    },
+
+    async ativarContaPendente(usuarioId, btnEl) {
+        if (!confirm('Confirmar manualmente o e-mail e liberar acesso imediato para este aluno?')) return;
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.textContent = 'Ativando...';
+        }
+        try {
+            const res = await API.post(`/mensagens-config/pendentes/${usuarioId}/ativar`, {});
+            if (!res?.success) throw new Error(res?.error || 'Falha ao ativar cadastro.');
+            UI.showToast(res.message || 'Conta ativada com sucesso!', 'success');
+            await this.loadPendentes();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao ativar cadastro.', 'error');
+        } finally {
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = 'Ativar Conta';
+            }
+        }
+    },
+
+    async loadLogs() {
+        const tbody = document.getElementById('tabela-logs-envios-corpo');
+        if (!tbody) return;
+
+        const canal = document.getElementById('msg-logs-canal')?.value || '';
+        const status = document.getElementById('msg-logs-status')?.value || '';
+        const busca = document.getElementById('msg-logs-busca')?.value?.trim() || '';
+
+        const params = new URLSearchParams();
+        if (canal) params.set('canal', canal);
+        if (status) params.set('status', status);
+        if (busca) params.set('busca', busca);
+        params.set('limit', '100');
+
+        try {
+            const res = await API.get(`/mensagens-config/logs?${params.toString()}`);
+            if (!res?.success || !res.data) throw new Error(res?.error || 'Falha ao carregar logs.');
+            this.renderLogs(res.data.logs || [], res.data.stats || {});
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #fca5a5;">${UI.escapeHtml(err.message || 'Erro ao carregar histórico.')}</td></tr>`;
+        }
+    },
+
+    renderLogs(logs, stats) {
+        const tbody = document.getElementById('tabela-logs-envios-corpo');
+        if (!tbody) return;
+
+        const envEl = document.getElementById('logs-stat-enviados');
+        const errEl = document.getElementById('logs-stat-erros');
+        const ignEl = document.getElementById('logs-stat-ignorados');
+        if (envEl) envEl.textContent = `Enviados (30d): ${Number(stats.enviados || 0)}`;
+        if (errEl) errEl.textContent = `Erros (30d): ${Number(stats.erros || 0)}`;
+        if (ignEl) ignEl.textContent = `Ignorados (30d): ${Number(stats.ignorados || 0)}`;
+
+        if (!Array.isArray(logs) || logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum registro de envio encontrado.</td></tr>`;
+            return;
+        }
+
+        const statusBadges = {
+            enviado: { bg: 'rgba(34, 197, 94, 0.16)', color: '#4ade80', label: 'Enviado' },
+            simulado: { bg: 'rgba(56, 189, 248, 0.16)', color: '#38bdf8', label: 'Simulado' },
+            ignorado: { bg: 'rgba(245, 158, 11, 0.16)', color: '#fbbf24', label: 'Ignorado' },
+            erro: { bg: 'rgba(239, 68, 68, 0.18)', color: '#fca5a5', label: 'Erro' }
+        };
+
+        tbody.innerHTML = logs.map(row => {
+            const dt = row.created_at ? new Date(row.created_at).toLocaleString('pt-BR') : '-';
+            const st = statusBadges[row.status] || statusBadges.erro;
+            const canalBadge = row.canal === 'whatsapp'
+                ? `<span style="font-size: 11px; font-weight: 700; color: #4ade80;">WhatsApp</span>`
+                : `<span style="font-size: 11px; font-weight: 700; color: #38bdf8;">E-mail</span>`;
+
+            const detalhe = row.erro_detalhe
+                ? `<span style="color: ${row.status === 'erro' ? '#fca5a5' : '#cbd5e1'};">${UI.escapeHtml(row.erro_detalhe)}</span>`
+                : (row.message_id ? `<span style="color: var(--text-muted); font-size: 11px;">ID: ${UI.escapeHtml(row.message_id)}</span>` : '<span style="color: var(--text-muted);">-</span>');
+
+            return `
+                <tr>
+                    <td style="white-space: nowrap; font-size: 12px;">${UI.escapeHtml(dt)}</td>
+                    <td>${canalBadge}</td>
+                    <td style="font-size: 12.5px; word-break: break-all;">${UI.escapeHtml(row.destinatario)}</td>
+                    <td style="font-size: 12.5px;">
+                        <div>${UI.escapeHtml(row.assunto || '-')}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(row.tipo || '')}</div>
+                    </td>
+                    <td>
+                        <span style="font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: ${st.bg}; color: ${st.color};">
+                            ${UI.escapeHtml(st.label)}
+                        </span>
+                    </td>
+                    <td style="font-size: 12px; max-width: 280px; word-break: break-word;">${detalhe}</td>
+                </tr>
+            `;
+        }).join('');
     }
 };
 
