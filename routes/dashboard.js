@@ -37,30 +37,40 @@ router.get('/stats', authenticateToken, async (req, res) => {
             FROM faturas
         `);
 
-        // 4. Distribuição de alunos por modalidade
+        // 4. Distribuição de alunos ativos por modalidade
         const [modalidadesDist] = await pool.query(`
             SELECT 
                 m.id,
                 m.nome,
-                COUNT(DISTINCT ag.aluno_id) AS total_alunos
+                COUNT(DISTINCT a.id) AS total_alunos
             FROM modalidades m
             LEFT JOIN aluno_graduacoes ag ON ag.modalidade_id = m.id AND ag.atual = 1
-            LEFT JOIN alunos a ON a.id = ag.aluno_id AND a.status = 'ativo'
+            LEFT JOIN alunos a ON a.id = ag.aluno_id AND a.status = 'ativo' AND a.deleted_at IS NULL
             WHERE m.ativo = 1
             GROUP BY m.id
-            ORDER BY total_alunos DESC
+            ORDER BY total_alunos DESC, m.nome ASC
         `);
 
-        // 5. Presenças por dia nos últimos 7 dias (para gráfico de frequência)
+        // 5. Presenças por dia nos últimos 7 dias corridos (sempre retorna as 7 datas)
         const [graficoFrequencia] = await pool.query(`
-            SELECT 
-                DATE_FORMAT(data_hora_checkin, '%d/%m') AS dia,
-                COUNT(*) AS total
-            FROM checkins
-            WHERE data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-              AND status = 'aprovado'
-            GROUP BY DATE(data_hora_checkin)
-            ORDER BY DATE(data_hora_checkin) ASC
+            SELECT
+                DATE_FORMAT(dias.dia_data, '%d/%m') AS dia,
+                DATE_FORMAT(dias.dia_data, '%Y-%m-%d') AS data_iso,
+                COUNT(c.id) AS total
+            FROM (
+                SELECT DATE_SUB(CURDATE(), INTERVAL 6 DAY) AS dia_data
+                UNION ALL SELECT DATE_SUB(CURDATE(), INTERVAL 5 DAY)
+                UNION ALL SELECT DATE_SUB(CURDATE(), INTERVAL 4 DAY)
+                UNION ALL SELECT DATE_SUB(CURDATE(), INTERVAL 3 DAY)
+                UNION ALL SELECT DATE_SUB(CURDATE(), INTERVAL 2 DAY)
+                UNION ALL SELECT DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                UNION ALL SELECT CURDATE()
+            ) AS dias
+            LEFT JOIN checkins c
+                ON DATE(c.data_hora_checkin) = dias.dia_data
+                AND c.status = 'aprovado'
+            GROUP BY dias.dia_data
+            ORDER BY dias.dia_data ASC
         `);
 
         // 6. Alunos que mais treinam (top assíduos)
@@ -74,7 +84,7 @@ router.get('/stats', authenticateToken, async (req, res) => {
             JOIN checkins c ON c.aluno_id = a.id AND c.status = 'aprovado'
             WHERE a.deleted_at IS NULL AND c.data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
             GROUP BY a.id
-            ORDER BY total_treinos DESC
+            ORDER BY total_treinos DESC, a.nome_completo ASC
             LIMIT 5
         `);
 

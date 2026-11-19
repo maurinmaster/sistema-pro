@@ -1,5 +1,5 @@
 /* ==========================================================================
-   SISTEMA DE RESPONSIVIDADE PROFISSIONAL (Mobile, Tablet, Desktop)
+   SISTEMA DE RESPONSIVIDADE (Mobile, Tablet, Desktop)
    ========================================================================== */
 
 /* Botões do Menu Mobile (Escondidos por padrão no Desktop) */
@@ -86,7 +86,7 @@
     }
 
     /* Grid do dashboard em 1 coluna */
-    #view-dashboard > div[style*="grid-template-columns: 2fr 1fr"] {
+    #view-dashboard>div[style*="grid-template-columns: 2fr 1fr"] {
         grid-template-columns: 1fr !important;
     }
 
@@ -100,6 +100,7 @@
    BREAKPOINT: TABLET VERTICAL & SMARTPHONES (<= 868px)
    ========================================================================== */
 @media (max-width: 868px) {
+
     /* Ativa menu hamburger */
     .mobile-menu-toggle {
         display: flex;
@@ -144,7 +145,8 @@
     }
 
     .page-title p {
-        display: none; /* Oculta subtítulo longo para economizar espaço */
+        display: none;
+        /* Oculta subtítulo longo para economizar espaço */
     }
 
     .topbar-actions {
@@ -181,7 +183,8 @@
     }
 
     /* Formulários em Modais: colunas viram 1 única coluna */
-    .form-grid, .form-grid-3 {
+    .form-grid,
+    .form-grid-3 {
         grid-template-columns: 1fr !important;
         gap: 12px;
     }
@@ -189,7 +192,8 @@
     /* Modais com melhor aproveitamento em tela cheia */
     .modal-overlay {
         padding: 12px;
-        align-items: flex-end; /* Abre no estilo 'bottom sheet' moderno em smartphones */
+        align-items: flex-end;
+        /* Abre no estilo 'bottom sheet' moderno em smartphones */
     }
 
     .modal-box {
@@ -232,30 +236,86 @@
 }
 
 /* ==========================================================================
-   BREAKPOINT: SMARTPHONES PEQUENOS (<= 520px)
+   BREAKPOINT: MOBILE (<= 767px)
    ========================================================================== */
-@media (max-width: 520px) {
-    .page-container {
-        padding: 16px 12px;
+@media (max-width: 767px) {
+    .page-title-desktop {
+        display: none;
     }
 
-    /* Stats Grid em 2 colunas compactas */
+    .page-title-mobile {
+        display: inline;
+    }
+
+    .topbar {
+        padding: 0 12px;
+        gap: 8px;
+    }
+
+    .topbar-left {
+        gap: 10px;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .page-title {
+        min-width: 0;
+    }
+
+    .page-title h2 {
+        font-size: 16px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .topbar-actions {
+        gap: 8px;
+        flex-shrink: 0;
+    }
+
+    .topbar-actions .btn {
+        min-width: 40px;
+        min-height: 40px;
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .topbar-actions .btn span {
+        display: none;
+    }
+
+    .topbar-actions .btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Compactar verticalmente o grid de KPIs em < 768px */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 10px;
-        margin-bottom: 18px;
+        margin-bottom: 16px;
     }
 
     .stat-card {
-        padding: 14px 12px;
+        padding: 12px 12px;
+    }
+
+    .stat-header {
+        margin-bottom: 6px;
     }
 
     .stat-title {
-        font-size: 11px;
+        font-size: 11.5px;
+        line-height: 1.2;
     }
 
     .stat-value {
-        font-size: 20px;
+        font-size: 22px;
+        margin-bottom: 4px;
     }
 
     .stat-icon {
@@ -264,21 +324,30 @@
     }
 
     .stat-icon svg {
-        width: 14px;
-        height: 14px;
+        width: 15px;
+        height: 15px;
     }
 
     .stat-meta {
-        font-size: 10px;
+        font-size: 10.5px;
+        gap: 4px;
+    }
+}
+
+/* ==========================================================================
+   BREAKPOINT: SMARTPHONES PEQUENOS (<= 520px)
+   ========================================================================== */
+@media (max-width: 520px) {
+    .page-container {
+        padding: 14px 12px;
     }
 
-    /* Topbar com botões ícone em telas minúsculas */
-    .topbar-actions .btn span {
-        display: none; /* Mostra apenas o ícone */
+    .stat-card {
+        padding: 11px 10px;
     }
 
-    .topbar-actions .btn {
-        padding: 8px 10px;
+    .stat-value {
+        font-size: 20px;
     }
 
     /* Filtros da tabela de alunos em 1 coluna */
@@ -287,14 +356,15 @@
     }
 
     /* Ajuste de tabela com scroll suave */
-    .data-table th, .data-table td {
+    .data-table th,
+    .data-table td {
         padding: 10px 12px;
         font-size: 12px;
     }
 
     .aluno-avatar {
-        width: 36px;
-        height: 36px;
+        width: 60px;
+        height: 46px;
     }
 
     .aluno-info-primary {
