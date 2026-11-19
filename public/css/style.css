@@ -385,6 +385,29 @@ body {
     margin-bottom: 24px;
 }
 
+.action-bar-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 260px;
+}
+
+.btn-filtros-toggle {
+    display: none;
+}
+
+.btn-filtros-toggle.has-active-filters {
+    border-color: var(--primary-light);
+    color: var(--primary-light);
+    background: rgba(56, 189, 248, 0.12);
+}
+
+.alunos-filters-panel {
+    display: flex;
+    align-items: center;
+}
+
 .search-box {
     position: relative;
     flex: 1;
@@ -506,6 +529,14 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     display: flex;
     align-items: center;
     gap: 12px;
+    width: 100%;
+}
+
+.aluno-avatar-wrap {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
 }
 
 .aluno-avatar {
@@ -515,6 +546,35 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     object-fit: cover;
     border: 2px solid rgba(56, 189, 248, 0.3);
     background: #1e293b;
+    display: block;
+}
+
+.avatar-status-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #0f172a;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.avatar-status-dot.status-dot-ativo {
+    background: #10b981;
+}
+
+.avatar-status-dot.status-dot-danger {
+    background: #ef4444;
+}
+
+.avatar-status-dot.status-dot-inativo {
+    background: #64748b;
+}
+
+.aluno-info-wrap {
+    flex: 1;
+    min-width: 0;
 }
 
 .aluno-info-primary {
@@ -523,12 +583,66 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     font-size: 14px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
+    line-height: 1.3;
+}
+
+.aluno-nome-link {
+    color: inherit;
+    text-decoration: none;
+    font-weight: 700;
+    min-width: 0;
+    word-break: break-word;
+    text-transform: capitalize;
 }
 
 .aluno-info-secondary {
     font-size: 12px;
     color: var(--text-muted);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 2px 6px;
+    margin-top: 3px;
+}
+
+.aluno-cpf-text,
+.aluno-idade-text {
+    white-space: nowrap;
+}
+
+.row-chevron {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    color: var(--text-muted);
+    opacity: 0.55;
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.data-table tbody tr.aluno-row-clickable {
+    cursor: pointer;
+}
+
+.data-table tbody tr.aluno-row-clickable:hover {
+    background: rgba(30, 41, 59, 0.6);
+}
+
+.data-table tbody tr.aluno-row-clickable:active {
+    background: rgba(56, 189, 248, 0.12);
+}
+
+.data-table tbody tr.aluno-row-clickable:hover .row-chevron {
+    opacity: 1;
+    color: var(--primary-light);
+    transform: translateX(2px);
 }
 
 .minor-tag {
@@ -540,6 +654,9 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     padding: 2px 6px;
     border-radius: var(--radius-sm);
     border: 1px solid rgba(245, 158, 11, 0.3);
+    flex-shrink: 0;
+    white-space: nowrap;
+    line-height: 1.2;
 }
 
 /* Actions Menu / Buttons in table */

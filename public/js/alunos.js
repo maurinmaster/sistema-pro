@@ -29,19 +29,52 @@ const AlunosModule = {
         // Filtro por status
         const statusFilter = document.getElementById('filter-status');
         if (statusFilter) {
-            statusFilter.addEventListener('change', () => this.loadAlunos());
+            statusFilter.addEventListener('change', () => {
+                this.updateActiveFiltersCount();
+                this.loadAlunos();
+            });
         }
 
         // Filtro por modalidade
         const modFilter = document.getElementById('filter-modalidade');
         if (modFilter) {
-            modFilter.addEventListener('change', () => this.loadAlunos());
+            modFilter.addEventListener('change', () => {
+                this.updateActiveFiltersCount();
+                this.loadAlunos();
+            });
         }
 
         // Filtro por menor de idade
         const menorFilter = document.getElementById('filter-menor');
         if (menorFilter) {
-            menorFilter.addEventListener('change', () => this.loadAlunos());
+            menorFilter.addEventListener('change', () => {
+                this.updateActiveFiltersCount();
+                this.loadAlunos();
+            });
+        }
+
+        // Painel retrátil de filtros no mobile
+        const btnToggleFiltros = document.getElementById('btn-toggle-filtros-alunos');
+        const filtersPanel = document.getElementById('alunos-filters-collapsible');
+        if (btnToggleFiltros && filtersPanel) {
+            btnToggleFiltros.addEventListener('click', () => {
+                const isOpen = filtersPanel.classList.toggle('open');
+                btnToggleFiltros.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            });
+        }
+
+        // Clique na linha do aluno abre o Dossiê 360° (exceto botões/links de ação)
+        const tbodyAlunos = document.getElementById('alunos-table-body');
+        if (tbodyAlunos) {
+            tbodyAlunos.addEventListener('click', (e) => {
+                if (e.target.closest('button, a, .table-actions')) return;
+                const row = e.target.closest('tr.aluno-row-clickable[data-aluno-id]');
+                if (!row) return;
+                const alunoId = Number(row.getAttribute('data-aluno-id'));
+                if (alunoId && window.AlunoDetalhesModule) {
+                    AlunoDetalhesModule.openDossier(alunoId);
+                }
+            });
         }
 
         // Botão de abrir Lixeira
@@ -308,11 +341,47 @@ const AlunosModule = {
         });
     },
 
+    formatNomeDisplay(nome) {
+        if (!nome) return '';
+        const preposicoes = new Set(['da', 'de', 'do', 'das', 'dos', 'e']);
+        return String(nome)
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .map((word, idx) => {
+                if (idx > 0 && preposicoes.has(word)) return word;
+                return word.charAt(0).toUpperCase() + word.slice(1);
+            })
+            .join(' ');
+    },
+
+    updateActiveFiltersCount() {
+        const status = document.getElementById('filter-status')?.value || 'todos';
+        const modalidade = document.getElementById('filter-modalidade')?.value || 'todas';
+        const menor = document.getElementById('filter-menor')?.value || 'todos';
+
+        let activeCount = 0;
+        if (status !== 'todos') activeCount++;
+        if (modalidade !== 'todas') activeCount++;
+        if (menor !== 'todos') activeCount++;
+
+        const btnToggle = document.getElementById('btn-toggle-filtros-alunos');
+        const label = document.getElementById('btn-filtros-label');
+        if (label) {
+            label.textContent = activeCount > 0 ? `Filtros (${activeCount})` : 'Filtros';
+        }
+        if (btnToggle) {
+            btnToggle.classList.toggle('has-active-filters', activeCount > 0);
+        }
+    },
+
     async loadAlunos() {
         const tbody = document.getElementById('alunos-table-body');
         const countSpan = document.getElementById('total-alunos-count');
+        const lixeiraBadge = document.getElementById('lixeira-contador-badge');
         if (!tbody) return;
 
+        this.updateActiveFiltersCount();
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px;"><div class="spinner"></div> Carregando alunos...</td></tr>`;
 
         const busca = document.getElementById('search-aluno')?.value || '';
@@ -324,7 +393,12 @@ const AlunosModule = {
             const res = await API.get(`/alunos?busca=${encodeURIComponent(busca)}&status=${status}&modalidade_id=${modalidade_id}&menor=${menor}`);
             this.alunosList = res.data || [];
 
-            if (countSpan) countSpan.textContent = this.alunosList.length;
+            if (countSpan) {
+                countSpan.textContent = res.total_base !== undefined ? Number(res.total_base) : this.alunosList.length;
+            }
+            if (lixeiraBadge && res.total_lixeira !== undefined) {
+                lixeiraBadge.textContent = Number(res.total_lixeira);
+            }
 
             if (this.alunosList.length === 0) {
                 tbody.innerHTML = `
@@ -339,11 +413,26 @@ const AlunosModule = {
 
             tbody.innerHTML = this.alunosList.map(a => {
                 const safeId = Number(a.id);
-                const safeNome = UI.escapeHtml(a.nome_completo);
-                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(a.nome_completo || 'Aluno')}&background=0284c7&color=fff`;
+                const formattedNome = this.formatNomeDisplay(a.nome_completo);
+                const safeNome = UI.escapeHtml(formattedNome);
+                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedNome || 'Aluno')}&background=0284c7&color=fff`;
                 const safeAvatar = UI.sanitizeUrl(a.foto_perfil_url, fallbackAvatar);
                 const isMenor = a.idade !== null && a.idade < 18;
-                const menorBadge = isMenor ? `<span class="minor-tag">Menor (${Number(a.idade)} anos)</span>` : '';
+                const menorBadge = isMenor ? `<span class="minor-tag">MENOR</span>` : '';
+
+                let dotClass = 'status-dot-inativo';
+                let dotTitle = 'Inativo';
+                if (Number(a.faturas_atrasadas) > 0 || a.status === 'bloqueado') {
+                    dotClass = 'status-dot-danger';
+                    dotTitle = a.status === 'bloqueado' ? 'Bloqueado' : 'Inadimplente';
+                } else if (a.status === 'ativo' || a.status === 'experimental') {
+                    dotClass = 'status-dot-ativo';
+                    dotTitle = a.status === 'experimental' ? 'Experimental' : 'Ativo';
+                } else if (a.status === 'trancado') {
+                    dotClass = 'status-dot-inativo';
+                    dotTitle = 'Trancado';
+                }
+
                 let financeiroIndicator;
                 if (Number(a.faturas_atrasadas) > 0) {
                     financeiroIndicator = `<span title="Possui mensalidade atrasada" style="color: #ef4444; font-weight: bold; cursor: help;">⚠️ Atrasado</span>`;
@@ -355,25 +444,32 @@ const AlunosModule = {
                     financeiroIndicator = `<span style="color: #10b981;">Em dia</span>`;
                 }
                 const encodedNome = encodeURIComponent(a.nome_completo || '').replace(/'/g, '%27');
+                const idadeHtml = a.idade !== null ? `<span class="aluno-idade-text">• ${Number(a.idade)} anos</span>` : '';
 
                 return `
-                    <tr id="aluno-row-${safeId}">
+                    <tr id="aluno-row-${safeId}" class="aluno-row-clickable" data-aluno-id="${safeId}">
                         <td>
                             <div class="aluno-cell">
-                                <img src="${safeAvatar}" 
-                                     alt="${safeNome}" class="aluno-avatar" 
-                                     onerror="this.src='${fallbackAvatar}'">
-                                <div>
+                                <div class="aluno-avatar-wrap">
+                                    <img src="${safeAvatar}" 
+                                         alt="${safeNome}" class="aluno-avatar" 
+                                         onerror="this.src='${fallbackAvatar}'">
+                                    <span class="avatar-status-dot ${dotClass}" title="${UI.escapeHtml(dotTitle)}"></span>
+                                </div>
+                                <div class="aluno-info-wrap">
                                     <div class="aluno-info-primary">
-                                        <a href="javascript:void(0)" onclick="AlunoDetalhesModule.openDossier(${safeId})" style="color: inherit; text-decoration: none; font-weight: 700;">
+                                        <a href="javascript:void(0)" class="aluno-nome-link" onclick="AlunoDetalhesModule.openDossier(${safeId})">
                                             ${safeNome}
                                         </a>
                                         ${menorBadge}
                                     </div>
                                     <div class="aluno-info-secondary">
-                                        CPF: ${UI.escapeHtml(a.cpf || 'Não informado')} • ${a.idade !== null ? Number(a.idade) + ' anos' : ''}
+                                        <span class="aluno-cpf-text">CPF: ${UI.escapeHtml(a.cpf || 'Não informado')}</span>${idadeHtml}
                                     </div>
                                 </div>
+                                <svg class="row-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                                    <polyline points="9 18 15 12 9 6" />
+                                </svg>
                             </div>
                         </td>
                         <td>

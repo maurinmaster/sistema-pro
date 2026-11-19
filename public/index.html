@@ -15,9 +15,9 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=3.8">
+    <link rel="stylesheet" href="/css/style.css?v=3.9">
     <link rel="stylesheet" href="/css/components.css?v=3.8">
-    <link rel="stylesheet" href="/css/responsive.css?v=3.8">
+    <link rel="stylesheet" href="/css/responsive.css?v=3.9">
 </head>
 
 <body>
@@ -334,43 +334,53 @@
                 <section class="view-section" id="view-alunos">
                     <!-- Barra de Filtros e Busca -->
                     <div class="action-bar">
-                        <div class="search-box">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="m21 21-4.3-4.3" />
-                            </svg>
-                            <input type="text" id="search-aluno" class="search-input"
-                                placeholder="Buscar por nome, CPF, e-mail ou WhatsApp...">
+                        <div class="action-bar-top">
+                            <div class="search-box">
+                                <svg viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="m21 21-4.3-4.3" />
+                                </svg>
+                                <input type="text" id="search-aluno" class="search-input"
+                                    placeholder="Buscar por nome, CPF, e-mail ou WhatsApp...">
+                            </div>
+                            <button type="button" class="btn btn-secondary btn-filtros-toggle" id="btn-toggle-filtros-alunos" aria-expanded="false" aria-controls="alunos-filters-collapsible">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                                </svg>
+                                <span id="btn-filtros-label">Filtros</span>
+                            </button>
                         </div>
 
-                        <div class="filter-group">
-                            <select id="filter-status" class="select-filter">
-                                <option value="todos">Todos os Status</option>
-                                <option value="ativo">Ativo</option>
-                                <option value="inativo">Inativo</option>
-                                <option value="trancado">Trancado</option>
-                                <option value="bloqueado">Bloqueado</option>
-                                <option value="experimental">Experimental</option>
-                            </select>
+                        <div class="alunos-filters-panel" id="alunos-filters-collapsible">
+                            <div class="filter-group">
+                                <select id="filter-status" class="select-filter">
+                                    <option value="todos">Todos os Status</option>
+                                    <option value="ativo">Ativo</option>
+                                    <option value="inativo">Inativo</option>
+                                    <option value="trancado">Trancado</option>
+                                    <option value="bloqueado">Bloqueado</option>
+                                    <option value="experimental">Experimental</option>
+                                </select>
 
-                            <select id="filter-modalidade" class="select-filter">
-                                <option value="todas">Todas as Modalidades</option>
-                            </select>
+                                <select id="filter-modalidade" class="select-filter">
+                                    <option value="todas">Todas as Modalidades</option>
+                                </select>
 
-                            <select id="filter-menor" class="select-filter">
-                                <option value="todos">Faixa Etária (Todas)</option>
-                                <option value="sim">Menores de 18 anos</option>
-                                <option value="nao">Adultos (18+)</option>
-                            </select>
+                                <select id="filter-menor" class="select-filter">
+                                    <option value="todos">Faixa Etária (Todas)</option>
+                                    <option value="sim">Menores de 18 anos</option>
+                                    <option value="nao">Adultos (18+)</option>
+                                </select>
 
-                            <button type="button" class="btn btn-secondary" id="btn-abrir-lixeira" title="Abrir Lixeira de Cadastros" style="display: inline-flex; align-items: center; gap: 7px; border-color: rgba(239, 68, 68, 0.3);">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                                <span>Lixeira</span>
-                                <span class="badge" id="lixeira-contador-badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 11px; padding: 1px 6px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.35);">0</span>
-                            </button>
+                                <button type="button" class="btn btn-secondary" id="btn-abrir-lixeira" title="Abrir Lixeira de Cadastros" style="display: inline-flex; align-items: center; gap: 7px; border-color: rgba(239, 68, 68, 0.3);">
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
+                                    <span>Lixeira</span>
+                                    <span class="badge" id="lixeira-contador-badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; font-size: 11px; padding: 1px 6px; border-radius: 999px; font-weight: 700; border: 1px solid rgba(239, 68, 68, 0.35);">0</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -3175,8 +3185,8 @@
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js?v=1.1"></script>
     <script src="/js/aluno-detalhes.js"></script>
-    <script src="/js/alunos.js?v=5.1"></script>
-    <script src="/js/dashboard.js?v=1.1"></script>
+    <script src="/js/alunos.js?v=5.2"></script>
+    <script src="/js/dashboard.js?v=1.2"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js"></script>
     <script src="/js/planos.js?v=4.9"></script>

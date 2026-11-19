@@ -20,21 +20,23 @@ router.get('/stats', authenticateToken, async (req, res) => {
             WHERE deleted_at IS NULL
         `);
 
-        // 2. Presenças hoje e últimos 7 dias
+        // 2. Presenças hoje e últimos 7 dias (apenas alunos ativos na base, fora da lixeira)
         const [presencas] = await pool.query(`
             SELECT 
-                SUM(CASE WHEN DATE(data_hora_checkin) = CURDATE() AND status = 'aprovado' THEN 1 ELSE 0 END) AS checkins_hoje,
-                SUM(CASE WHEN data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND status = 'aprovado' THEN 1 ELSE 0 END) AS checkins_semana
-            FROM checkins
+                SUM(CASE WHEN DATE(c.data_hora_checkin) = CURDATE() AND c.status = 'aprovado' THEN 1 ELSE 0 END) AS checkins_hoje,
+                SUM(CASE WHEN c.data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND c.status = 'aprovado' THEN 1 ELSE 0 END) AS checkins_semana
+            FROM checkins c
+            JOIN alunos a ON a.id = c.aluno_id AND a.deleted_at IS NULL
         `);
 
-        // 3. Faturas e inadimplência
+        // 3. Faturas e inadimplência (excluindo alunos na lixeira)
         const [financeiro] = await pool.query(`
             SELECT 
-                COUNT(DISTINCT CASE WHEN status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()) THEN aluno_id END) AS alunos_inadimplentes,
-                SUM(CASE WHEN status = 'pago' AND competencia = DATE_FORMAT(CURDATE(), '%Y-%m') THEN valor_pago ELSE 0 END) AS receita_mes,
-                SUM(CASE WHEN status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()) THEN valor_original ELSE 0 END) AS valor_em_atraso
-            FROM faturas
+                COUNT(DISTINCT CASE WHEN f.status = 'atrasado' OR (f.status = 'pendente' AND f.data_vencimento < CURDATE()) THEN f.aluno_id END) AS alunos_inadimplentes,
+                SUM(CASE WHEN f.status = 'pago' AND f.competencia = DATE_FORMAT(CURDATE(), '%Y-%m') THEN f.valor_pago ELSE 0 END) AS receita_mes,
+                SUM(CASE WHEN f.status = 'atrasado' OR (f.status = 'pendente' AND f.data_vencimento < CURDATE()) THEN f.valor_original ELSE 0 END) AS valor_em_atraso
+            FROM faturas f
+            JOIN alunos a ON a.id = f.aluno_id AND a.deleted_at IS NULL
         `);
 
         // 4. Distribuição de alunos ativos por modalidade
@@ -51,12 +53,12 @@ router.get('/stats', authenticateToken, async (req, res) => {
             ORDER BY total_alunos DESC, m.nome ASC
         `);
 
-        // 5. Presenças por dia nos últimos 7 dias corridos (sempre retorna as 7 datas)
+        // 5. Presenças por dia nos últimos 7 dias corridos (sempre retorna as 7 datas, sem alunos na lixeira)
         const [graficoFrequencia] = await pool.query(`
             SELECT
                 DATE_FORMAT(dias.dia_data, '%d/%m') AS dia,
                 DATE_FORMAT(dias.dia_data, '%Y-%m-%d') AS data_iso,
-                COUNT(c.id) AS total
+                COUNT(a.id) AS total
             FROM (
                 SELECT DATE_SUB(CURDATE(), INTERVAL 6 DAY) AS dia_data
                 UNION ALL SELECT DATE_SUB(CURDATE(), INTERVAL 5 DAY)
@@ -69,6 +71,9 @@ router.get('/stats', authenticateToken, async (req, res) => {
             LEFT JOIN checkins c
                 ON DATE(c.data_hora_checkin) = dias.dia_data
                 AND c.status = 'aprovado'
+            LEFT JOIN alunos a
+                ON a.id = c.aluno_id
+                AND a.deleted_at IS NULL
             GROUP BY dias.dia_data
             ORDER BY dias.dia_data ASC
         `);

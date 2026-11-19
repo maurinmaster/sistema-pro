@@ -332,6 +332,65 @@
         font-size: 10.5px;
         gap: 4px;
     }
+
+    /* Painel retrátil de busca e filtros na página de Alunos */
+    #view-alunos .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 10px 12px;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .action-bar-top {
+        width: 100%;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .search-box {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .btn-filtros-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        min-height: 40px;
+        font-size: 12.5px;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .alunos-filters-panel {
+        display: none;
+        width: 100%;
+    }
+
+    .alunos-filters-panel.open {
+        display: block;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .alunos-filters-panel .filter-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    .alunos-filters-panel .select-filter,
+    .alunos-filters-panel #btn-abrir-lixeira {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        font-size: 12px;
+        padding: 8px 10px;
+    }
 }
 
 /* ==========================================================================
@@ -350,8 +409,8 @@
         font-size: 20px;
     }
 
-    /* Filtros da tabela de alunos em 1 coluna */
-    .filter-group {
+    /* Filtros fora do painel retrátil de alunos em 1 coluna */
+    .filter-group:not(.alunos-filters-panel .filter-group) {
         grid-template-columns: 1fr;
     }
 
@@ -362,9 +421,10 @@
         font-size: 12px;
     }
 
+    .aluno-avatar-wrap,
     .aluno-avatar {
-        width: 60px;
-        height: 46px;
+        width: 44px;
+        height: 44px;
     }
 
     .aluno-info-primary {

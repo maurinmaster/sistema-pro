@@ -179,7 +179,20 @@ router.get('/', authenticateToken, async (req, res) => {
         }
 
         const [rows] = await pool.query(query, params);
-        res.json({ success: true, count: rows.length, data: rows });
+        const [totals] = await pool.query(`
+            SELECT
+                SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS total_base,
+                SUM(CASE WHEN deleted_at IS NOT NULL THEN 1 ELSE 0 END) AS total_lixeira
+            FROM alunos
+        `);
+
+        res.json({
+            success: true,
+            count: rows.length,
+            total_base: Number(totals[0]?.total_base || 0),
+            total_lixeira: Number(totals[0]?.total_lixeira || 0),
+            data: rows
+        });
     } catch (err) {
         console.error('Erro ao listar alunos:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao consultar alunos.' });

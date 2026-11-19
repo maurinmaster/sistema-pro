@@ -117,6 +117,8 @@ const DashboardModule = {
 
         // KPI Cards
         document.getElementById('stat-total-alunos').textContent = alunos.total_alunos || 0;
+        const sidebarTotalAlunos = document.getElementById('total-alunos-count');
+        if (sidebarTotalAlunos) sidebarTotalAlunos.textContent = alunos.total_alunos || 0;
         document.getElementById('stat-alunos-ativos').textContent = alunos.ativos || 0;
         document.getElementById('stat-checkins-hoje').textContent = presencas.checkins_hoje || 0;
         document.getElementById('stat-menores').textContent = alunos.menores_idade || 0;
