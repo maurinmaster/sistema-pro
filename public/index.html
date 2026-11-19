@@ -16,8 +16,8 @@
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
     <link rel="stylesheet" href="/css/style.css?v=3.9">
-    <link rel="stylesheet" href="/css/components.css?v=3.8">
-    <link rel="stylesheet" href="/css/responsive.css?v=3.9">
+    <link rel="stylesheet" href="/css/components.css?v=3.9">
+    <link rel="stylesheet" href="/css/responsive.css?v=4.0">
 </head>
 
 <body>
@@ -1708,66 +1708,60 @@
     <!-- MODAL: DOSSIÊ 360° DO ALUNO                -->
     <!-- ========================================== -->
     <div class="modal-overlay" id="modal-dossie">
-        <div class="modal-box modal-large">
+        <div class="modal-box modal-large modal-box-dossier">
             <div class="modal-header">
-                <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="dossier-header-main">
                     <img id="dossie-avatar"
                         src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
                         alt="Avatar do aluno"
-                        style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light);">
-                    <div>
-                        <h3 id="dossie-nome" style="font-size: 20px;">Dossiê do Aluno</h3>
-                        <div id="dossie-meta"
-                            style="font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                        </div>
+                        style="width: 52px; height: 52px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-light); flex-shrink: 0;">
+                    <div class="dossier-header-info">
+                        <h3 id="dossie-nome">Dossiê do Aluno</h3>
+                        <div id="dossie-meta"></div>
                     </div>
                 </div>
-                <button class="modal-close" onclick="UI.closeModal('modal-dossie')">&times;</button>
+                <button class="modal-close" onclick="UI.closeModal('modal-dossie')" aria-label="Fechar dossiê">&times;</button>
             </div>
 
-            <div class="modal-body" style="padding-top: 14px;">
-                <!-- Abas do Dossiê -->
+            <!-- Abas Fixas do Dossiê -->
+            <div class="dossier-tabs-wrap">
                 <div class="dossier-tabs">
                     <button class="dossier-tab-btn active" data-tab="geral">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
                             <circle cx="12" cy="7" r="4" />
                         </svg>
-                        Dados & Saúde
+                        Geral
                     </button>
                     <button class="dossier-tab-btn" data-tab="graduacoes">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <polygon
-                                points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                         </svg>
                         Graduações
                     </button>
                     <button class="dossier-tab-btn" data-tab="financeiro">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" x2="12" y1="2" y2="22" />
                             <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                         </svg>
-                        Matrícula & Faturas
+                        Financeiro
                     </button>
                     <button class="dossier-tab-btn" data-tab="presencas">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        Presenças & Frequência
+                        Presenças
                     </button>
                     <button class="dossier-tab-btn" data-tab="desempenho" id="tab-btn-desempenho">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M18 20V10M12 20V4M6 20v-6" />
                         </svg>
-                        Desempenho & Sparring
+                        Desempenho
                     </button>
                 </div>
+            </div>
 
+            <div class="modal-body dossier-scroll-body">
                 <!-- Conteúdo das Abas -->
                 <div id="dossie-body-content">
                     <div class="dossier-tab-content active" id="dossier-tab-geral"></div>
@@ -1779,7 +1773,7 @@
             </div>
 
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="UI.closeModal('modal-dossie')">Fechar</button>
+                <button class="btn btn-secondary dossier-btn-fechar" onclick="UI.closeModal('modal-dossie')">Fechar</button>
             </div>
         </div>
     </div>
@@ -3184,7 +3178,7 @@
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js?v=1.1"></script>
-    <script src="/js/aluno-detalhes.js"></script>
+    <script src="/js/aluno-detalhes.js?v=1.1"></script>
     <script src="/js/alunos.js?v=5.2"></script>
     <script src="/js/dashboard.js?v=1.2"></script>
     <script src="/js/checkins.js"></script>

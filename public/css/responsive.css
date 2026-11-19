@@ -391,6 +391,108 @@
         font-size: 12px;
         padding: 8px 10px;
     }
+
+    /* Dossiê 360° otimizado para mobile */
+    #modal-dossie {
+        padding: 0;
+        align-items: flex-end;
+    }
+
+    #modal-dossie .modal-box-dossier {
+        width: 100%;
+        max-width: 100%;
+        height: 94dvh;
+        max-height: 94dvh;
+        border-radius: 18px 18px 0 0;
+    }
+
+    #modal-dossie .modal-header {
+        padding: 14px 14px 12px;
+    }
+
+    #dossie-avatar {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    #dossie-nome {
+        font-size: 16px !important;
+    }
+
+    #dossie-meta {
+        font-size: 11px !important;
+        gap: 4px 6px !important;
+    }
+
+    .dossier-tabs-wrap::after {
+        opacity: 1;
+    }
+
+    .modal-box-dossier .dossier-tabs {
+        padding: 0 12px;
+        gap: 4px;
+    }
+
+    .modal-box-dossier .dossier-tab-btn {
+        padding: 10px 12px;
+        font-size: 12.5px;
+        gap: 6px;
+    }
+
+    .modal-box-dossier .dossier-scroll-body {
+        padding: 14px;
+    }
+
+    .modal-box-dossier .modal-footer {
+        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+    }
+
+    .dossier-btn-fechar {
+        width: 100%;
+        min-height: 42px;
+        justify-content: center;
+    }
+
+    .dossier-quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        gap: 8px;
+    }
+
+    .dossier-resp-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .dossier-eval-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dossier-contract-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .dossier-perf-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .dossier-desktop-table {
+        display: none;
+    }
+
+    .dossier-mobile-list {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .dossier-actions-row .btn {
+        flex: 1 1 100%;
+        min-height: 40px;
+        justify-content: center;
+    }
 }
 
 /* ==========================================================================
