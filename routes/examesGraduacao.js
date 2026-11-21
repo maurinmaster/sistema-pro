@@ -56,9 +56,10 @@ router.get('/eventos', authenticateToken, authorizeRoles('admin', 'recepcao', 'p
                 eg.status,
                 eg.created_at,
                 COUNT(c.id) AS total_convidados,
-                SUM(CASE WHEN c.status IN ('aceito', 'pago') THEN 1 ELSE 0 END) AS total_confirmados,
-                SUM(CASE WHEN c.status = 'pago' THEN 1 ELSE 0 END) AS total_pagos,
-                SUM(CASE WHEN c.status = 'recusado' THEN 1 ELSE 0 END) AS total_recusados,
+                COALESCE(SUM(CASE WHEN c.status = 'pago' THEN 1 ELSE 0 END), 0) AS total_confirmados,
+                COALESCE(SUM(CASE WHEN c.status = 'pago' THEN 1 ELSE 0 END), 0) AS total_pagos,
+                COALESCE(SUM(CASE WHEN c.status = 'aceito' THEN 1 ELSE 0 END), 0) AS total_aguardando_pagamento,
+                COALESCE(SUM(CASE WHEN c.status = 'recusado' THEN 1 ELSE 0 END), 0) AS total_recusados,
                 COALESCE(SUM(CASE WHEN c.status = 'pago' THEN c.valor ELSE 0 END), 0.00) AS total_arrecadado
             FROM eventos_graduacao eg
             LEFT JOIN modalidades m ON m.id = eg.modalidade_id
@@ -154,7 +155,8 @@ router.get('/eventos/:id', authenticateToken, authorizeRoles('admin', 'recepcao'
         evento.convites = convites;
         evento.total_convidados = convites.length;
         evento.total_pagos = convites.filter(c => c.convite_status === 'pago').length;
-        evento.total_confirmados = convites.filter(c => ['aceito', 'pago'].includes(c.convite_status)).length;
+        evento.total_aguardando_pagamento = convites.filter(c => c.convite_status === 'aceito').length;
+        evento.total_confirmados = evento.total_pagos;
         evento.total_arrecadado = convites
             .filter(c => c.convite_status === 'pago')
             .reduce((acc, c) => acc + parseFloat(c.valor || 0), 0);
@@ -658,6 +660,7 @@ router.post('/convites/:conviteId/confirmar-manual', authenticateToken, authoriz
             SET status = 'pago',
                 data_pagamento = NOW(),
                 data_resposta = COALESCE(data_resposta, NOW()),
+                asaas_billing_type = 'MANUAL',
                 asaas_status = 'CONFIRMED'
             WHERE id = ?
         `, [conviteId]);

@@ -59,9 +59,17 @@ const ExamesModule = {
 
     async loadAll() {
         try {
+            const hadSelected = Boolean(this.eventoSelecionadoId);
             await this.loadEventos();
-            if (this.eventoSelecionadoId) {
-                await this.carregarDetalhesEvento(this.eventoSelecionadoId);
+            if (hadSelected && this.eventoSelecionadoId) {
+                const eventoAtual = this.eventos.find(e => e.id === this.eventoSelecionadoId);
+                if (eventoAtual) {
+                    await this.syncModalidadeFilterVisibility(eventoAtual);
+                    await Promise.all([
+                        this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                        this.carregarAlunosAptos()
+                    ]);
+                }
             }
         } catch (err) {
             console.error('Erro ao carregar dados de exames:', err);
@@ -93,7 +101,7 @@ const ExamesModule = {
     renderKPIs() {
         const abertos = this.eventos.filter(e => e.status === 'aberto').length;
         const totalConvidados = this.eventos.reduce((acc, e) => acc + (parseInt(e.total_convidados, 10) || 0), 0);
-        const totalConfirmados = this.eventos.reduce((acc, e) => acc + (parseInt(e.total_confirmados, 10) || 0), 0);
+        const totalConfirmados = this.eventos.reduce((acc, e) => acc + (parseInt(e.total_pagos !== undefined ? e.total_pagos : e.total_confirmados, 10) || 0), 0);
         const totalArrecadado = this.eventos.reduce((acc, e) => acc + (parseFloat(e.total_arrecadado) || 0), 0);
 
         const elAbertos = document.getElementById('kpi-exames-abertos');
@@ -160,7 +168,7 @@ const ExamesModule = {
             const isSelected = e.id === this.eventoSelecionadoId;
             const dataFmt = this.formatarData(e.data_evento);
             const taxaFmt = parseFloat(e.taxa_inscricao || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-            const totalPagos = parseInt(e.total_pagos, 10) || 0;
+            const totalPagos = parseInt(e.total_pagos !== undefined ? e.total_pagos : e.total_confirmados, 10) || 0;
             const totalConv = parseInt(e.total_convidados, 10) || 0;
 
             const statusBadges = {
@@ -220,8 +228,27 @@ const ExamesModule = {
         this.eventoSelecionadoId = eventoId;
         this.renderEventosCards();
         this.renderEventosSelect();
+        const eventoAtual = this.eventos.find(e => e.id === eventoId);
+        await this.syncModalidadeFilterVisibility(eventoAtual);
         await this.carregarDetalhesEvento(eventoId);
         await this.carregarAlunosAptos();
+    },
+
+    async syncModalidadeFilterVisibility(evento) {
+        const wrap = document.getElementById('filtro-aptos-modalidade-wrap');
+        const select = document.getElementById('filtro-aptos-modalidade');
+        if (!wrap || !select) return;
+
+        if (evento && evento.modalidade_id) {
+            wrap.style.display = 'none';
+            select.value = '';
+        } else {
+            wrap.style.display = 'flex';
+            if (select.options.length <= 1) {
+                const selectedVal = select.value ? parseInt(select.value, 10) : null;
+                await this.carregarModalidadesSelect('filtro-aptos-modalidade', selectedVal);
+            }
+        }
     },
 
     async carregarDetalhesEvento(eventoId) {
@@ -262,12 +289,17 @@ const ExamesModule = {
 
         try {
             let url = `/exames/alunos-aptos?evento_id=${this.eventoSelecionadoId || ''}`;
-            const modFiltro = document.getElementById('filtro-aptos-modalidade')?.value;
+            const eventoAtual = this.eventos.find(e => e.id === this.eventoSelecionadoId);
+            const modFiltro = (eventoAtual && eventoAtual.modalidade_id)
+                ? String(eventoAtual.modalidade_id)
+                : (document.getElementById('filtro-aptos-modalidade')?.value || '');
             if (modFiltro) url += `&modalidade_id=${encodeURIComponent(modFiltro)}`;
 
             const res = await API.get(url);
             this.alunosAptos = res.data || [];
             this.alunosSelecionadosIds.clear();
+            const chkAll = document.getElementById('check-todos-aptos');
+            if (chkAll) chkAll.checked = false;
 
             const badgeCount = document.getElementById('badge-aptos-count');
             if (badgeCount) badgeCount.textContent = `${this.alunosAptos.length} aptos`;
@@ -289,9 +321,16 @@ const ExamesModule = {
                 const fotoUrl = UI.sanitizeUrl(al.foto_perfil_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(al.nome_completo)}&background=0284c7&color=fff`;
                 const isJaConvidado = Boolean(al.ja_convidado);
                 const isSelected = this.alunosSelecionadosIds.has(al.aluno_id);
+                const conviteStatusRaw = String(al.convite_status || 'convidado').toLowerCase();
+                const conviteStatusSafe = UI.escapeHtml(conviteStatusRaw);
+                const conviteBadgeClass = conviteStatusRaw === 'pago'
+                    ? 'exame-status-pago'
+                    : (conviteStatusRaw === 'aceito'
+                        ? 'exame-status-aceito'
+                        : (conviteStatusRaw === 'recusado' ? 'exame-status-recusado' : 'exame-status-convidado'));
 
                 return `
-                    <tr style="${isJaConvidado ? 'opacity: 0.65; background: rgba(255,255,255,0.01);' : ''}">
+                    <tr style="${isJaConvidado ? 'opacity: 0.85; background: rgba(255,255,255,0.01);' : ''}">
                         <td style="width: 40px; text-align: center;">
                             <input type="checkbox" class="check-aluno-apto" data-aluno-id="${al.aluno_id}" 
                                    ${isJaConvidado ? 'disabled title="Já convidado para este exame"' : ''}
@@ -332,7 +371,7 @@ const ExamesModule = {
                         </td>
                         <td>
                             ${isJaConvidado 
-                                ? `<span class="status-badge status-active" style="font-size: 11px;">✓ Convidado (${al.convite_status})</span>` 
+                                ? `<span class="status-badge ${conviteBadgeClass}" style="font-size: 11px;">✓ Convidado (${conviteStatusSafe})</span>` 
                                 : `<button type="button" class="btn btn-secondary btn-sm" onclick="ExamesModule.convidarAlunoIndividual(${al.aluno_id})">Convidar</button>`}
                         </td>
                     </tr>
@@ -376,12 +415,14 @@ const ExamesModule = {
         const count = this.alunosSelecionadosIds.size;
         if (btn) {
             btn.disabled = count === 0;
+            btn.classList.toggle('is-disabled', count === 0);
+            const labelCount = count === 1 ? '1 selecionado' : `${count} selecionados`;
             btn.innerHTML = `
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <line x1="22" y1="2" x2="11" y2="13" />
                     <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
-                <span>Enviar Convite de Exame (${count} selecionados)</span>
+                <span>Enviar Convite de Exame (${labelCount})</span>
             `;
         }
     },
@@ -468,17 +509,22 @@ const ExamesModule = {
             const valorFmt = parseFloat(c.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             const dataConvFmt = this.formatarData(c.data_convite);
 
-            let statusBadge = '<span class="status-badge status-pending">Convidado</span>';
+            let statusBadge = '<span class="status-badge exame-status-convidado">Convidado</span>';
             if (c.convite_status === 'pago') {
-                statusBadge = '<span class="status-badge" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">✓ Pago (Online)</span>';
+                const isPagoManual = c.asaas_billing_type === 'MANUAL' || (!c.asaas_payment_id && !c.asaas_invoice_url);
+                const pagoLabel = isPagoManual ? '✓ Pago (Manual)' : '✓ Pago (Online)';
+                statusBadge = `<span class="status-badge exame-status-pago">${pagoLabel}</span>`;
             } else if (c.convite_status === 'aceito') {
-                statusBadge = '<span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">Aceito (Aguardando Pgto)</span>';
+                statusBadge = '<span class="status-badge exame-status-aceito">Aceito (Aguardando Pgto)</span>';
             } else if (c.convite_status === 'recusado') {
+                const motivoSafe = c.motivo_recusa ? UI.escapeHtml(c.motivo_recusa) : '';
                 statusBadge = `
-                    <span class="status-badge status-danger" title="${UI.escapeHtml(c.motivo_recusa || 'Desistência informada pelo atleta')}">
-                        Recusado pelo Aluno
-                    </span>
-                    ${c.motivo_recusa ? `<div style="font-size: 10.5px; color: #ef4444; margin-top: 3px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${UI.escapeHtml(c.motivo_recusa)}">Motivo: ${UI.escapeHtml(c.motivo_recusa)}</div>` : ''}
+                    <div class="exame-status-cell">
+                        <span class="status-badge exame-status-recusado" title="${motivoSafe || 'Desistência informada pelo atleta'}">
+                            Recusado pelo Aluno
+                        </span>
+                        ${motivoSafe ? `<span class="exame-recusa-motivo" title="Motivo: ${motivoSafe}">Motivo: ${motivoSafe}</span>` : ''}
+                    </div>
                 `;
             }
 
@@ -487,11 +533,17 @@ const ExamesModule = {
             if (c.asaas_invoice_url) {
                 asaasAction = `
                     <div style="display: flex; gap: 6px; align-items: center;">
-                        <a href="${UI.sanitizeUrl(c.asaas_invoice_url)}" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="Abrir Fatura Digital">
+                        <a href="${UI.sanitizeUrl(c.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="Abrir Fatura Digital">
                             🔗 Fatura Digital
                         </a>
                     </div>
                 `;
+            } else if (c.convite_status === 'pago') {
+                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Quitado manualmente</span>';
+            } else if (c.convite_status === 'recusado') {
+                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">—</span>';
+            } else if (c.convite_status === 'aceito') {
+                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Aguardando fatura</span>';
             }
 
             let actionBtn = '';
@@ -505,13 +557,13 @@ const ExamesModule = {
                 `;
             } else if (c.convite_status !== 'pago') {
                 actionBtn = `
-                    <button type="button" class="btn btn-secondary btn-sm" style="color: #10b981; border-color: rgba(16, 185, 129, 0.3);" 
+                    <button type="button" class="btn btn-sm btn-exame-baixa" 
                             onclick="ExamesModule.confirmarPagamentoManual(${c.convite_id})" title="Confirmar pagamento em dinheiro/balcão">
                         Baixa Manual
                     </button>
                 `;
             } else {
-                actionBtn = `<span style="font-size: 11px; color: #10b981; font-weight: 700;">Inscrição Confirmada</span>`;
+                actionBtn = `<span class="exame-action-done" title="Pagamento já confirmado" aria-label="Inscrição quitada">—</span>`;
             }
 
             return `
