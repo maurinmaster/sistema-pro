@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=4.1">
+    <link rel="stylesheet" href="/css/style.css?v=4.2">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.1">
 </head>
@@ -585,14 +585,23 @@
                                 <p style="margin: 0; font-size: 13px; color: var(--text-muted);">Acompanhe o
                                     faturamento, pagamentos recebidos e pendências financeiras</p>
                             </div>
-                            <button class="btn btn-primary" id="btn-nova-fatura">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <line x1="12" y1="5" x2="12" y2="19" />
-                                    <line x1="5" y1="12" x2="19" y2="12" />
-                                </svg>
-                                <span>+ Lançar Fatura Avulsa</span>
-                            </button>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button type="button" class="btn btn-secondary btn-icon-refresh" id="btn-sincronizar-faturas-asaas" title="Sincronizar pagamentos com o Gateway Asaas" aria-label="Sincronizar pagamentos com o Gateway Asaas">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                        <polyline points="23 4 23 10 17 10" />
+                                        <polyline points="1 20 1 14 7 14" />
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                    </svg>
+                                </button>
+                                <button class="btn btn-primary" id="btn-nova-fatura">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                    <span>+ Lançar Fatura Avulsa</span>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- KPIs Financeiros da Competência -->
@@ -885,7 +894,7 @@
                             </div>
                             <div class="stat-value" id="kpi-exames-arrecadado" style="color: #10b981;">R$ 0,00</div>
                             <div class="stat-meta">
-                                <span>Via Pagamentos Online (Pix / Fatura)</span>
+                                <span>Online (Gateway) e Baixas Manuais</span>
                             </div>
                         </div>
                     </div>
@@ -3177,14 +3186,14 @@
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js?v=1.1"></script>
-    <script src="/js/aluno-detalhes.js?v=1.1"></script>
+    <script src="/js/aluno-detalhes.js?v=1.2"></script>
     <script src="/js/alunos.js?v=5.3"></script>
     <script src="/js/dashboard.js?v=1.2"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js"></script>
-    <script src="/js/planos.js?v=4.9"></script>
+    <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.5"></script>
-    <script src="/js/exames.js?v=3.8"></script>
+    <script src="/js/exames.js?v=3.9"></script>
     <script src="/js/mensagens-config.js?v=1.1"></script>
     <script src="/js/app.js?v=4.0"></script>
 </body>

@@ -3760,6 +3760,11 @@ const PainelAlunoApp = {
                         <input type="text" id="input-pix-copia-cola" readonly value="${this.escapeHtml(pixCopiaCola)}"
                                style="width: 100%; box-sizing: border-box; padding: 8px 10px; font-size: 11px; font-family: monospace; background: #12151C; border: 1px solid #2D3545; border-radius: 8px; color: #94a3b8; margin-bottom: 10px; text-align: center;">
 
+                        <button type="button" id="btn-verificar-pix-exame-${Number(convite.convite_id)}" onclick="PainelAlunoApp.verificarPagamentoExame(${Number(convite.convite_id)})"
+                                style="width: 100%; padding: 10px 14px; font-size: 13px; font-weight: 700; background: rgba(16, 185, 129, 0.14); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.38); border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px;">
+                            <span>✓ Já paguei — Verificar agora</span>
+                        </button>
+
                         ${this.sanitizeUrl(convite.asaas_invoice_url) ? `
                             <a href="${this.sanitizeUrl(convite.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer"
                                style="font-size: 12px; color: #38bdf8; text-decoration: underline; display: inline-block;">
@@ -3990,6 +3995,48 @@ const PainelAlunoApp = {
         } catch (err) {
             console.error('Erro ao simular pagamento:', err);
             alert('Falha na simulação: ' + err.message);
+        }
+    },
+
+    async verificarPagamentoExame(conviteId) {
+        const btn = document.getElementById(`btn-verificar-pix-exame-${Number(conviteId)}`);
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Verificando no gateway...';
+        }
+
+        try {
+            const headers = { 'Content-Type': 'application/json' };
+            if (this.authToken && this.authToken !== 'null') {
+                headers['Authorization'] = `Bearer ${this.authToken}`;
+            }
+
+            const res = await fetch(`/api/aluno/exames/${Number(conviteId)}/verificar-asaas`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ aluno_id: this.currentAlunoId })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erro ao verificar pagamento do exame.');
+
+            if (data.pago) {
+                this.showToast(data.message || 'Pagamento confirmado com sucesso!', 'success');
+                await this.loadMeusExames();
+                this.abrirModalExame(conviteId);
+                await this.init();
+            } else {
+                this.showToast(data.message || 'Aguardando compensação do banco.', 'info');
+            }
+        } catch (err) {
+            console.error('Erro ao verificar pagamento do exame:', err);
+            this.showToast(err.message || 'Falha ao consultar pagamento.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
         }
     },
 

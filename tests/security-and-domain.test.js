@@ -2024,6 +2024,92 @@ test('Gateway Asaas: Extração estruturada de falhas e sanitização de dados s
     assert.equal(sanitized.errors[0].code, 'invalid_cpfCnpj');
 });
 
+test('Conciliação de Pagamentos: Classificação Gateway vs Manual/Avulso e Referências Externas', () => {
+    const rec = require('../services/paymentReconciliationService');
+
+    // Mapeamento válido para ENUM metodo_pagamento da tabela faturas
+    assert.equal(rec.mapAsaasBillingTypeToMetodo('CREDIT_CARD'), 'cartao_credito');
+    assert.equal(rec.mapAsaasBillingTypeToMetodo('DEBIT_CARD'), 'cartao_debito');
+    assert.equal(rec.mapAsaasBillingTypeToMetodo('BOLETO'), 'boleto');
+    assert.equal(rec.mapAsaasBillingTypeToMetodo('PIX'), 'pix');
+    assert.equal(rec.mapAsaasBillingTypeToMetodo('RECEIVED_IN_CASH'), 'dinheiro');
+    assert.equal(rec.mapAsaasBillingTypeToMetodo('UNDEFINED'), 'pix');
+
+    // Status online vs manual
+    assert.equal(rec.isAsaasStatusPaidOnline('RECEIVED'), true);
+    assert.equal(rec.isAsaasStatusPaidOnline('CONFIRMED'), true);
+    assert.equal(rec.isAsaasStatusPaidOnline('RECEIVED_MANUALLY'), false);
+    assert.equal(rec.isAsaasStatusPaidOnline('RECEIVED_IN_CASH'), false);
+    assert.equal(rec.isAsaasStatusManual('RECEIVED_MANUALLY'), true);
+    assert.equal(rec.isAsaasStatusManual('RECEIVED_IN_CASH'), true);
+
+    // Extração segura de externalReference
+    assert.deepEqual(rec.parseExternalReference('fatura_42_aluno_7'), { tipo: 'fatura', id: 42, alunoId: 7 });
+    assert.deepEqual(rec.parseExternalReference('convite_19_aluno_3'), { tipo: 'convite', id: 19, alunoId: 3 });
+    assert.equal(rec.parseExternalReference('invalid_ref'), null);
+
+    // Classificação de exames: baixa manual antiga ambígua vs pagamento online real
+    const exameLegacyManual = rec.classifyConvitePaymentOrigin({
+        status: 'pago',
+        asaas_payment_id: 'pay_123456',
+        asaas_invoice_url: 'https://sandbox.asaas.com/i/pay_123456',
+        asaas_billing_type: 'PIX',
+        asaas_status: 'CONFIRMED'
+    });
+    assert.equal(exameLegacyManual.origem, 'manual');
+    assert.equal(exameLegacyManual.badgeText, '✓ Pago (Manual)');
+
+    const examePixOnline = rec.classifyConvitePaymentOrigin({
+        status: 'pago',
+        asaas_payment_id: 'pay_123456',
+        asaas_billing_type: 'PIX',
+        asaas_status: 'RECEIVED'
+    });
+    assert.equal(examePixOnline.origem, 'online');
+    assert.equal(examePixOnline.badgeText, '✓ Pago (Online)');
+
+    const exameCartaoOnline = rec.classifyConvitePaymentOrigin({
+        status: 'pago',
+        asaas_payment_id: 'pay_999',
+        asaas_billing_type: 'CREDIT_CARD',
+        asaas_status: 'CONFIRMED'
+    });
+    assert.equal(exameCartaoOnline.origem, 'online');
+
+    const exameManualNovo = rec.classifyConvitePaymentOrigin({
+        status: 'pago',
+        asaas_payment_id: 'pay_123456',
+        asaas_billing_type: 'MANUAL',
+        asaas_status: 'RECEIVED_MANUALLY'
+    });
+    assert.equal(exameManualNovo.origem, 'manual');
+
+    // Classificação de faturas: avulsa paga manualmente mesmo com pix/cartão vs gateway
+    const faturaManualPix = rec.classifyFaturaPaymentOrigin({
+        status: 'pago',
+        metodo_pagamento: 'pix',
+        asaas_payment_id: 'pay_fat_1',
+        asaas_status: 'RECEIVED_MANUALLY'
+    });
+    assert.equal(faturaManualPix.origem, 'manual');
+
+    const faturaOnlinePix = rec.classifyFaturaPaymentOrigin({
+        status: 'pago',
+        metodo_pagamento: 'pix',
+        asaas_payment_id: 'pay_fat_2',
+        asaas_status: 'RECEIVED'
+    });
+    assert.equal(faturaOnlinePix.origem, 'online');
+
+    const faturaPagaComStatusAsaasPendente = rec.classifyFaturaPaymentOrigin({
+        status: 'pago',
+        metodo_pagamento: 'pix',
+        asaas_payment_id: 'pay_fat_3',
+        asaas_status: 'PENDING'
+    });
+    assert.equal(faturaPagaComStatusAsaasPendente.origem, 'manual');
+});
+
 test.after(async () => {
     try {
         await pool.end();

@@ -149,6 +149,32 @@ app.use('/api/whatsapp', whatsappRoutes);
 const mensagensConfigRoutes = require('./routes/mensagensConfig');
 app.use('/api/mensagens-config', mensagensConfigRoutes);
 
+// Webhook unificado Asaas (processa pagamentos de Faturas e Exames em uma única URL)
+app.post('/api/webhook/asaas', async (req, res) => {
+    try {
+        const asaasService = require('./services/asaasService');
+        const paymentReconciliationService = require('./services/paymentReconciliationService');
+
+        if (!asaasService.isValidWebhookToken(req.headers['asaas-access-token'])) {
+            return res.status(401).json({ success: false, error: 'Token de webhook inválido.' });
+        }
+
+        const { event, payment } = req.body || {};
+        console.log(`[Webhook Asaas Unificado] Evento recebido: ${event} para cobrança ${payment?.id}`);
+
+        const result = await paymentReconciliationService.processAsaasWebhookEvent({
+            event,
+            payment,
+            origemRota: '/api/webhook/asaas'
+        });
+
+        res.status(200).json({ received: true, ...result });
+    } catch (err) {
+        console.error('[Webhook Asaas Unificado] Erro:', err.message);
+        res.status(500).json({ error: 'Erro interno ao processar webhook' });
+    }
+});
+
 // Healthcheck
 app.get('/api/health', (req, res) => {
     res.json({

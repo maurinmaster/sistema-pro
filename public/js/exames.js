@@ -51,9 +51,19 @@ const ExamesModule = {
             this.enviarConvitesSelecionados();
         });
 
-        // Botão Atualizar Listas
-        document.getElementById('btn-recarregar-exames')?.addEventListener('click', () => {
-            this.loadAll();
+        // Botão Atualizar Listas (concilia com Asaas antes de recarregar)
+        document.getElementById('btn-recarregar-exames')?.addEventListener('click', async () => {
+            if (this.eventoSelecionadoId) {
+                try {
+                    const syncRes = await API.post(`/exames/eventos/${this.eventoSelecionadoId}/sincronizar-asaas`, {});
+                    if (syncRes && (syncRes.atualizados_online > 0 || syncRes.ajustados_manual > 0)) {
+                        UI.showToast(syncRes.message, 'success');
+                    }
+                } catch (syncErr) {
+                    console.warn('Falha ao conciliar exame no Asaas:', syncErr.message);
+                }
+            }
+            await this.loadAll();
         });
     },
 
@@ -253,7 +263,7 @@ const ExamesModule = {
 
     async carregarDetalhesEvento(eventoId) {
         try {
-            const res = await API.get(`/exames/eventos/${eventoId}`);
+            const res = await API.get(`/exames/eventos/${eventoId}?sync_asaas=1`);
             const evento = res.data;
 
             const tituloEl = document.getElementById('detalhe-evento-titulo');
@@ -272,6 +282,10 @@ const ExamesModule = {
 
             const painelDetalhes = document.getElementById('painel-evento-detalhes');
             if (painelDetalhes) painelDetalhes.style.display = 'block';
+
+            if (evento.sync_atualizou) {
+                await this.loadEventos();
+            }
 
         } catch (err) {
             console.error('Erro ao carregar detalhes do evento:', err);
@@ -510,8 +524,20 @@ const ExamesModule = {
             const dataConvFmt = this.formatarData(c.data_convite);
 
             let statusBadge = '<span class="status-badge exame-status-convidado">Convidado</span>';
+            const statusAsaasUpper = String(c.asaas_status || '').toUpperCase();
+            const billingUpper = String(c.asaas_billing_type || '').toUpperCase();
+            const isLegacyManual = statusAsaasUpper === 'CONFIRMED' && billingUpper !== 'CREDIT_CARD';
+            const isPagoManual = c.origem_pagamento
+                ? c.origem_pagamento === 'manual'
+                : (
+                    billingUpper === 'MANUAL' ||
+                    ['RECEIVED_MANUALLY', 'MANUAL', 'RECEIVED_IN_CASH'].includes(statusAsaasUpper) ||
+                    (!c.asaas_payment_id && !c.asaas_invoice_url) ||
+                    isLegacyManual ||
+                    ['PENDING', 'OVERDUE', ''].includes(statusAsaasUpper)
+                );
+
             if (c.convite_status === 'pago') {
-                const isPagoManual = c.asaas_billing_type === 'MANUAL' || (!c.asaas_payment_id && !c.asaas_invoice_url);
                 const pagoLabel = isPagoManual ? '✓ Pago (Manual)' : '✓ Pago (Online)';
                 statusBadge = `<span class="status-badge exame-status-pago">${pagoLabel}</span>`;
             } else if (c.convite_status === 'aceito') {
@@ -530,7 +556,9 @@ const ExamesModule = {
 
             // Ações e Cobrança Online
             let asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Aguardando aceite</span>';
-            if (c.asaas_invoice_url) {
+            if (c.convite_status === 'pago' && isPagoManual) {
+                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Quitado manualmente</span>';
+            } else if (c.asaas_invoice_url) {
                 asaasAction = `
                     <div style="display: flex; gap: 6px; align-items: center;">
                         <a href="${UI.sanitizeUrl(c.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="Abrir Fatura Digital">
@@ -539,7 +567,7 @@ const ExamesModule = {
                     </div>
                 `;
             } else if (c.convite_status === 'pago') {
-                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Quitado manualmente</span>';
+                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Pago via Gateway</span>';
             } else if (c.convite_status === 'recusado') {
                 asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">—</span>';
             } else if (c.convite_status === 'aceito') {

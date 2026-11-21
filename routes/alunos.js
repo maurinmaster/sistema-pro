@@ -402,7 +402,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         // 4. Histórico Financeiro / Faturas
-        const [faturas] = await pool.query(`
+        const { classifyFaturaPaymentOrigin } = require('../services/paymentReconciliationService');
+        const [faturasRows] = await pool.query(`
             SELECT 
                 f.id,
                 f.competencia,
@@ -414,11 +415,23 @@ router.get('/:id', authenticateToken, async (req, res) => {
                 f.data_pagamento,
                 f.metodo_pagamento,
                 f.status,
+                f.asaas_payment_id,
+                f.asaas_status,
+                f.asaas_invoice_url,
                 f.observacoes
             FROM faturas f
             WHERE f.aluno_id = ?
             ORDER BY f.data_vencimento DESC
         `, [id]);
+
+        const faturas = faturasRows.map((f) => {
+            const origin = classifyFaturaPaymentOrigin(f);
+            return {
+                ...f,
+                origem_pagamento: origin.origem,
+                origem_label: origin.label
+            };
+        });
 
         // 5. Histórico de Check-ins / Presenças (últimos 30)
         const [checkins] = await pool.query(`

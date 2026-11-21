@@ -54,6 +54,12 @@ const PlanosModule = {
             btnNovaFatura.addEventListener('click', () => this.openModalNovaFatura());
         }
 
+        // Botão Sincronizar Pagamentos com Gateway Asaas
+        const btnSincronizarFaturas = document.getElementById('btn-sincronizar-faturas-asaas');
+        if (btnSincronizarFaturas) {
+            btnSincronizarFaturas.addEventListener('click', () => this.sincronizarFaturasAsaas());
+        }
+
         // Formulário Baixa de Pagamento
         const formBaixa = document.getElementById('form-fatura-baixa');
         if (formBaixa) {
@@ -521,14 +527,25 @@ const PlanosModule = {
                                     <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
                                     Baixar
                                 </button>
+                                ${f.asaas_payment_id ? (
+                                    f.asaas_invoice_url
+                                        ? `<a href="${UI.sanitizeUrl(f.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer" class="fatura-gateway-pending" title="Cobrança digital aberta no Asaas (${UI.escapeHtml(f.asaas_payment_id)})">Asaas</a>`
+                                        : `<span class="fatura-gateway-pending" title="Cobrança digital aberta no Asaas (${UI.escapeHtml(f.asaas_payment_id)})">Asaas</span>`
+                                ) : ''}
                                 <button class="btn btn-secondary btn-sm" onclick="PlanosModule.excluirFatura(${safeFatId})" title="Cancelar / Excluir Fatura">
                                     &times;
                                 </button>
                             ` : `
-                                <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 600; display: flex; align-items: center; gap: 4px;">
-                                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                                    ${UI.escapeHtml(f.metodo_pagamento || 'Quitado')}
-                                </span>
+                                ${(() => {
+                                    const metodoLabel = String(f.metodo_pagamento || 'Quitado').replace(/_/g, ' ');
+                                    const isGateway = f.origem_pagamento === 'online';
+                                    const origemClass = isGateway ? 'origem-online' : 'origem-manual';
+                                    const origemNome = isGateway ? 'Gateway' : 'Manual';
+                                    const tooltip = isGateway
+                                        ? 'Pagamento confirmado automaticamente pelo Gateway Asaas'
+                                        : 'Baixa manual registrada pela equipe';
+                                    return `<span class="fatura-origem-badge ${origemClass}" title="${tooltip}">${origemNome} • ${UI.escapeHtml(metodoLabel)}</span>`;
+                                })()}
                             `}
                         </div>
                     </td>
@@ -792,6 +809,30 @@ const PlanosModule = {
             await this.loadLogsFalhas();
         } catch (err) {
             UI.showToast(err.message || 'Erro ao limpar logs.', 'error');
+        }
+    },
+
+    async sincronizarFaturasAsaas() {
+        const btn = document.getElementById('btn-sincronizar-faturas-asaas');
+        const originalHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div>`;
+        }
+
+        try {
+            const mes = document.getElementById('filtro-fatura-mes')?.value || null;
+            const res = await API.post('/faturas/sincronizar-asaas', { mes });
+            const mudou = (res.atualizados_online || 0) + (res.ajustados_manual || 0);
+            UI.showToast(res.message || 'Sincronização concluída.', mudou > 0 ? 'success' : 'info');
+            await this.loadFaturas();
+        } catch (err) {
+            UI.showToast('Erro ao sincronizar com o Asaas: ' + (err.message || 'falha inesperada'), 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
     }
 };

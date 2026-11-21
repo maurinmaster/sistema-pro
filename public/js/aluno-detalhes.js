@@ -478,12 +478,19 @@ const AlunoDetalhesModule = {
                                 </td>
                                 <td>
                                     ${f.status !== 'pago' && f.status !== 'cancelado' ? `
-                                        <button class="btn btn-success" style="padding: 6px 12px; font-size: 11px;" onclick="AlunoDetalhesModule.darBaixaFatura(${Number(f.id)})">
-                                            Confirmar Pagamento
-                                        </button>
+                                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                            <button class="btn btn-success" style="padding: 6px 12px; font-size: 11px;" onclick="AlunoDetalhesModule.darBaixaFatura(${Number(f.id)})">
+                                                Confirmar Pagamento
+                                            </button>
+                                            ${f.asaas_payment_id ? `<span class="fatura-gateway-pending" title="Cobrança aberta no gateway Asaas">Asaas</span>` : ''}
+                                        </div>
+                                    ` : (f.status === 'pago' ? `
+                                        <span class="fatura-origem-badge ${f.origem_pagamento === 'online' ? 'origem-online' : 'origem-manual'}">
+                                            ${f.origem_pagamento === 'online' ? 'Gateway' : 'Manual'} • ${UI.escapeHtml(String(f.metodo_pagamento || 'Pago').replace(/_/g, ' '))}
+                                        </span>
                                     ` : `
-                                        <span style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(f.metodo_pagamento || (f.status === 'cancelado' ? 'Cancelada' : 'Pago'))}</span>
-                                    `}
+                                        <span style="font-size: 11px; color: var(--text-muted);">Cancelada</span>
+                                    `)}
                                 </td>
                             </tr>
                         `).join('')}
@@ -505,11 +512,17 @@ const AlunoDetalhesModule = {
                         </div>
                         ${f.status !== 'pago' && f.status !== 'cancelado' ? `
                             <button class="btn btn-success btn-sm" style="width: 100%; min-height: 40px; justify-content: center;" onclick="AlunoDetalhesModule.darBaixaFatura(${Number(f.id)})">
-                                Confirmar Pagamento
+                                Confirmar Pagamento${f.asaas_payment_id ? ' (Asaas aberto)' : ''}
                             </button>
+                        ` : (f.status === 'pago' ? `
+                            <div style="font-size: 11.5px;">
+                                <span class="fatura-origem-badge ${f.origem_pagamento === 'online' ? 'origem-online' : 'origem-manual'}">
+                                    ${f.origem_pagamento === 'online' ? 'Gateway' : 'Manual'} • ${UI.escapeHtml(String(f.metodo_pagamento || 'Pago').replace(/_/g, ' '))}
+                                </span>
+                            </div>
                         ` : `
-                            <div style="font-size: 11.5px; color: var(--text-muted);">Forma: ${UI.escapeHtml(f.metodo_pagamento || (f.status === 'cancelado' ? 'Cancelada' : 'Pago'))}</div>
-                        `}
+                            <div style="font-size: 11.5px; color: var(--text-muted);">Forma: Cancelada</div>
+                        `)}
                     </div>
                 `).join('')}
             </div>

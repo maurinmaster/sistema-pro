@@ -10,6 +10,7 @@ const jwt = require('jsonwebtoken');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const notificationConfigService = require('../services/notificationConfigService');
+const paymentReconciliationService = require('../services/paymentReconciliationService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -112,8 +113,18 @@ router.get('/eventos/:id', authenticateToken, authorizeRoles('admin', 'recepcao'
 
         const evento = eventos[0];
 
+        let syncAtualizou = false;
+        if (req.query.sync_asaas === '1') {
+            try {
+                const syncStats = await paymentReconciliationService.reconcileEventoConvites(eventoId);
+                syncAtualizou = (syncStats.atualizados_online + syncStats.ajustados_manual) > 0;
+            } catch (syncErr) {
+                console.warn('[Exames] Falha não-bloqueante ao conciliar Asaas:', syncErr.message);
+            }
+        }
+
         // Lista de convites vinculados a este evento
-        const [convites] = await pool.query(`
+        const [convitesRows] = await pool.query(`
             SELECT 
                 c.id AS convite_id,
                 c.evento_id,
@@ -152,7 +163,17 @@ router.get('/eventos/:id', authenticateToken, authorizeRoles('admin', 'recepcao'
             ORDER BY a.nome_completo ASC
         `, [eventoId]);
 
+        const convites = convitesRows.map((c) => {
+            const origin = paymentReconciliationService.classifyConvitePaymentOrigin(c);
+            return {
+                ...c,
+                origem_pagamento: origin.origem,
+                origem_label: origin.label
+            };
+        });
+
         evento.convites = convites;
+        evento.sync_atualizou = syncAtualizou;
         evento.total_convidados = convites.length;
         evento.total_pagos = convites.filter(c => c.convite_status === 'pago').length;
         evento.total_aguardando_pagamento = convites.filter(c => c.convite_status === 'aceito').length;
@@ -165,6 +186,32 @@ router.get('/eventos/:id', authenticateToken, authorizeRoles('admin', 'recepcao'
     } catch (err) {
         console.error('Erro ao consultar detalhes do evento:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao consultar detalhes do evento.' });
+    }
+});
+
+/**
+ * POST /api/exames/eventos/:id/sincronizar-asaas
+ * Sincroniza manualmente os convites do evento com a API do Asaas
+ */
+router.post('/eventos/:id/sincronizar-asaas', authenticateToken, authorizeRoles('admin', 'recepcao', 'professor'), async (req, res) => {
+    try {
+        const eventoId = parseInt(req.params.id, 10);
+        if (isNaN(eventoId)) {
+            return res.status(400).json({ success: false, error: 'ID do evento inválido.' });
+        }
+
+        const stats = await paymentReconciliationService.reconcileEventoConvites(eventoId);
+        const totalMudancas = stats.atualizados_online + stats.ajustados_manual;
+        res.json({
+            success: true,
+            ...stats,
+            message: totalMudancas > 0
+                ? `${totalMudancas} inscrição(ões) atualizada(s) após conciliação com o Gateway Asaas.`
+                : 'Conciliação concluída. Nenhuma divergência encontrada.'
+        });
+    } catch (err) {
+        console.error('Erro ao sincronizar exame com Asaas:', err);
+        res.status(500).json({ success: false, error: 'Erro ao sincronizar inscrições com o gateway.' });
     }
 });
 
@@ -655,45 +702,105 @@ router.post('/convites/:conviteId/confirmar-manual', authenticateToken, authoriz
             return res.status(400).json({ success: false, error: 'ID do convite inválido.' });
         }
 
-        const [result] = await pool.query(`
+        const [convRows] = await pool.query(`
+            SELECT c.id, c.aluno_id, c.status, c.valor, c.asaas_payment_id, c.asaas_billing_type, c.asaas_status,
+                   eg.titulo AS evento_titulo
+            FROM evento_graduacao_convites c
+            JOIN eventos_graduacao eg ON eg.id = c.evento_id
+            WHERE c.id = ?
+            LIMIT 1
+        `, [conviteId]);
+
+        if (convRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Convite não encontrado.' });
+        }
+
+        const convite = convRows[0];
+        const wasPaid = convite.status === 'pago';
+        let settlement = { alreadyPaidOnline: false, asaasClosedInCash: false };
+
+        if (convite.asaas_payment_id) {
+            settlement = await paymentReconciliationService.notifyAsaasManualSettlement(convite.asaas_payment_id, {
+                valor: convite.valor,
+                context: {
+                    alunoId: convite.aluno_id,
+                    referenciaTipo: 'convite_exame',
+                    referenciaId: convite.id,
+                    origemRota: '/api/exames/convites/:conviteId/confirmar-manual'
+                }
+            });
+        }
+
+        if (settlement.alreadyPaidOnline) {
+            const billingUpper = String(settlement.cobranca?.billingType || 'PIX').trim().toUpperCase();
+            const nextBilling = ['PIX', 'BOLETO', 'CREDIT_CARD', 'DEBIT_CARD'].includes(billingUpper) ? billingUpper : 'PIX';
+            const nextStatus = (String(settlement.cobranca?.status || '').toUpperCase() === 'CONFIRMED' && nextBilling === 'CREDIT_CARD')
+                ? 'CONFIRMED'
+                : 'RECEIVED';
+
+            await pool.query(`
+                UPDATE evento_graduacao_convites
+                SET status = 'pago',
+                    data_pagamento = COALESCE(data_pagamento, NOW()),
+                    data_resposta = COALESCE(data_resposta, NOW()),
+                    asaas_billing_type = ?,
+                    asaas_status = ?
+                WHERE id = ?
+            `, [nextBilling, nextStatus, conviteId]);
+
+            if (!wasPaid) {
+                const valorFmt = Number(convite.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                notificationConfigService.dispatchEvent('pagamento_exame', {
+                    alunoId: convite.aluno_id,
+                    variables: { evento: convite.evento_titulo, valor: valorFmt, metodo: `${nextBilling} (Asaas)` },
+                    detalhes: [
+                        { label: 'Exame', value: convite.evento_titulo },
+                        { label: 'Valor', value: valorFmt },
+                        { label: 'Método', value: `${nextBilling} (Asaas)` }
+                    ]
+                });
+            }
+
+            return res.json({
+                success: true,
+                origem_pagamento: 'online',
+                message: 'Este exame já constava como pago no gateway Asaas! Status sincronizado como Pago (Online).'
+            });
+        }
+
+        await pool.query(`
             UPDATE evento_graduacao_convites
             SET status = 'pago',
                 data_pagamento = NOW(),
                 data_resposta = COALESCE(data_resposta, NOW()),
                 asaas_billing_type = 'MANUAL',
-                asaas_status = 'CONFIRMED'
+                asaas_status = 'RECEIVED_MANUALLY'
             WHERE id = ?
         `, [conviteId]);
 
-        if (result.affectedRows === 0) {
-            return res.status(404).json({ success: false, error: 'Convite não encontrado.' });
-        }
-
-        try {
-            const [infoRows] = await pool.query(`
-                SELECT c.aluno_id, c.valor, eg.titulo AS evento_titulo
-                FROM evento_graduacao_convites c
-                JOIN eventos_graduacao eg ON eg.id = c.evento_id
-                WHERE c.id = ? LIMIT 1
-            `, [conviteId]);
-            if (infoRows.length > 0) {
-                const info = infoRows[0];
-                const valorFmt = Number(info.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        if (!wasPaid) {
+            try {
+                const valorFmt = Number(convite.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                 notificationConfigService.dispatchEvent('pagamento_exame', {
-                    alunoId: info.aluno_id,
-                    variables: { evento: info.evento_titulo, valor: valorFmt, metodo: 'Confirmação Manual' },
+                    alunoId: convite.aluno_id,
+                    variables: { evento: convite.evento_titulo, valor: valorFmt, metodo: 'Confirmação Manual' },
                     detalhes: [
-                        { label: 'Exame', value: info.evento_titulo },
+                        { label: 'Exame', value: convite.evento_titulo },
                         { label: 'Valor', value: valorFmt },
                         { label: 'Método', value: 'Confirmação Manual' }
                     ]
                 });
+            } catch (wErr) {
+                console.warn('[Exames] Falha ao notificar WhatsApp:', wErr.message);
             }
-        } catch (wErr) {
-            console.warn('[Exames] Falha ao notificar WhatsApp:', wErr.message);
         }
 
-        res.json({ success: true, message: 'Inscrição confirmada e marcada como paga com sucesso!' });
+        res.json({
+            success: true,
+            origem_pagamento: 'manual',
+            asaas_baixa_dinheiro: Boolean(settlement.asaasClosedInCash),
+            message: 'Inscrição confirmada manualmente como paga com sucesso!'
+        });
     } catch (err) {
         console.error('Erro ao confirmar pagamento manual:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao confirmar inscrição.' });
@@ -1224,6 +1331,70 @@ router.post('/exames/:conviteId/simular-pagamento', optionalAuth, async (req, re
 });
 
 /**
+ * POST /api/aluno/exames/:conviteId/verificar-asaas
+ * Permite ao aluno checar imediatamente no Asaas se o PIX/Boleto da taxa de exame compensou
+ */
+router.post('/exames/:conviteId/verificar-asaas', optionalAuth, async (req, res) => {
+    try {
+        let alunoId = null;
+        if (req.user) {
+            alunoId = req.user.aluno_id || (req.user.cargo === 'aluno' ? req.user.id : null);
+        }
+        if (!alunoId && req.body.aluno_id) {
+            alunoId = parseInt(req.body.aluno_id, 10);
+        }
+        if (!alunoId) alunoId = 1;
+
+        const conviteId = parseInt(req.params.conviteId, 10);
+        if (isNaN(conviteId)) {
+            return res.status(400).json({ success: false, error: 'ID do convite inválido.' });
+        }
+
+        const [rows] = await pool.query(`
+            SELECT c.*, eg.titulo AS evento_titulo
+            FROM evento_graduacao_convites c
+            JOIN eventos_graduacao eg ON eg.id = c.evento_id
+            WHERE c.id = ? AND c.aluno_id = ?
+            LIMIT 1
+        `, [conviteId, alunoId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Convite de exame não encontrado.' });
+        }
+
+        const convite = rows[0];
+        if (convite.status === 'pago') {
+            const origin = paymentReconciliationService.classifyConvitePaymentOrigin(convite);
+            return res.json({
+                success: true,
+                pago: true,
+                origem_pagamento: origin.origem,
+                message: 'Inscrição já confirmada como paga!'
+            });
+        }
+
+        if (!convite.asaas_payment_id) {
+            return res.status(400).json({ success: false, error: 'Nenhuma cobrança online gerada para este exame.' });
+        }
+
+        const outcome = await paymentReconciliationService.reconcileConviteWithAsaas(convite);
+        const isPaid = outcome === 'paid_online' || outcome === 'paid_manual';
+
+        return res.json({
+            success: true,
+            pago: isPaid,
+            origem_pagamento: outcome === 'paid_manual' ? 'manual' : (isPaid ? 'online' : null),
+            message: isPaid
+                ? 'Pagamento confirmado com sucesso! Sua vaga no exame está garantida.'
+                : 'Aguardando confirmação do pagamento pelo banco.'
+        });
+    } catch (err) {
+        console.error('Erro ao verificar pagamento do exame no Asaas:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao verificar pagamento do exame.' });
+    }
+});
+
+/**
  * POST /api/aluno/exames/:conviteId/pagar-cartao
  * Processa pagamento direto com cartão de crédito da taxa de exame de graduação
  */
@@ -1388,54 +1559,17 @@ router.post('/webhook-asaas', async (req, res) => {
         }
 
         const { event, payment } = req.body;
-        console.log(`[Webhook Asaas] Evento recebido: ${event} para cobrança ${payment?.id}`);
+        console.log(`[Webhook Asaas Exames] Evento recebido: ${event} para cobrança ${payment?.id}`);
 
-        if (payment && payment.id) {
-            const statusPago = ['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'].includes(event);
-            if (statusPago) {
-                await pool.query(`
-                    UPDATE evento_graduacao_convites
-                    SET status = 'pago',
-                        asaas_status = 'RECEIVED',
-                        data_pagamento = NOW()
-                    WHERE asaas_payment_id = ?
-                `, [payment.id]);
-                console.log(`[Webhook Asaas] Convite atualizado para PAGO com sucesso para paymentId: ${payment.id}`);
-                try {
-                    const [infoRows] = await pool.query(`
-                        SELECT c.aluno_id, c.valor, eg.titulo AS evento_titulo
-                        FROM evento_graduacao_convites c
-                        JOIN eventos_graduacao eg ON eg.id = c.evento_id
-                        WHERE c.asaas_payment_id = ? LIMIT 1
-                    `, [payment.id]);
-                    if (infoRows.length > 0) {
-                        const info = infoRows[0];
-                        const valorFmt = Number(info.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                        notificationConfigService.dispatchEvent('pagamento_exame', {
-                            alunoId: info.aluno_id,
-                            variables: { evento: info.evento_titulo, valor: valorFmt, metodo: String(payment.billingType || 'PIX / Asaas') },
-                            detalhes: [
-                                { label: 'Exame', value: info.evento_titulo },
-                                { label: 'Valor', value: valorFmt },
-                                { label: 'Método', value: String(payment.billingType || 'PIX / Asaas') }
-                            ]
-                        });
-                    }
-                } catch (wErr) {
-                    console.warn('[Webhook Asaas] Falha ao notificar WhatsApp:', wErr.message);
-                }
-            } else if (event === 'PAYMENT_OVERDUE') {
-                await pool.query(`
-                    UPDATE evento_graduacao_convites
-                    SET asaas_status = 'OVERDUE'
-                    WHERE asaas_payment_id = ?
-                `, [payment.id]);
-            }
-        }
+        const result = await paymentReconciliationService.processAsaasWebhookEvent({
+            event,
+            payment,
+            origemRota: '/api/exames/webhook-asaas'
+        });
 
-        res.json({ success: true, received: true });
+        res.json({ success: true, received: true, ...result });
     } catch (err) {
-        console.error('[Webhook Asaas] Erro no processamento:', err);
+        console.error('[Webhook Asaas Exames] Erro no processamento:', err);
         res.status(500).json({ error: 'Erro no processamento do webhook' });
     }
 });

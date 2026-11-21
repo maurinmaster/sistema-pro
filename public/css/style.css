@@ -1437,4 +1437,52 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     user-select: none;
 }
 
+/* Badges de Origem de Pagamento (Gateway Asaas vs Baixa Manual) */
+.fatura-origem-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.fatura-origem-badge.origem-online {
+    background: rgba(16, 185, 129, 0.14);
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.34);
+}
+
+.fatura-origem-badge.origem-manual {
+    background: rgba(245, 158, 11, 0.14);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.34);
+}
+
+.fatura-gateway-pending {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.fatura-gateway-pending:hover {
+    background: rgba(56, 189, 248, 0.22);
+    color: #e0f2fe;
+}
+
 

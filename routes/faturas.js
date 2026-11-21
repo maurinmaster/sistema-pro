@@ -4,12 +4,24 @@ const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const PaymentLogService = require('../services/paymentLogService');
 const notificationConfigService = require('../services/notificationConfigService');
+const paymentReconciliationService = require('../services/paymentReconciliationService');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 // GET /api/faturas - Listagem geral de faturas com filtros (admin e recepcao)
 router.get('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
     try {
-        const { status, mes, aluno_id } = req.query;
+        const { status, mes, aluno_id, sync_asaas } = req.query;
+
+        if (sync_asaas === '1') {
+            try {
+                await paymentReconciliationService.reconcilePendingFaturas({
+                    alunoId: aluno_id || null,
+                    mes: mes || null
+                });
+            } catch (syncErr) {
+                console.warn('[Faturas] Falha não-bloqueante ao conciliar Asaas:', syncErr.message);
+            }
+        }
 
         let query = `
             SELECT 
@@ -22,6 +34,10 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (r
                 f.data_pagamento,
                 f.metodo_pagamento,
                 f.status,
+                f.asaas_payment_id,
+                f.asaas_invoice_url,
+                f.asaas_status,
+                f.observacoes,
                 a.id AS aluno_id,
                 a.nome_completo AS aluno_nome,
                 a.telefone_whatsapp,
@@ -52,11 +68,40 @@ router.get('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (r
 
         query += ` ORDER BY f.data_vencimento DESC LIMIT 100`;
 
-        const [rows] = await pool.query(query, params);
+        const [rawRows] = await pool.query(query, params);
+        const rows = rawRows.map((r) => {
+            const origin = paymentReconciliationService.classifyFaturaPaymentOrigin(r);
+            return {
+                ...r,
+                origem_pagamento: origin.origem,
+                origem_label: origin.label
+            };
+        });
         res.json({ success: true, count: rows.length, data: rows });
     } catch (err) {
         console.error('Erro ao listar faturas:', err);
         res.status(500).json({ success: false, error: 'Erro ao consultar faturas.' });
+    }
+});
+
+// POST /api/faturas/sincronizar-asaas - Conciliação manual das faturas abertas contra o Gateway Asaas
+router.post('/sincronizar-asaas', authenticateToken, authorizeRoles('admin', 'recepcao'), async (req, res) => {
+    try {
+        const stats = await paymentReconciliationService.reconcilePendingFaturas({
+            mes: req.body?.mes || null,
+            alunoId: req.body?.aluno_id || null
+        });
+        const totalMudancas = stats.atualizados_online + stats.ajustados_manual;
+        res.json({
+            success: true,
+            ...stats,
+            message: totalMudancas > 0
+                ? `${totalMudancas} fatura(s) atualizada(s) com sucesso a partir do Gateway Asaas.`
+                : 'Sincronização concluída. Nenhuma divergência encontrada no gateway.'
+        });
+    } catch (err) {
+        console.error('Erro ao sincronizar faturas com Asaas:', err);
+        res.status(500).json({ success: false, error: 'Erro ao sincronizar faturas com o gateway.' });
     }
 });
 
@@ -156,12 +201,68 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
         const { id } = req.params;
         const { metodo_pagamento = 'pix', valor_pago, observacoes } = req.body;
 
-        const [faturas] = await pool.query('SELECT aluno_id, valor_original FROM faturas WHERE id = ?', [id]);
+        const [faturas] = await pool.query(
+            'SELECT id, aluno_id, status, valor_original, asaas_payment_id, asaas_status FROM faturas WHERE id = ?',
+            [id]
+        );
         if (faturas.length === 0) {
             return res.status(404).json({ success: false, error: 'Fatura não encontrada.' });
         }
 
-        const valor = valor_pago !== undefined ? parseFloat(valor_pago) : faturas[0].valor_original;
+        const fat = faturas[0];
+        const wasPaid = fat.status === 'pago';
+        const valor = valor_pago !== undefined ? parseFloat(valor_pago) : fat.valor_original;
+        let settlement = { alreadyPaidOnline: false, asaasClosedInCash: false };
+
+        if (fat.asaas_payment_id) {
+            settlement = await paymentReconciliationService.notifyAsaasManualSettlement(fat.asaas_payment_id, {
+                valor,
+                context: {
+                    alunoId: fat.aluno_id,
+                    referenciaTipo: 'fatura',
+                    referenciaId: fat.id,
+                    origemRota: '/api/faturas/:id/pagar'
+                }
+            });
+        }
+
+        if (settlement.alreadyPaidOnline) {
+            const metodoGateway = paymentReconciliationService.mapAsaasBillingTypeToMetodo(settlement.cobranca?.billingType);
+            const valorGateway = settlement.cobranca?.value ? parseFloat(settlement.cobranca.value) : valor;
+            const nextStatus = (String(settlement.cobranca?.status || '').toUpperCase() === 'CONFIRMED' && metodoGateway === 'cartao_credito')
+                ? 'CONFIRMED'
+                : 'RECEIVED';
+
+            await pool.query(`
+                UPDATE faturas SET
+                    status = 'pago',
+                    data_pagamento = COALESCE(data_pagamento, NOW()),
+                    metodo_pagamento = ?,
+                    valor_pago = COALESCE(?, valor_original),
+                    asaas_status = ?,
+                    observacoes = COALESCE(?, observacoes)
+                WHERE id = ?
+            `, [metodoGateway, !isNaN(valorGateway) ? valorGateway : valor, nextStatus, observacoes || null, id]);
+
+            if (!wasPaid && fat.aluno_id) {
+                const valorFmt = Number(valorGateway || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const metodoFmt = String(metodoGateway).toUpperCase();
+                notificationConfigService.dispatchEvent('pagamento_mensalidade', {
+                    alunoId: fat.aluno_id,
+                    variables: { valor: valorFmt, metodo: metodoFmt },
+                    detalhes: [
+                        { label: 'Valor', value: valorFmt },
+                        { label: 'Forma de Pagamento', value: metodoFmt }
+                    ]
+                });
+            }
+
+            return res.json({
+                success: true,
+                origem_pagamento: 'online',
+                message: 'Esta fatura já constava como paga no gateway Asaas! Status sincronizado como Pago (Online).'
+            });
+        }
 
         await pool.query(`
             UPDATE faturas SET
@@ -174,11 +275,11 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
             WHERE id = ?
         `, [metodo_pagamento, valor, observacoes || null, id]);
 
-        if (faturas[0].aluno_id) {
+        if (!wasPaid && fat.aluno_id) {
             const valorFmt = Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             const metodoFmt = String(metodo_pagamento).toUpperCase();
             notificationConfigService.dispatchEvent('pagamento_mensalidade', {
-                alunoId: faturas[0].aluno_id,
+                alunoId: fat.aluno_id,
                 variables: { valor: valorFmt, metodo: metodoFmt },
                 detalhes: [
                     { label: 'Valor', value: valorFmt },
@@ -187,7 +288,12 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
             });
         }
 
-        res.json({ success: true, message: 'Pagamento registrado com sucesso!' });
+        res.json({
+            success: true,
+            origem_pagamento: 'manual',
+            asaas_baixa_dinheiro: Boolean(settlement.asaasClosedInCash),
+            message: 'Pagamento registrado com sucesso!'
+        });
     } catch (err) {
         console.error('Erro ao registrar pagamento:', err);
         res.status(500).json({ success: false, error: 'Erro ao registrar pagamento.' });
@@ -198,13 +304,24 @@ router.patch('/:id/pagar', authenticateToken, authorizeRoles('admin', 'recepcao'
 router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
         const { id } = req.params;
-        const [faturas] = await pool.query('SELECT id, status FROM faturas WHERE id = ?', [id]);
+        const [faturas] = await pool.query('SELECT id, aluno_id, status, asaas_payment_id FROM faturas WHERE id = ?', [id]);
         if (faturas.length === 0) {
             return res.status(404).json({ success: false, error: 'Fatura não encontrada.' });
         }
 
         if (faturas[0].status === 'pago') {
             return res.status(400).json({ success: false, error: 'Fatura já quitada não pode ser excluída diretamente. Cancele o recebimento primeiro.' });
+        }
+
+        if (faturas[0].asaas_payment_id && !String(faturas[0].asaas_payment_id).startsWith('pay_mock_')) {
+            await asaasService.cancelarCobranca(faturas[0].asaas_payment_id, {
+                alunoId: faturas[0].aluno_id,
+                referenciaTipo: 'fatura',
+                referenciaId: faturas[0].id,
+                origemRota: '/api/faturas/:id'
+            }).catch((err) => {
+                console.warn(`[Faturas] Aviso ao cancelar cobrança Asaas ${faturas[0].asaas_payment_id}:`, err.message);
+            });
         }
 
         await pool.query('DELETE FROM faturas WHERE id = ?', [id]);
@@ -215,7 +332,7 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin'), async (req, re
     }
 });
 
-// POST /api/faturas/webhook-asaas - Webhook de recebimento de pagamentos do Asaas
+// POST /api/faturas/webhook-asaas - Webhook unificado de recebimento de pagamentos do Asaas
 router.post('/webhook-asaas', async (req, res) => {
     try {
         if (!asaasService.isValidWebhookToken(req.headers['asaas-access-token'])) {
@@ -225,50 +342,13 @@ router.post('/webhook-asaas', async (req, res) => {
         const { event, payment } = req.body;
         console.log(`[Webhook Asaas Faturas] Evento recebido: ${event} para cobrança ${payment?.id}`);
 
-        if (payment && payment.id) {
-            if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
-                const metodo = String(payment.billingType || 'pix').toLowerCase();
-                const metodoValido = ['pix', 'cartao_credito', 'cartao_debito', 'boleto'].includes(metodo) ? metodo : 'pix';
-                const valorPago = payment.value ? parseFloat(payment.value) : null;
+        const result = await paymentReconciliationService.processAsaasWebhookEvent({
+            event,
+            payment,
+            origemRota: '/api/faturas/webhook-asaas'
+        });
 
-                const [resUpdate] = await pool.query(`
-                    UPDATE faturas SET
-                        status = 'pago',
-                        data_pagamento = NOW(),
-                        metodo_pagamento = ?,
-                        valor_pago = COALESCE(?, valor_original),
-                        asaas_status = 'RECEIVED'
-                    WHERE asaas_payment_id = ? AND status != 'pago'
-                `, [metodoValido, valorPago, payment.id]);
-
-                if (resUpdate.affectedRows > 0) {
-                    console.log(`[Webhook Asaas Faturas] Fatura quitada via Asaas: ${payment.id}`);
-                    try {
-                        const [fatRows] = await pool.query(
-                            'SELECT aluno_id, valor_pago, valor_original FROM faturas WHERE asaas_payment_id = ? LIMIT 1',
-                            [payment.id]
-                        );
-                        if (fatRows.length > 0 && fatRows[0].aluno_id) {
-                            const vPago = fatRows[0].valor_pago ?? fatRows[0].valor_original ?? valorPago ?? 0;
-                            const valorFmt = Number(vPago).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                            const metodoFmt = metodoValido.toUpperCase();
-                            notificationConfigService.dispatchEvent('pagamento_mensalidade', {
-                                alunoId: fatRows[0].aluno_id,
-                                variables: { valor: valorFmt, metodo: metodoFmt },
-                                detalhes: [
-                                    { label: 'Valor', value: valorFmt },
-                                    { label: 'Forma de Pagamento', value: metodoFmt }
-                                ]
-                            });
-                        }
-                    } catch (wErr) {
-                        console.warn('[Webhook Asaas Faturas] Falha ao notificar WhatsApp:', wErr.message);
-                    }
-                }
-            }
-        }
-
-        res.status(200).json({ received: true });
+        res.status(200).json({ received: true, ...result });
     } catch (err) {
         console.error('[Webhook Asaas Faturas] Erro:', err.message);
         await PaymentLogService.recordFailure({

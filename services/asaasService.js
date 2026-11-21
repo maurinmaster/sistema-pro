@@ -460,6 +460,86 @@ class AsaasService {
             throw err;
         }
     }
+
+    /**
+     * Informa ao Asaas que uma cobrança em aberto foi recebida manualmente em dinheiro/balcão.
+     */
+    async confirmarRecebimentoEmDinheiro(paymentId, { valor = null, dataPagamento = null, notifyCustomer = false, context = {} } = {}) {
+        if (!paymentId) return null;
+
+        if (!this.isConfigured() || String(paymentId).startsWith('pay_mock_')) {
+            return {
+                id: paymentId,
+                status: 'RECEIVED_IN_CASH',
+                is_mock: true
+            };
+        }
+
+        const paymentDate = (dataPagamento && /^\d{4}-\d{2}-\d{2}$/.test(dataPagamento))
+            ? dataPagamento
+            : new Date().toISOString().split('T')[0];
+
+        const payload = {
+            paymentDate,
+            notifyCustomer: Boolean(notifyCustomer)
+        };
+        const valNum = parseFloat(valor);
+        if (!isNaN(valNum) && valNum > 0) {
+            payload.value = valNum;
+        }
+
+        try {
+            const res = await fetch(`${this.baseUrl}/payments/${encodeURIComponent(paymentId)}/receiveInCash`, {
+                method: 'POST',
+                headers: this.getHeaders(),
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw this.buildAsaasError(res.status, data, 'Falha ao confirmar recebimento em dinheiro no Asaas', 'confirmar_recebimento_dinheiro', paymentId);
+            }
+
+            return data;
+        } catch (err) {
+            console.error('[AsaasService] Erro ao confirmar recebimento em dinheiro:', err.message);
+            await this.logServiceFailure('confirmar_recebimento_dinheiro', err, { paymentId, ...context });
+            throw err;
+        }
+    }
+
+    /**
+     * Cancela/remove uma cobrança pendente no Asaas.
+     */
+    async cancelarCobranca(paymentId, context = {}) {
+        if (!paymentId) return null;
+
+        if (!this.isConfigured() || String(paymentId).startsWith('pay_mock_')) {
+            return {
+                id: paymentId,
+                deleted: true,
+                is_mock: true
+            };
+        }
+
+        try {
+            const res = await fetch(`${this.baseUrl}/payments/${encodeURIComponent(paymentId)}`, {
+                method: 'DELETE',
+                headers: this.getHeaders()
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw this.buildAsaasError(res.status, data, 'Falha ao cancelar cobrança no Asaas', 'cancelar_cobranca', paymentId);
+            }
+
+            return data;
+        } catch (err) {
+            console.error('[AsaasService] Erro ao cancelar cobrança:', err.message);
+            await this.logServiceFailure('cancelar_cobranca', err, { paymentId, ...context });
+            throw err;
+        }
+    }
 }
 
 module.exports = new AsaasService();

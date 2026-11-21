@@ -12,6 +12,7 @@ const multer = require('multer');
 const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const notificationConfigService = require('../services/notificationConfigService');
+const paymentReconciliationService = require('../services/paymentReconciliationService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
@@ -1716,7 +1717,8 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
         for (const f of faturas) {
             const isPago = f.status === 'pago';
             const isAtrasado = f.em_atraso === 1;
-            const isManual = !f.asaas_payment_id || f.asaas_status === 'RECEIVED_MANUALLY' || ['dinheiro', 'balcao'].includes(f.metodo_pagamento);
+            const origin = paymentReconciliationService.classifyFaturaPaymentOrigin(f);
+            const isManual = origin.origem === 'manual';
 
             let tituloFmt = 'Mensalidade';
             if (f.competencia && /^\d{4}-\d{2}$/.test(f.competencia)) {
@@ -1744,8 +1746,8 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
                 status: isPago ? 'pago' : (isAtrasado ? 'atrasado' : (f.status === 'cancelado' ? 'cancelado' : 'pendente')),
                 status_label: isPago ? 'Pago' : (isAtrasado ? 'Em Atraso' : (f.status === 'cancelado' ? 'Cancelado' : 'Pendente')),
                 metodo_pagamento: isPago ? (f.metodo_pagamento || (isManual ? 'dinheiro' : 'pix')) : null,
-                origem_pagamento: isManual ? 'manual' : 'asaas',
-                origem_label: isManual ? 'Manual / Balcão' : 'Pagamento Online',
+                origem_pagamento: origin.origem,
+                origem_label: origin.canalLabel,
                 asaas_status: f.asaas_status,
                 asaas_payment_id: f.asaas_payment_id,
                 asaas_invoice_url: f.asaas_invoice_url,
@@ -1758,7 +1760,8 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
         for (const c of convites) {
             const isPago = c.status === 'pago';
             const isCancelado = c.status === 'recusado';
-            const isManual = !c.asaas_payment_id || c.asaas_status === 'RECEIVED_MANUALLY' || c.asaas_status === 'MANUAL';
+            const origin = paymentReconciliationService.classifyConvitePaymentOrigin(c);
+            const isManual = origin.origem === 'manual';
             const valorFinal = Number(c.valor || c.taxa_inscricao || 0);
 
             itens.push({
@@ -1775,9 +1778,9 @@ router.get('/historico-financeiro', optionalAuth, async (req, res) => {
                 valor_pago: isPago ? valorFinal : null,
                 status: isPago ? 'pago' : (isCancelado ? 'cancelado' : 'pendente'),
                 status_label: isPago ? 'Pago' : (isCancelado ? 'Cancelado' : (c.status === 'aceito' ? 'Aguardando Pagamento' : 'Convocado')),
-                metodo_pagamento: c.asaas_billing_type || 'pix',
-                origem_pagamento: isManual ? 'manual' : 'asaas',
-                origem_label: isManual ? 'Manual / Balcão' : 'Pagamento Online',
+                metodo_pagamento: isManual && String(c.asaas_billing_type || '').toUpperCase() === 'MANUAL' ? 'dinheiro' : (c.asaas_billing_type || 'pix'),
+                origem_pagamento: origin.origem,
+                origem_label: origin.canalLabel,
                 asaas_status: c.asaas_status,
                 asaas_payment_id: c.asaas_payment_id,
                 asaas_invoice_url: c.asaas_invoice_url,
@@ -2031,20 +2034,38 @@ router.post('/faturas/:id/verificar-asaas', optionalAuth, async (req, res) => {
 
         // Consulta status atualizado no Asaas
         const cobranca = await asaasService.consultarCobranca(fat.asaas_payment_id);
-        const st = cobranca ? cobranca.status : null;
+        const st = String(cobranca?.status || '').trim().toUpperCase();
+        const billingUpper = String(cobranca?.billingType || 'PIX').trim().toUpperCase();
 
-        if (st === 'RECEIVED' || st === 'CONFIRMED' || st === 'RECEIVED_IN_CASH') {
+        if (st === 'RECEIVED_IN_CASH') {
             await pool.query(`
                 UPDATE faturas SET
                     status = 'pago',
-                    data_pagamento = NOW(),
-                    metodo_pagamento = 'pix',
-                    valor_pago = valor_original,
+                    data_pagamento = COALESCE(data_pagamento, NOW()),
+                    metodo_pagamento = 'dinheiro',
+                    valor_pago = COALESCE(valor_pago, valor_original),
+                    asaas_status = 'RECEIVED_MANUALLY'
+                WHERE id = ?
+            `, [fat.id]);
+
+            return res.json({ success: true, pago: true, origem_pagamento: 'manual', message: 'Pagamento confirmado manualmente no balcão!' });
+        }
+
+        if (paymentReconciliationService.isAsaasStatusPaidOnline(st)) {
+            const metodo = paymentReconciliationService.mapAsaasBillingTypeToMetodo(billingUpper);
+            const nextStatus = (st === 'CONFIRMED' && billingUpper === 'CREDIT_CARD') ? 'CONFIRMED' : 'RECEIVED';
+
+            await pool.query(`
+                UPDATE faturas SET
+                    status = 'pago',
+                    data_pagamento = COALESCE(data_pagamento, NOW()),
+                    metodo_pagamento = ?,
+                    valor_pago = COALESCE(valor_pago, valor_original),
                     asaas_status = ?
                 WHERE id = ?
-            `, [st, fat.id]);
+            `, [metodo, nextStatus, fat.id]);
 
-            return res.json({ success: true, pago: true, message: 'Pagamento confirmado com sucesso!' });
+            return res.json({ success: true, pago: true, origem_pagamento: 'online', message: 'Pagamento confirmado com sucesso!' });
         }
 
         res.json({
