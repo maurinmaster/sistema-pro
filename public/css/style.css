@@ -393,7 +393,8 @@ body {
     min-width: 260px;
 }
 
-.btn-filtros-toggle {
+.btn.btn-filtros-toggle,
+#btn-toggle-filtros-alunos {
     display: none;
 }
 
@@ -692,6 +693,139 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     stroke: currentColor;
     stroke-width: 2;
     fill: none;
+}
+
+.data-table th.col-actions,
+.data-table td.col-actions {
+    text-align: right;
+    width: 1%;
+    white-space: nowrap;
+}
+
+.table-actions-compact {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.btn-icon-checkin {
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.28);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.btn-icon-checkin:hover {
+    color: #ffffff;
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.24);
+}
+
+.btn-icon-edit {
+    color: var(--text-secondary);
+}
+
+.btn-icon-edit:hover {
+    color: #ffffff;
+    border-color: rgba(148, 163, 184, 0.45);
+    background: rgba(148, 163, 184, 0.16);
+}
+
+.btn-icon-more:hover,
+.btn-icon-more[aria-expanded="true"] {
+    color: #ffffff;
+    border-color: var(--primary-light);
+    background: rgba(56, 189, 248, 0.18);
+}
+
+/* Menu Dropdown Flutuante de Ações Secundárias (Portal fixed no body) */
+.aluno-actions-menu {
+    position: fixed;
+    top: -9999px;
+    left: -9999px;
+    z-index: 1200;
+    min-width: 235px;
+    max-width: calc(100vw - 16px);
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 10px;
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.55);
+    padding: 6px;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+}
+
+.aluno-actions-menu.open {
+    display: flex;
+}
+
+.aluno-actions-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 11px;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 500;
+    font-family: var(--font-sans);
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.aluno-actions-item svg {
+    width: 15px;
+    height: 15px;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    flex-shrink: 0;
+}
+
+.aluno-actions-item:hover,
+.aluno-actions-item:focus-visible {
+    background: rgba(56, 189, 248, 0.12);
+    color: #ffffff;
+    outline: none;
+}
+
+.aluno-actions-item .item-icon-portal {
+    color: #38bdf8;
+}
+
+.aluno-actions-item .item-icon-promo {
+    color: #fbbf24;
+}
+
+.aluno-actions-item .item-icon-reset {
+    color: #f59e0b;
+}
+
+.aluno-actions-divider {
+    height: 1px;
+    background: rgba(148, 163, 184, 0.16);
+    margin: 5px 4px;
+}
+
+.aluno-actions-item.danger {
+    color: #f87171;
+}
+
+.aluno-actions-item.danger:hover,
+.aluno-actions-item.danger:focus-visible {
+    background: rgba(239, 68, 68, 0.16);
+    color: #fca5a5;
 }
 
 /* ==========================================================================

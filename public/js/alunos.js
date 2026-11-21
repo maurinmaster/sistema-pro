@@ -3,6 +3,10 @@ const AlunosModule = {
     alunosList: [],
     modalidades: [],
     planos: [],
+    activeActionMenuTrigger: null,
+    activeActionMenuAlunoId: null,
+    activeActionMenuEncodedNome: '',
+    actionMenuEventsBound: false,
 
     async init() {
         this.bindEvents();
@@ -67,6 +71,14 @@ const AlunosModule = {
         const tbodyAlunos = document.getElementById('alunos-table-body');
         if (tbodyAlunos) {
             tbodyAlunos.addEventListener('click', (e) => {
+                const menuTrigger = e.target.closest('[data-action-menu-trigger="true"]');
+                if (menuTrigger) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleActionMenu(menuTrigger);
+                    return;
+                }
+
                 if (e.target.closest('button, a, .table-actions')) return;
                 const row = e.target.closest('tr.aluno-row-clickable[data-aluno-id]');
                 if (!row) return;
@@ -76,6 +88,8 @@ const AlunosModule = {
                 }
             });
         }
+
+        this.bindActionMenuGlobalEvents();
 
         // Botão de abrir Lixeira
         const btnAbrirLixeira = document.getElementById('btn-abrir-lixeira');
@@ -375,12 +389,190 @@ const AlunosModule = {
         }
     },
 
+    bindActionMenuGlobalEvents() {
+        if (this.actionMenuEventsBound) return;
+        this.actionMenuEventsBound = true;
+
+        document.addEventListener('click', (e) => {
+            if (!this.activeActionMenuTrigger) return;
+            if (e.target.closest('#aluno-actions-dropdown') || e.target.closest('[data-action-menu-trigger="true"]')) {
+                return;
+            }
+            this.closeActionMenu();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.activeActionMenuTrigger) {
+                this.closeActionMenu();
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (this.activeActionMenuTrigger) this.closeActionMenu();
+        });
+
+        window.addEventListener('scroll', (e) => {
+            if (!this.activeActionMenuTrigger) return;
+            if (e.target && e.target.id === 'aluno-actions-dropdown') return;
+            this.closeActionMenu();
+        }, true);
+    },
+
+    getOrCreateActionsMenu() {
+        let menu = document.getElementById('aluno-actions-dropdown');
+        if (menu) return menu;
+
+        menu = document.createElement('div');
+        menu.id = 'aluno-actions-dropdown';
+        menu.className = 'aluno-actions-menu';
+        menu.setAttribute('role', 'menu');
+        menu.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(menu);
+
+        menu.addEventListener('click', (e) => {
+            const linkItem = e.target.closest('a.aluno-actions-item');
+            if (linkItem) {
+                this.closeActionMenu();
+                return;
+            }
+
+            const actionBtn = e.target.closest('button[data-menu-action]');
+            if (!actionBtn) return;
+
+            const action = actionBtn.getAttribute('data-menu-action');
+            const alunoId = this.activeActionMenuAlunoId;
+            const encodedNome = this.activeActionMenuEncodedNome;
+            this.closeActionMenu();
+
+            if (!alunoId) return;
+            if (action === 'promo') {
+                this.openPromoModal(alunoId, encodedNome);
+            } else if (action === 'reset-senha') {
+                this.openResetSenhaModal(alunoId, encodedNome);
+            } else if (action === 'delete') {
+                this.deleteAluno(alunoId, encodedNome);
+            }
+        });
+
+        return menu;
+    },
+
+    toggleActionMenu(triggerBtn) {
+        if (!triggerBtn) return;
+        if (this.activeActionMenuTrigger === triggerBtn) {
+            this.closeActionMenu();
+            return;
+        }
+        const alunoId = Number(triggerBtn.getAttribute('data-aluno-id'));
+        const encodedNome = triggerBtn.getAttribute('data-aluno-nome') || '';
+        this.openActionMenu(triggerBtn, alunoId, encodedNome);
+    },
+
+    openActionMenu(triggerBtn, alunoId, encodedNome) {
+        const safeId = Number(alunoId);
+        if (!Number.isInteger(safeId) || safeId <= 0) return;
+
+        this.closeActionMenu();
+
+        const menu = this.getOrCreateActionsMenu();
+        const canPromo = !window.AuthModule || AuthModule.can('promote_faixas');
+        const canDelete = !window.AuthModule || AuthModule.can('delete_alunos');
+
+        menu.innerHTML = `
+            <a class="aluno-actions-item" role="menuitem" href="/painel?aluno_id=${safeId}" target="_blank" rel="noopener noreferrer">
+                <svg class="item-icon-portal" viewBox="0 0 24 24" aria-hidden="true">
+                    <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                </svg>
+                <span>Portal do Aluno / Acesso</span>
+            </a>
+            ${canPromo ? `
+                <button type="button" class="aluno-actions-item" role="menuitem" data-menu-action="promo">
+                    <svg class="item-icon-promo" viewBox="0 0 24 24" aria-hidden="true">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <span>Graduações / Exames</span>
+                </button>
+            ` : ''}
+            <button type="button" class="aluno-actions-item" role="menuitem" data-menu-action="reset-senha">
+                <svg class="item-icon-reset" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="7.5" cy="15.5" r="5.5" />
+                    <path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l2 2" />
+                </svg>
+                <span>Redefinir Senha / Credenciais</span>
+            </button>
+            ${canDelete ? `
+                <div class="aluno-actions-divider" role="separator"></div>
+                <button type="button" class="aluno-actions-item danger" role="menuitem" data-menu-action="delete">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    <span>Mover para Lixeira</span>
+                </button>
+            ` : ''}
+        `;
+
+        menu.style.visibility = 'hidden';
+        menu.classList.add('open');
+        menu.setAttribute('aria-hidden', 'false');
+
+        const rect = triggerBtn.getBoundingClientRect();
+        const menuWidth = menu.offsetWidth || 235;
+        const menuHeight = menu.offsetHeight || 190;
+
+        let left = rect.right - menuWidth;
+        if (left < 8) left = 8;
+        if (left + menuWidth > window.innerWidth - 8) {
+            left = Math.max(8, window.innerWidth - menuWidth - 8);
+        }
+
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        let top;
+        let openUpward = false;
+        if (spaceBelow < menuHeight + 12 && spaceAbove > spaceBelow) {
+            top = Math.max(8, rect.top - menuHeight - 6);
+            openUpward = true;
+        } else {
+            top = Math.max(8, Math.min(window.innerHeight - menuHeight - 8, rect.bottom + 6));
+        }
+
+        menu.style.left = `${Math.round(left)}px`;
+        menu.style.top = `${Math.round(top)}px`;
+        menu.classList.toggle('open-upward', openUpward);
+        menu.style.visibility = 'visible';
+
+        triggerBtn.setAttribute('aria-expanded', 'true');
+        this.activeActionMenuTrigger = triggerBtn;
+        this.activeActionMenuAlunoId = safeId;
+        this.activeActionMenuEncodedNome = encodedNome;
+    },
+
+    closeActionMenu() {
+        const menu = document.getElementById('aluno-actions-dropdown');
+        if (menu) {
+            menu.classList.remove('open', 'open-upward');
+            menu.setAttribute('aria-hidden', 'true');
+            menu.style.visibility = '';
+            menu.style.top = '-9999px';
+            menu.style.left = '-9999px';
+        }
+        if (this.activeActionMenuTrigger) {
+            this.activeActionMenuTrigger.setAttribute('aria-expanded', 'false');
+        }
+        this.activeActionMenuTrigger = null;
+        this.activeActionMenuAlunoId = null;
+        this.activeActionMenuEncodedNome = '';
+    },
+
     async loadAlunos() {
         const tbody = document.getElementById('alunos-table-body');
         const countSpan = document.getElementById('total-alunos-count');
         const lixeiraBadge = document.getElementById('lixeira-contador-badge');
         if (!tbody) return;
 
+        this.closeActionMenu();
         this.updateActiveFiltersCount();
         tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 30px;"><div class="spinner"></div> Carregando alunos...</td></tr>`;
 
@@ -491,35 +683,23 @@ const AlunosModule = {
                         <td>
                             ${UI.renderStatusBadge(a.status)}
                         </td>
-                        <td>
-                            <div class="table-actions">
-                                <button class="btn-icon" title="Ver Dossiê 360°" onclick="AlunoDetalhesModule.openDossier(${safeId})">
-                                    <svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-                                </button>
-                                <a class="btn-icon" title="Abrir Painel Mobile do Aluno" href="/aluno.html?aluno_id=${safeId}" target="_blank" style="text-decoration: none; color: #38bdf8;">
-                                    <svg viewBox="0 0 24 24"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
-                                </a>
-                                ${(!window.AuthModule || AuthModule.can('promote_faixas')) ? `
-                                    <button class="btn-icon" title="Graduar / Promover" onclick="AlunosModule.openPromoModal(${safeId}, '${encodedNome}')">
-                                        <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                                    </button>
-                                ` : ''}
-                                <button class="btn-icon" title="Registrar Check-in" onclick="CheckinsModule.quickCheckin(${safeId})">
-                                    <svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
-                                </button>
-                                <button class="btn-icon" style="color: #f59e0b;" title="Resetar Senha do Aluno" onclick="AlunosModule.openResetSenhaModal(${safeId}, '${encodedNome}')">
-                                    <svg viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l2 2"/></svg>
+                        <td class="col-actions">
+                            <div class="table-actions table-actions-compact">
+                                <button type="button" class="btn-icon btn-icon-checkin" title="Check-in Rápido" aria-label="Check-in Rápido" onclick="CheckinsModule.quickCheckin(${safeId})">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
                                 </button>
                                 ${(!window.AuthModule || AuthModule.can('manage_alunos')) ? `
-                                    <button class="btn-icon" title="Editar Dados" onclick="AlunosModule.openEditModal(${safeId})">
-                                        <svg viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    <button type="button" class="btn-icon btn-icon-edit" title="Editar Cadastro" aria-label="Editar Cadastro" onclick="AlunosModule.openEditModal(${safeId})">
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                                     </button>
                                 ` : ''}
-                                ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
-                                    <button class="btn-icon" style="color: #ef4444;" title="Mover Aluno para a Lixeira" onclick="AlunosModule.deleteAluno(${safeId}, '${encodedNome}')">
-                                        <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                                    </button>
-                                ` : ''}
+                                <button type="button" class="btn-icon btn-icon-more" title="Mais ações" aria-label="Mais ações" aria-haspopup="menu" aria-expanded="false" data-action-menu-trigger="true" data-aluno-id="${safeId}" data-aluno-nome="${UI.escapeHtml(encodedNome)}">
+                                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                                        <circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/>
+                                        <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+                                        <circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>

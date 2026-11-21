@@ -97,6 +97,71 @@
 }
 
 /* ==========================================================================
+   BREAKPOINT: FILTROS RETRÁTEIS DE ALUNOS (< 1024px)
+   ========================================================================== */
+@media (max-width: 1023px) {
+    #view-alunos .action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px 14px;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+    #view-alunos .action-bar-top {
+        width: 100%;
+        min-width: 0;
+        gap: 8px;
+    }
+
+    #view-alunos .action-bar-top .search-box {
+        min-width: 0;
+        width: auto;
+        flex: 1;
+    }
+
+    #view-alunos .btn.btn-filtros-toggle,
+    #btn-toggle-filtros-alunos {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        min-height: 40px;
+        font-size: 12.5px;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    #view-alunos .alunos-filters-panel {
+        display: none;
+        width: 100%;
+    }
+
+    #view-alunos .alunos-filters-panel.open {
+        display: block;
+        padding-top: 10px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    #view-alunos .alunos-filters-panel .filter-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        width: 100%;
+    }
+
+    #view-alunos .alunos-filters-panel .select-filter,
+    #view-alunos .alunos-filters-panel #btn-abrir-lixeira {
+        width: 100%;
+        min-width: 0;
+        justify-content: center;
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+}
+
+/* ==========================================================================
    BREAKPOINT: TABLET VERTICAL & SMARTPHONES (<= 868px)
    ========================================================================== */
 @media (max-width: 868px) {
@@ -333,63 +398,10 @@
         gap: 4px;
     }
 
-    /* Painel retrátil de busca e filtros na página de Alunos */
+    /* Espaçamento compacto da barra de busca de Alunos no mobile */
     #view-alunos .action-bar {
-        flex-direction: column;
-        align-items: stretch;
         padding: 10px 12px;
-        gap: 10px;
         margin-bottom: 14px;
-    }
-
-    .action-bar-top {
-        width: 100%;
-        min-width: 0;
-        gap: 8px;
-    }
-
-    .search-box {
-        min-width: 0;
-        flex: 1;
-    }
-
-    .btn-filtros-toggle {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        padding: 8px 12px;
-        min-height: 40px;
-        font-size: 12.5px;
-        flex-shrink: 0;
-        white-space: nowrap;
-    }
-
-    .alunos-filters-panel {
-        display: none;
-        width: 100%;
-    }
-
-    .alunos-filters-panel.open {
-        display: block;
-        padding-top: 10px;
-        border-top: 1px solid var(--border-color);
-    }
-
-    .alunos-filters-panel .filter-group {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px;
-        width: 100%;
-    }
-
-    .alunos-filters-panel .select-filter,
-    .alunos-filters-panel #btn-abrir-lixeira {
-        width: 100%;
-        min-width: 0;
-        justify-content: center;
-        font-size: 12px;
-        padding: 8px 10px;
     }
 
     /* Dossiê 360° otimizado para mobile */
