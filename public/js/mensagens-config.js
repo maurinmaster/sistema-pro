@@ -221,7 +221,7 @@ const MensagensConfigModule = {
         }
     },
 
-    async refreshWaSummary() {
+    async refreshWaSummary(fromRetry = false) {
         const badge = document.getElementById('msg-page-wa-status');
         if (!badge) return;
         try {
@@ -232,6 +232,13 @@ const MensagensConfigModule = {
                 badge.textContent = `WhatsApp: Conectado${phone}`;
                 badge.style.background = 'rgba(34, 197, 94, 0.16)';
                 badge.style.color = '#4ade80';
+            } else if (st === 'connecting') {
+                badge.textContent = 'WhatsApp: Reconectando...';
+                badge.style.background = 'rgba(56, 189, 248, 0.16)';
+                badge.style.color = '#38bdf8';
+                if (!fromRetry) {
+                    setTimeout(() => this.refreshWaSummary(true), 3500);
+                }
             } else if (st === 'qr') {
                 badge.textContent = 'WhatsApp: Aguardando QR Code';
                 badge.style.background = 'rgba(245, 158, 11, 0.16)';

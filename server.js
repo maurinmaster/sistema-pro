@@ -224,6 +224,24 @@ app.use((err, req, res, next) => {
     res.status(500).json({ success: false, error: 'Erro interno no servidor.' });
 });
 
+// Inicialização em segundo plano (compatível com runner Passenger/LiteSpeed da Hostinger e execução direta)
+if (process.env.NODE_ENV !== 'test') {
+    const bootstrapTimer = setTimeout(() => {
+        const whatsappService = require('./services/whatsappService');
+        whatsappService.ensureWhatsAppColumn().catch(() => {});
+        whatsappService.initAutoReconnect();
+
+        const notificationConfigService = require('./services/notificationConfigService');
+        notificationConfigService.ensureTable().catch(() => {});
+
+        const messageLogService = require('./services/messageLogService');
+        messageLogService.ensureTable().catch(() => {});
+    }, 1500);
+    if (typeof bootstrapTimer.unref === 'function') {
+        bootstrapTimer.unref();
+    }
+}
+
 // Inicialização do servidor (apenas quando executado diretamente, facilitando testes de integração)
 if (require.main === module) {
     const http = require('http');

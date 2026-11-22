@@ -2413,6 +2413,113 @@ test('Quadro de Missões e Missões Automáticas: Validação, Geração Automá
     assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 1, currentEnrollment: { status: 'cancelada' }, totalAceites: 1 }).allowed, true);
 });
 
+test('WhatsApp Persistência MySQL: Criptografia AES-256-GCM, Auth State e Backoff de Reconexão', async () => {
+    const whatsappService = require('../services/whatsappService');
+    const authStore = require('../services/whatsappAuthStore');
+    const baileys = await whatsappService.loadBaileys();
+
+    // 1. Criptografia AES-256-GCM e fallback seguro
+    const payloadJson = JSON.stringify({ hello: 'world', num: 42 });
+    const encrypted = authStore.encryptPayload(payloadJson, 'chave-super-secreta');
+    assert.ok(encrypted.startsWith('enc:v1:'));
+    assert.equal(authStore.decryptPayload(encrypted, 'chave-super-secreta'), payloadJson);
+    assert.equal(authStore.decryptPayload(encrypted, 'chave-errada'), null);
+    assert.equal(authStore.decryptPayload(payloadJson, 'chave-super-secreta'), payloadJson);
+    assert.equal(authStore.encryptPayload(payloadJson, ''), payloadJson);
+
+    // 2. Pool MySQL em memória simulando reinício entre deploys
+    const dbRows = new Map();
+    const mockPool = {
+        async query(sql, params = []) {
+            const normalized = String(sql).replace(/\s+/g, ' ').trim();
+            if (normalized.startsWith('INSERT INTO whatsapp_auth_state')) {
+                const [sid, key, val] = params;
+                dbRows.set(`${sid}::${key}`, val);
+                return [{ affectedRows: 1 }];
+            }
+            if (normalized.startsWith('SELECT 1 AS ok FROM whatsapp_auth_state')) {
+                const [sid] = params;
+                return [dbRows.has(`${sid}::creds`) ? [{ ok: 1 }] : []];
+            }
+            if (normalized.startsWith('SELECT data_value FROM whatsapp_auth_state')) {
+                const [sid, key] = params;
+                const val = dbRows.get(`${sid}::${key}`);
+                return [val !== undefined ? [{ data_value: val }] : []];
+            }
+            if (normalized.startsWith('SELECT data_key, data_value FROM whatsapp_auth_state')) {
+                const [sid, ...keys] = params;
+                const found = [];
+                for (const k of keys) {
+                    const val = dbRows.get(`${sid}::${k}`);
+                    if (val !== undefined) found.push({ data_key: k, data_value: val });
+                }
+                return [found];
+            }
+            if (normalized.startsWith('DELETE FROM whatsapp_auth_state WHERE session_id = ? AND data_key = ?')) {
+                const [sid, key] = params;
+                dbRows.delete(`${sid}::${key}`);
+                return [{ affectedRows: 1 }];
+            }
+            if (normalized.startsWith('DELETE FROM whatsapp_auth_state WHERE session_id = ?')) {
+                const [sid] = params;
+                for (const k of Array.from(dbRows.keys())) {
+                    if (k.startsWith(`${sid}::`)) dbRows.delete(k);
+                }
+                return [{ affectedRows: 1 }];
+            }
+            return [[]];
+        }
+    };
+
+    const secret = 'segredo-jwt-ambiente';
+    assert.equal(await authStore.hasSavedSession(mockPool), false);
+
+    const firstBoot = await authStore.useMysqlAuthState(mockPool, { baileys, secret });
+    assert.ok(Buffer.isBuffer(firstBoot.state.creds.noiseKey.private));
+    const originalPrivHex = Buffer.from(firstBoot.state.creds.noiseKey.private).toString('hex');
+
+    await firstBoot.saveCreds();
+    assert.equal(await authStore.hasSavedSession(mockPool), true);
+    assert.ok(String(dbRows.get('default::creds')).startsWith('enc:v1:'));
+
+    await firstBoot.state.keys.set({
+        'pre-key': { '1': { private: Buffer.from([1, 2, 3]), public: Buffer.from([4, 5, 6]) } },
+        'app-state-sync-key': { 'k1': { keyData: Buffer.from([9, 8, 7]) } }
+    });
+
+    // Simula novo deploy / reinício carregando do MySQL em outra instância
+    const secondBoot = await authStore.useMysqlAuthState(mockPool, { baileys, secret });
+    assert.ok(Buffer.isBuffer(secondBoot.state.creds.noiseKey.private));
+    assert.equal(Buffer.from(secondBoot.state.creds.noiseKey.private).toString('hex'), originalPrivHex);
+
+    const preKeys = await secondBoot.state.keys.get('pre-key', ['1', '999']);
+    assert.ok(Buffer.isBuffer(preKeys['1'].private));
+    assert.equal(preKeys['1'].private.toString('hex'), '010203');
+    assert.equal(preKeys['999'], null);
+
+    const syncKeys = await secondBoot.state.keys.get('app-state-sync-key', ['k1']);
+    assert.ok(syncKeys['k1']);
+    assert.equal(Buffer.from(syncKeys['k1'].keyData).toString('hex'), '090807');
+
+    // Remoção de chave específica e limpeza total no logout
+    await secondBoot.state.keys.set({ 'pre-key': { '1': null } });
+    const afterRemove = await secondBoot.state.keys.get('pre-key', ['1']);
+    assert.equal(afterRemove['1'], null);
+
+    await authStore.clearSavedSession(mockPool);
+    assert.equal(await authStore.hasSavedSession(mockPool), false);
+
+    // 3. Backoff de reconexão (erro transitório vs conflito 440)
+    assert.equal(whatsappService.computeReconnectDelayMs(1), 2000);
+    assert.equal(whatsappService.computeReconnectDelayMs(2), 4000);
+    assert.equal(whatsappService.computeReconnectDelayMs(3), 8000);
+    assert.equal(whatsappService.computeReconnectDelayMs(6), 60000);
+    assert.equal(whatsappService.computeReconnectDelayMs(9), 60000);
+    assert.equal(whatsappService.computeReconnectDelayMs(1, { isConflict: true }), 15000);
+    assert.equal(whatsappService.computeReconnectDelayMs(2, { isConflict: true }), 30000);
+    assert.equal(whatsappService.computeReconnectDelayMs(5, { isConflict: true }), 60000);
+});
+
 test.after(async () => {
     try {
         await pool.end();

@@ -6,8 +6,15 @@ const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 // Todas as rotas de configuração do WhatsApp exigem perfil admin
 router.use(authenticateToken, authorizeRoles('admin'));
 
-// GET /api/whatsapp/status - Consulta estado atual da conexão Baileys e QR Code
-router.get('/status', (req, res) => {
+// GET /api/whatsapp/status - Consulta estado atual da conexão Baileys e desperta sessão salva se necessário
+router.get('/status', async (req, res) => {
+    try {
+        if (whatsappService.status === 'disconnected' && !whatsappService.isManualDisconnect) {
+            await whatsappService.ensureConnectedIfSaved({ waitMs: 0 });
+        }
+    } catch {
+        // Retorna estado atual mesmo se checagem em segundo plano falhar
+    }
     res.json({
         success: true,
         data: whatsappService.getStatus()

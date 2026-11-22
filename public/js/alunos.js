@@ -1406,7 +1406,7 @@ const AlunosModule = {
             }
             if (testeBox) testeBox.style.display = 'none';
         } else if (st === 'connecting') {
-            statusText.textContent = 'Iniciando conexão...';
+            statusText.textContent = data?.hasSavedSession ? 'Reconectando sessão salva...' : 'Iniciando conexão...';
             statusText.style.color = '#38bdf8';
             if (phoneText) phoneText.textContent = '';
             if (btnConectar) btnConectar.style.display = 'none';

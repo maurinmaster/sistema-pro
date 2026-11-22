@@ -732,6 +732,17 @@ async function runMigrations() {
             console.log('🎯 [Bootstrap] Missões iniciais adicionadas ao Quadro de Missões.');
         }
 
+        // 19f. Persistência de Sessão WhatsApp (Baileys) no MySQL para reconexão após deploys/reinícios
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS whatsapp_auth_state (
+                session_id VARCHAR(64) NOT NULL DEFAULT 'default',
+                data_key VARCHAR(191) NOT NULL,
+                data_value LONGTEXT NOT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (session_id, data_key)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
         // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
         const [alunosSemGrad] = await pool.query(`
             SELECT a.id FROM alunos a
