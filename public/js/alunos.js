@@ -638,6 +638,17 @@ const AlunosModule = {
                 const encodedNome = encodeURIComponent(a.nome_completo || '').replace(/'/g, '%27');
                 const idadeHtml = a.idade !== null ? `<span class="aluno-idade-text">• ${Number(a.idade)} anos</span>` : '';
 
+                const dtUltimaAval = a.ultima_avaliacao_data || a.ultima_avaliacao_graduacao || a.ultima_avaliacao_desempenho || null;
+                const tooltipParts = [];
+                if (a.ultima_avaliacao_graduacao) tooltipParts.push(`Graduação: ${UI.formatDate(a.ultima_avaliacao_graduacao)}`);
+                if (a.ultima_avaliacao_desempenho) tooltipParts.push(`Desempenho: ${UI.formatDate(a.ultima_avaliacao_desempenho)}`);
+                const evalTooltip = tooltipParts.length > 0
+                    ? tooltipParts.join(' • ')
+                    : 'Nenhuma avaliação registrada para este aluno';
+                const ultimaAvalHtml = dtUltimaAval
+                    ? `<div class="aluno-eval-meta avaliado" title="${UI.escapeHtml(evalTooltip)}">Últ. avaliação: <strong>${UI.escapeHtml(UI.formatDate(dtUltimaAval))}</strong></div>`
+                    : `<div class="aluno-eval-meta pendente" title="${UI.escapeHtml(evalTooltip)}">Sem avaliação</div>`;
+
                 return `
                     <tr id="aluno-row-${safeId}" class="aluno-row-clickable" data-aluno-id="${safeId}">
                         <td>
@@ -667,6 +678,7 @@ const AlunosModule = {
                         <td>
                             ${UI.renderBeltBadge(a.graduacao_nome, a.graduacao_cor_primaria, a.graduacao_cor_secundaria)}
                             <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${UI.escapeHtml(a.modalidade_nome || 'Sem modalidade')}</div>
+                            ${ultimaAvalHtml}
                         </td>
                         <td>
                             <div style="font-weight: 500;">${UI.escapeHtml(a.telefone_whatsapp)}</div>

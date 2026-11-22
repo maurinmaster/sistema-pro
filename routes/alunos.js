@@ -135,7 +135,22 @@ router.get('/', authenticateToken, async (req, res) => {
                     FROM faturas f 
                     WHERE f.aluno_id = a.id 
                       AND f.status = 'pendente' AND f.data_vencimento >= CURDATE()
-                ) AS faturas_pendentes
+                ) AS faturas_pendentes,
+                -- Última avaliação real feita (graduação avaliada ou avaliação técnica de desempenho)
+                (
+                    SELECT DATE_FORMAT(MAX(DATE(aag.data_avaliacao)), '%Y-%m-%d')
+                    FROM aluno_avaliacoes_graduacao aag
+                    WHERE aag.aluno_id = a.id
+                      AND (
+                          aag.total_pontos_obtidos > 0
+                          OR (aag.observacoes_professor IS NOT NULL AND TRIM(aag.observacoes_professor) != '')
+                      )
+                ) AS ultima_avaliacao_graduacao,
+                (
+                    SELECT DATE_FORMAT(MAX(aad.data_avaliacao), '%Y-%m-%d')
+                    FROM aluno_avaliacoes_desempenho aad
+                    WHERE aad.aluno_id = a.id
+                ) AS ultima_avaliacao_desempenho
             FROM alunos a
             LEFT JOIN aluno_graduacoes ag ON ag.aluno_id = a.id AND ag.atual = 1
             LEFT JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
@@ -179,6 +194,21 @@ router.get('/', authenticateToken, async (req, res) => {
         }
 
         const [rows] = await pool.query(query, params);
+        const enrichedRows = rows.map((row) => {
+            const dtGrad = row.ultima_avaliacao_graduacao || null;
+            const dtDesemp = row.ultima_avaliacao_desempenho || null;
+            let ultimaAvaliacao = null;
+            if (dtGrad && dtDesemp) {
+                ultimaAvaliacao = dtGrad >= dtDesemp ? dtGrad : dtDesemp;
+            } else {
+                ultimaAvaliacao = dtGrad || dtDesemp || null;
+            }
+            return {
+                ...row,
+                ultima_avaliacao_data: ultimaAvaliacao
+            };
+        });
+
         const [totals] = await pool.query(`
             SELECT
                 SUM(CASE WHEN deleted_at IS NULL THEN 1 ELSE 0 END) AS total_base,
@@ -188,10 +218,10 @@ router.get('/', authenticateToken, async (req, res) => {
 
         res.json({
             success: true,
-            count: rows.length,
+            count: enrichedRows.length,
             total_base: Number(totals[0]?.total_base || 0),
             total_lixeira: Number(totals[0]?.total_lixeira || 0),
-            data: rows
+            data: enrichedRows
         });
     } catch (err) {
         console.error('Erro ao listar alunos:', err);

@@ -1193,6 +1193,7 @@ const AlunoDetalhesModule = {
             await this.openDossier(alunoId);
             this.switchTab('graduacoes');
             UI.closeModal('modal-avaliacao-graduacao');
+            if (window.AlunosModule) AlunosModule.loadAlunos();
         } catch (err) {
             UI.showToast(err.message || 'Erro ao salvar avaliação.', 'error');
         } finally {
@@ -1304,6 +1305,7 @@ const AlunoDetalhesModule = {
             // Recarrega o dossiê e permanece na aba de desempenho
             await this.openDossier(this.currentAlunoId);
             this.switchTab('desempenho');
+            if (window.AlunosModule) AlunosModule.loadAlunos();
 
         } catch (err) {
             UI.showToast('Erro ao salvar avaliação: ' + err.message, 'error');
@@ -1325,6 +1327,7 @@ const AlunoDetalhesModule = {
             UI.showToast('Avaliação excluída com sucesso.', 'success');
             await this.openDossier(this.currentAlunoId);
             this.switchTab('desempenho');
+            if (window.AlunosModule) AlunosModule.loadAlunos();
         } catch (err) {
             UI.showToast('Erro ao excluir avaliação: ' + err.message, 'error');
         }
