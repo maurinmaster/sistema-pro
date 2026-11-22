@@ -24,6 +24,8 @@ const PainelAlunoApp = {
     meusExames: [],
     modalExameAtivoId: null,
     portalRpgCompareId: null,
+    missoesData: null,
+    missoesBoardFiltro: 'todas',
 
     escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -410,6 +412,9 @@ const PainelAlunoApp = {
         document.getElementById('mob-nav-graduacoes')?.addEventListener('click', () => {
             this.switchView('graduacoes');
         });
+        document.getElementById('mob-nav-missoes')?.addEventListener('click', () => {
+            this.switchView('missoes');
+        });
         document.getElementById('mob-nav-perfil')?.addEventListener('click', () => {
             this.openSkinsModal();
         });
@@ -448,7 +453,7 @@ const PainelAlunoApp = {
             if (dockWiki) dockWiki.href = `/wiki-aluno.html?aluno_id=${encodeURIComponent(queryAlunoId)}`;
         }
 
-        // Abas do Dock com alternância dinâmica SPA (Visão Geral, Wiki e Faturas)
+        // Abas do Dock com alternância dinâmica SPA (Visão Geral, Wiki, Faturas, Graduações e Missões)
         document.querySelectorAll('.dock-btn[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.dataset.tab;
@@ -458,10 +463,22 @@ const PainelAlunoApp = {
                     this.switchView('faturas');
                 } else if (tab === 'graduacoes') {
                     this.switchView('graduacoes');
+                } else if (tab === 'missoes') {
+                    this.switchView('missoes');
                 } else if (tab === 'visao-geral') {
                     this.switchView('dashboard');
                     this.scrollToSection('.content-header');
                 }
+            });
+        });
+
+        // Filtros de Categoria do Quadro de Missões do Professor
+        document.querySelectorAll('#missoes-board-filters [data-missao-cat]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('#missoes-board-filters [data-missao-cat]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.missoesBoardFiltro = btn.dataset.missaoCat || 'todas';
+                this.renderMissoesView();
             });
         });
 
@@ -498,7 +515,7 @@ const PainelAlunoApp = {
             });
         }
 
-        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas vs #graduacoes vs #evolucao)
+        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas vs #graduacoes vs #evolucao vs #missoes)
         window.addEventListener('popstate', () => {
             if (window.location.hash === '#faturas') {
                 this.switchView('faturas', false);
@@ -506,6 +523,8 @@ const PainelAlunoApp = {
                 this.switchView('graduacoes', false);
             } else if (window.location.hash === '#evolucao') {
                 this.switchView('evolucao', false);
+            } else if (window.location.hash === '#missoes') {
+                this.switchView('missoes', false);
             } else if (window.location.hash === '#wiki') {
                 this.switchView('wiki', false);
             } else {
@@ -519,6 +538,8 @@ const PainelAlunoApp = {
             this.switchView('graduacoes', false);
         } else if (window.location.hash === '#evolucao') {
             this.switchView('evolucao', false);
+        } else if (window.location.hash === '#missoes') {
+            this.switchView('missoes', false);
         } else if (window.location.hash === '#wiki') {
             this.switchView('wiki', false);
         }
@@ -1047,28 +1068,7 @@ const PainelAlunoApp = {
         // 5.2. Botão de Inscrição no Exame & Pop-up Obrigatório de Convocação (quando Elegível + Exame Aberto)
         this.renderBotaoEPopUpExame({ isApto, exame, data, aluno, graduacao });
 
-        // 6. Badges & Conquistas (Carrossel Horizontal Moderno)
-        const badgesContainer = document.getElementById('badges-container');
-        const achievementsBadge = document.getElementById('achievements-badge');
-
-        if (conquistas && badgesContainer) {
-            const unlockedCount = conquistas.filter(c => c.desbloqueada).length;
-            if (achievementsBadge) achievementsBadge.textContent = `${unlockedCount} de ${conquistas.length}`;
-
-            badgesContainer.innerHTML = conquistas.map(c => `
-                <div class="achievement-carousel-card ${c.desbloqueada ? 'unlocked' : 'locked'}" title="${this.escapeHtml(c.titulo || '')}: ${this.escapeHtml(c.descricao || '')}">
-                    <div class="achievement-icon-box">
-                        ${c.icone || (c.desbloqueada
-                            ? '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>'
-                            : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>')}
-                    </div>
-                    <div>
-                        <h4 class="achievement-name">${this.escapeHtml(c.titulo || '')}</h4>
-                        <p class="achievement-sub">${c.desbloqueada ? 'Conquistado' : (c.progresso_str || 'Bloqueado')}</p>
-                    </div>
-                </div>
-            `).join('');
-        }
+        // 6. Card legado de Conquistas removido (substituído pelas Insígnias na Ficha RPG)
 
         // 7. Histórico de Graduações
         const timelineContainer = document.getElementById('graduations-timeline-container');
@@ -1237,8 +1237,6 @@ const PainelAlunoApp = {
 
         container.innerHTML = `
             <div class="portal-rpg-card">
-                ${ui.renderFocusMissionCardHtml(focoObj)}
-
                 <div class="portal-rpg-header">
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                         ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
@@ -1272,6 +1270,10 @@ const PainelAlunoApp = {
                 </div>
 
                 ${compareHtml}
+                <button type="button" id="btn-portal-ir-missoes" class="portal-rpg-missoes-cta">
+                    <span>🎯 Foco de Treino &amp; Quadro de Missões</span>
+                    <span>Abrir Missões →</span>
+                </button>
                 ${ui.renderBadgesGridHtml(badgesArr)}
                 ${ui.renderExamProgressionCardHtml(requisitosExame)}
                 ${legacyHtml}
@@ -1290,6 +1292,12 @@ const PainelAlunoApp = {
         if (storyBtn) {
             storyBtn.addEventListener('click', () => {
                 this.openPortalRpgStatusCard();
+            });
+        }
+        const goMissoesBtn = document.getElementById('btn-portal-ir-missoes');
+        if (goMissoesBtn) {
+            goMissoesBtn.addEventListener('click', () => {
+                this.switchView('missoes');
             });
         }
     },
@@ -3038,24 +3046,50 @@ const PainelAlunoApp = {
     // -------------------------------------------------------------------------
 
     /**
-     * Alterna instantaneamente a visão entre Dashboard, Wiki, Faturas e Graduações (SPA dinâmico sem reload)
+     * Alterna instantaneamente a visão entre Dashboard, Wiki, Faturas, Graduações, Evolução e Missões
      */
     switchView(viewName, updateHash = true) {
-        this.currentView = (viewName === 'wiki' || viewName === 'faturas' || viewName === 'graduacoes' || viewName === 'evolucao') ? viewName : 'dashboard';
+        this.currentView = ['wiki', 'faturas', 'graduacoes', 'evolucao', 'missoes'].includes(viewName) ? viewName : 'dashboard';
 
         const dashboardView = document.getElementById('spa-view-dashboard');
         const wikiView = document.getElementById('spa-view-wiki');
         const faturasView = document.getElementById('spa-view-faturas');
         const graduacoesView = document.getElementById('spa-view-graduacoes');
         const evolucaoView = document.getElementById('spa-view-evolucao');
+        const missoesView = document.getElementById('spa-view-missoes');
         const rightPanel = document.querySelector('.right-panel-dark');
         const shell = document.querySelector('.dashboard-shell');
 
-        if (this.currentView === 'evolucao') {
+        if (this.currentView === 'missoes') {
             if (dashboardView) dashboardView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
+            if (evolucaoView) evolucaoView.style.display = 'none';
+            if (missoesView) missoesView.style.display = 'block';
+            if (rightPanel) rightPanel.style.display = 'none';
+            if (shell) shell.classList.add('wiki-spa-expanded');
+
+            const aluno = this.alunoData?.aluno || {};
+            const mName = document.getElementById('missoes-header-student-name');
+            const mAvatar = document.getElementById('missoes-header-avatar-img');
+            if (mName) mName.textContent = aluno.nome_completo || aluno.primeiro_nome || 'Atleta';
+            if (mAvatar && aluno.foto_perfil_url) mAvatar.src = aluno.foto_perfil_url;
+
+            document.querySelectorAll('.dock-btn[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'missoes');
+            });
+            document.querySelectorAll('.mobile-nav-item[data-tab]').forEach(b => {
+                b.classList.toggle('active', b.dataset.tab === 'missoes');
+            });
+
+            this.loadMissoesView();
+        } else if (this.currentView === 'evolucao') {
+            if (dashboardView) dashboardView.style.display = 'none';
+            if (wikiView) wikiView.style.display = 'none';
+            if (faturasView) faturasView.style.display = 'none';
+            if (graduacoesView) graduacoesView.style.display = 'none';
+            if (missoesView) missoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3079,6 +3113,7 @@ const PainelAlunoApp = {
             if (wikiView) wikiView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
+            if (missoesView) missoesView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3098,6 +3133,7 @@ const PainelAlunoApp = {
             if (wikiView) wikiView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
+            if (missoesView) missoesView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3115,6 +3151,7 @@ const PainelAlunoApp = {
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
+            if (missoesView) missoesView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3134,6 +3171,7 @@ const PainelAlunoApp = {
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
+            if (missoesView) missoesView.style.display = 'none';
             if (dashboardView) dashboardView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = '';
             if (shell) shell.classList.remove('wiki-spa-expanded');
@@ -3149,7 +3187,7 @@ const PainelAlunoApp = {
         }
 
         if (updateHash) {
-            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', evolucao: '#evolucao', wiki: '#wiki', dashboard: '#dashboard' };
+            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', evolucao: '#evolucao', missoes: '#missoes', wiki: '#wiki', dashboard: '#dashboard' };
             const hash = hashMap[this.currentView] || '#dashboard';
             if (window.location.hash !== hash) {
                 history.pushState(null, '', hash);
@@ -3157,6 +3195,281 @@ const PainelAlunoApp = {
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    getAlunoQuerySuffix() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const queryAlunoId = urlParams.get('aluno_id');
+        return queryAlunoId ? `?aluno_id=${encodeURIComponent(queryAlunoId)}` : '';
+    },
+
+    async requestAlunoJson(endpoint, options = {}) {
+        const token = this.getAuthToken();
+        const headers = { ...(options.headers || {}) };
+        if (token && token !== 'null' && token !== 'undefined') {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        const res = await fetch(`${endpoint}${this.getAlunoQuerySuffix()}`, {
+            ...options,
+            headers
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.error || 'Erro ao comunicar com o servidor.');
+        }
+        return data;
+    },
+
+    async loadMissoesView() {
+        try {
+            const res = await this.requestAlunoJson('/api/aluno/missoes');
+            this.missoesData = res.data || null;
+            this.renderMissoesView();
+        } catch (err) {
+            console.error('Erro ao carregar página de missões:', err);
+            const autoEl = document.getElementById('missoes-automaticas-container');
+            if (autoEl) {
+                autoEl.innerHTML = `<div style="grid-column:1/-1; color:#fca5a5; padding:18px; text-align:center;">${this.escapeHtml(err.message)}</div>`;
+            }
+        }
+    },
+
+    renderMissoesView() {
+        const payload = this.missoesData;
+        if (!payload) return;
+
+        const resumo = payload.resumo || {};
+        const kpiAtivas = document.getElementById('missoes-kpi-ativas');
+        const kpiConcluidas = document.getElementById('missoes-kpi-concluidas');
+        const kpiXp = document.getElementById('missoes-kpi-xp');
+        if (kpiAtivas) kpiAtivas.textContent = `${Number(resumo.ativas_count || 0)}/${Number(resumo.limite_ativas || 3)}`;
+        if (kpiConcluidas) kpiConcluidas.textContent = String(Number(resumo.concluidas_count || 0));
+        if (kpiXp) kpiXp.textContent = `${Number(resumo.xp_total || 0)} XP`;
+
+        const diffLabels = { facil: 'Fácil', media: 'Média', dificil: 'Difícil', epica: 'Épica' };
+        const catLabels = { tecnica: 'Técnica', sparring: 'Sparring', clinch: 'Clinch', condicionamento: 'Condicionamento', frequencia: 'Frequência', disciplina: 'Disciplina' };
+
+        // 1. Missões Automáticas
+        const autoEl = document.getElementById('missoes-automaticas-container');
+        const automaticas = Array.isArray(payload.automaticas) ? payload.automaticas : [];
+        if (autoEl) {
+            if (automaticas.length === 0) {
+                autoEl.innerHTML = `
+                    <div class="missao-card auto" style="grid-column: 1 / -1;">
+                        <p class="missao-card-desc">Suas missões automáticas serão geradas assim que houver check-ins ou Avaliação Técnica RPG registrada pelo instrutor.</p>
+                    </div>
+                `;
+            } else {
+                autoEl.innerHTML = automaticas.map((m) => {
+                    const cor = this.sanitizeColor(m.pilar_cor, '#38bdf8');
+                    const pct = Math.max(0, Math.min(100, Number(m.progresso_pct || 0)));
+                    const isDone = m.status === 'concluida';
+                    return `
+                        <article class="missao-card ${isDone ? 'done' : 'auto'}">
+                            <div class="missao-card-top">
+                                <span class="missao-origin-badge ${isDone ? 'done' : 'auto'}">⚡ ${this.escapeHtml(m.badge_texto || 'Automática')}</span>
+                                <span style="font-size: 11px; font-weight: 700; color: ${cor};">${this.escapeHtml(m.pilar_nome || 'Evolução')}</span>
+                            </div>
+                            <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
+                            <p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>
+                            <div class="missao-progress-row">
+                                <div class="missao-progress-track">
+                                    <div class="missao-progress-fill" style="width: ${pct}%; background: ${isDone ? '#10b981' : cor};"></div>
+                                </div>
+                                <span class="missao-progress-val">${Number(m.progresso_atual || 0)}/${Number(m.progresso_meta || 100)}</span>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 2. Minhas Missões Escolhidas (Ativas & Aguardando Validação)
+        const minhasAll = Array.isArray(payload.minhas_missoes) ? payload.minhas_missoes : [];
+        const minhasAtivas = minhasAll.filter(m => m.status === 'em_andamento' || m.status === 'aguardando_validacao');
+        const minhasConcluidas = minhasAll.filter(m => m.status === 'concluida');
+
+        const minhasEl = document.getElementById('missoes-minhas-container');
+        if (minhasEl) {
+            if (minhasAtivas.length === 0) {
+                minhasEl.innerHTML = `
+                    <div class="missao-card" style="grid-column: 1 / -1;">
+                        <p class="missao-card-desc">Você ainda não escolheu nenhuma missão ativa. Selecione um desafio abaixo no <strong>Quadro de Missões do Professor</strong>!</p>
+                    </div>
+                `;
+            } else {
+                minhasEl.innerHTML = minhasAtivas.map((m) => {
+                    const diffKey = ['facil', 'media', 'dificil', 'epica'].includes(m.dificuldade) ? m.dificuldade : 'media';
+                    const awaiting = m.status === 'aguardando_validacao';
+                    const safeMissaoId = Number(m.missao_id);
+                    return `
+                        <article class="missao-card chosen">
+                            <div class="missao-card-top">
+                                <span class="missao-origin-badge board">${awaiting ? '⏳ Aguardando Professor' : '⚔️ Em Andamento'}</span>
+                                <span class="missao-diff-pill ${diffKey}">${this.escapeHtml(diffLabels[diffKey] || m.dificuldade)}</span>
+                            </div>
+                            <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
+                            <p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>
+                            <div class="missao-card-meta-row">
+                                <span class="missao-xp-tag">⚡ +${Number(m.recompensa_xp || 0)} XP</span>
+                                ${m.recompensa_texto ? `<span>${this.escapeHtml(m.recompensa_texto)}</span>` : ''}
+                            </div>
+                            ${m.feedback_professor ? `
+                                <div class="missao-feedback-box">
+                                    <strong>Professor:</strong> ${this.escapeHtml(m.feedback_professor)}
+                                </div>
+                            ` : ''}
+                            <div class="missao-card-actions">
+                                ${awaiting ? `
+                                    <button type="button" class="btn-missao-action complete" disabled>Enviada p/ Validação</button>
+                                ` : `
+                                    <button type="button" class="btn-missao-action complete" data-concluir-missao="${safeMissaoId}">✓ Concluí a Missão</button>
+                                `}
+                                <button type="button" class="btn-missao-action abandon" data-abandonar-missao="${safeMissaoId}" title="Sair desta missão">Sair</button>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 3. Quadro de Missões Disponíveis do Professor
+        const quadroEl = document.getElementById('missoes-quadro-container');
+        const quadroAll = Array.isArray(payload.quadro_disponiveis) ? payload.quadro_disponiveis : [];
+        const filtro = this.missoesBoardFiltro || 'todas';
+        const quadroFiltrado = filtro === 'todas'
+            ? quadroAll
+            : quadroAll.filter(m => String(m.categoria || '').toLowerCase() === filtro);
+
+        if (quadroEl) {
+            if (quadroFiltrado.length === 0) {
+                quadroEl.innerHTML = `
+                    <div class="missao-card" style="grid-column: 1 / -1;">
+                        <p class="missao-card-desc">Nenhuma missão disponível nesta categoria no momento.</p>
+                    </div>
+                `;
+            } else {
+                const limitReached = Number(resumo.ativas_count || 0) >= Number(resumo.limite_ativas || 3);
+                quadroEl.innerHTML = quadroFiltrado.map((m) => {
+                    const diffKey = ['facil', 'media', 'dificil', 'epica'].includes(m.dificuldade) ? m.dificuldade : 'media';
+                    const safeId = Number(m.id);
+                    const status = m.meu_status;
+                    const lotada = m.limite_vagas && Number(m.vagas_ocupadas || 0) >= Number(m.limite_vagas);
+
+                    let btnHtml = `<button type="button" class="btn-missao-action accept" data-accept-missao="${safeId}">Escolher Missão</button>`;
+                    if (status === 'em_andamento') {
+                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled>✓ Em Andamento</button>`;
+                    } else if (status === 'aguardando_validacao') {
+                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled>⏳ Aguardando Validação</button>`;
+                    } else if (status === 'concluida') {
+                        btnHtml = `<button type="button" class="btn-missao-action complete" disabled>🏆 Já Concluída</button>`;
+                    } else if (lotada) {
+                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled>Vagas Esgotadas</button>`;
+                    } else if (limitReached) {
+                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled title="Você já possui 3 missões ativas">Limite 3/3 Ativo</button>`;
+                    }
+
+                    return `
+                        <article class="missao-card">
+                            <div class="missao-card-top">
+                                <span class="missao-origin-badge board">${this.escapeHtml(catLabels[m.categoria] || m.categoria || 'Desafio')}</span>
+                                <span class="missao-diff-pill ${diffKey}">${this.escapeHtml(diffLabels[diffKey] || m.dificuldade)}</span>
+                            </div>
+                            <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
+                            <p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>
+                            <div class="missao-card-meta-row">
+                                <span class="missao-xp-tag">⚡ +${Number(m.recompensa_xp || 0)} XP</span>
+                                ${m.prazo_dias ? `<span>Prazo sugerido: ${Number(m.prazo_dias)} dias</span>` : ''}
+                                ${m.limite_vagas ? `<span>Vagas: ${Number(m.vagas_ocupadas || 0)}/${Number(m.limite_vagas)}</span>` : ''}
+                            </div>
+                            ${m.recompensa_texto ? `<div style="font-size:11px; color:#cbd5e1;">🎁 ${this.escapeHtml(m.recompensa_texto)}</div>` : ''}
+                            <div class="missao-card-actions">${btnHtml}</div>
+                        </article>
+                    `;
+                }).join('');
+            }
+        }
+
+        // 4. Histórico de Concluídas
+        const conclSec = document.getElementById('missoes-concluidas-section');
+        const conclEl = document.getElementById('missoes-concluidas-container');
+        if (conclSec && conclEl) {
+            if (minhasConcluidas.length === 0) {
+                conclSec.style.display = 'none';
+            } else {
+                conclSec.style.display = 'block';
+                conclEl.innerHTML = minhasConcluidas.map((m) => `
+                    <article class="missao-card done">
+                        <div class="missao-card-top">
+                            <span class="missao-origin-badge done">🏆 Concluída</span>
+                            <span class="missao-xp-tag">+${Number(m.recompensa_xp || 0)} XP</span>
+                        </div>
+                        <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
+                        ${m.feedback_professor ? `<p class="missao-card-desc">Feedback: ${this.escapeHtml(m.feedback_professor)}</p>` : `<p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>`}
+                    </article>
+                `).join('');
+            }
+        }
+
+        // Bind seguro de eventos sem handlers inline
+        document.querySelectorAll('[data-accept-missao]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                this.aceitarMissaoBoard(Number(btn.dataset.acceptMissao));
+            });
+        });
+        document.querySelectorAll('[data-concluir-missao]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                this.solicitarConclusaoMissao(Number(btn.dataset.concluirMissao));
+            });
+        });
+        document.querySelectorAll('[data-abandonar-missao]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                this.abandonarMissaoBoard(Number(btn.dataset.abandonarMissao));
+            });
+        });
+    },
+
+    async aceitarMissaoBoard(missaoId) {
+        try {
+            const res = await this.requestAlunoJson(`/api/aluno/missoes/${missaoId}/aceitar`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            this.showToast(res.message || 'Missão escolhida com sucesso!', 'success');
+            await this.loadMissoesView();
+        } catch (err) {
+            this.showToast(err.message, 'error');
+        }
+    },
+
+    async solicitarConclusaoMissao(missaoId) {
+        const nota = prompt('Deseja deixar uma observação rápida para o professor validar (opcional)?');
+        if (nota === null) return;
+        try {
+            const res = await this.requestAlunoJson(`/api/aluno/missoes/${missaoId}/concluir`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nota_aluno: nota.trim() || null })
+            });
+            this.showToast(res.message || 'Solicitação enviada ao professor!', 'success');
+            await this.loadMissoesView();
+        } catch (err) {
+            this.showToast(err.message, 'error');
+        }
+    },
+
+    async abandonarMissaoBoard(missaoId) {
+        if (!confirm('Deseja sair desta missão ativa para liberar vaga para outra?')) return;
+        try {
+            const res = await this.requestAlunoJson(`/api/aluno/missoes/${missaoId}/abandonar`, {
+                method: 'DELETE'
+            });
+            this.showToast(res.message || 'Missão removida das ativas.', 'info');
+            await this.loadMissoesView();
+        } catch (err) {
+            this.showToast(err.message, 'error');
+        }
     },
 
     /**

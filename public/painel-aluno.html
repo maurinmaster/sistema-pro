@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.0">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.1">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -75,6 +75,13 @@
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="8" r="6"/>
                             <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+                        </svg>
+                    </button>
+                    <button type="button" class="dock-btn" data-tab="missoes" title="Missões & Quadro de Desafios">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <circle cx="12" cy="12" r="6"/>
+                            <circle cx="12" cy="12" r="2"/>
                         </svg>
                     </button>
                 </nav>
@@ -699,6 +706,117 @@
                     </table>
                 </div>
             </div>
+
+            <!-- ========================================================= -->
+            <!-- SPA VIEW 6: MISSÕES (AUTOMÁTICAS + QUADRO DO PROFESSOR)   -->
+            <!-- ========================================================= -->
+            <div class="spa-view" id="spa-view-missoes" style="display: none;">
+                <div class="wiki-header-nav-row">
+                    <button type="button" class="btn-voltar-painel" onclick="PainelAlunoApp.switchView('dashboard')">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                        <span>Voltar à Visão Geral</span>
+                    </button>
+
+                    <div class="student-profile-pill">
+                        <img id="missoes-header-avatar-img"
+                            src="https://ui-avatars.com/api/?name=Atleta&background=f59e0b&color=fff" alt="Avatar">
+                        <span id="missoes-header-student-name">Atleta</span>
+                    </div>
+                </div>
+
+                <div class="faturas-overview-banner" style="margin-bottom: 16px;">
+                    <div class="faturas-overview-header">
+                        <div class="faturas-icon-wrap" style="background: rgba(245, 158, 11, 0.16); color: #fbbf24;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="6" />
+                                <circle cx="12" cy="12" r="2" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 style="margin: 0; font-size: 19px; color: #f8fafc;">Missões &amp; Quadro de Desafios</h2>
+                            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #94a3b8;">Metas automáticas da sua evolução + desafios extras do professor para você escolher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="missoes-kpi-strip">
+                    <div class="missoes-kpi-box">
+                        <span>Ativas do Quadro</span>
+                        <strong id="missoes-kpi-ativas">0/3</strong>
+                    </div>
+                    <div class="missoes-kpi-box">
+                        <span>Concluídas</span>
+                        <strong id="missoes-kpi-concluidas" style="color: #34d399;">0</strong>
+                    </div>
+                    <div class="missoes-kpi-box">
+                        <span>XP em Missões</span>
+                        <strong id="missoes-kpi-xp" style="color: #fbbf24;">0 XP</strong>
+                    </div>
+                </div>
+
+                <!-- 1. MISSÕES AUTOMÁTICAS -->
+                <section class="missoes-section-block">
+                    <div class="missoes-block-header">
+                        <div>
+                            <h3>🎯 Missões Automáticas de Evolução</h3>
+                            <p>Geradas automaticamente pelo seu Foco Técnico RPG, frequência semanal, currículo e exame.</p>
+                        </div>
+                    </div>
+                    <div id="missoes-automaticas-container" class="missoes-cards-grid">
+                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">Carregando missões automáticas...</div>
+                    </div>
+                </section>
+
+                <!-- 2. MINHAS MISSÕES ESCOLHIDAS DO QUADRO -->
+                <section class="missoes-section-block">
+                    <div class="missoes-block-header">
+                        <div>
+                            <h3>⚔️ Minhas Missões Escolhidas</h3>
+                            <p>Desafios do quadro do professor que você assumiu no momento (máximo de 3 simultâneas).</p>
+                        </div>
+                    </div>
+                    <div id="missoes-minhas-container" class="missoes-cards-grid">
+                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 18px;">Carregando suas missões...</div>
+                    </div>
+                </section>
+
+                <!-- 3. QUADRO DE MISSÕES DO PROFESSOR -->
+                <section class="missoes-section-block">
+                    <div class="missoes-block-header">
+                        <div>
+                            <h3>📋 Quadro de Missões do Professor</h3>
+                            <p>Escolha desafios criados pelo seu instrutor para evoluir atributos e acumular XP.</p>
+                        </div>
+                    </div>
+                    <div class="wiki-spa-filters" id="missoes-board-filters" style="margin-bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="curriculum-pill active" data-missao-cat="todas">Todas</button>
+                        <button type="button" class="curriculum-pill" data-missao-cat="tecnica">Técnica</button>
+                        <button type="button" class="curriculum-pill" data-missao-cat="sparring">Sparring</button>
+                        <button type="button" class="curriculum-pill" data-missao-cat="clinch">Clinch</button>
+                        <button type="button" class="curriculum-pill" data-missao-cat="condicionamento">Condicionamento</button>
+                        <button type="button" class="curriculum-pill" data-missao-cat="disciplina">Disciplina</button>
+                    </div>
+                    <div id="missoes-quadro-container" class="missoes-cards-grid">
+                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">Carregando quadro de missões...</div>
+                    </div>
+                </section>
+
+                <!-- 4. HISTÓRICO DE MISSÕES CONCLUÍDAS -->
+                <section class="missoes-section-block" id="missoes-concluidas-section" style="display: none;">
+                    <div class="missoes-block-header">
+                        <div>
+                            <h3>🏆 Missões Concluídas</h3>
+                            <p>Desafios do quadro já validados pelo professor.</p>
+                        </div>
+                    </div>
+                    <div id="missoes-concluidas-container" class="missoes-cards-grid"></div>
+                </section>
+            </div>
         </main>
 
         <!-- ============================================================= -->
@@ -947,36 +1065,6 @@
                         <div class="graduations-timeline" id="graduations-timeline-container">
                             <!-- Linha do tempo inserida pelo JS -->
                         </div>
-                    </div>
-                </section>
-
-                <!-- ========================================================= -->
-                <!-- CARD INDEPENDENTE: CONQUISTAS & MEDALHAS                  -->
-                <!-- ========================================================= -->
-                <section class="achievements-section-wrap standalone-panel-card">
-                    <div class="achievements-head-row">
-                        <div class="achievements-title-group">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b"
-                                stroke-width="2">
-                                <circle cx="12" cy="8" r="6" />
-                                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
-                            </svg>
-                            <span class="achievements-title-text">Conquistas</span>
-                            <span class="achievements-counter-chip" id="achievements-badge">1 de 6</span>
-                        </div>
-                        <button type="button" class="btn-see-all-achievements" id="btn-see-all-conquistas"
-                            onclick="PainelAlunoApp.scrollToSection('.engagement-hero-grid')">
-                            <span>Ver todas</span>
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2.5">
-                                <polyline points="9 18 15 12 9 6" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <!-- Carrossel Deslizável Horizontalmente -->
-                    <div class="achievements-carousel no-scrollbar" id="badges-container">
-                        <!-- Preenchido dinamicamente pelo JS -->
                     </div>
                 </section>
 
@@ -1790,12 +1878,20 @@
             </svg>
             <span>Evolução</span>
         </button>
+        <button type="button" class="mobile-nav-item" data-tab="missoes" id="mob-nav-missoes">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="2" />
+            </svg>
+            <span>Missões</span>
+        </button>
 
     </nav>
 
     <!-- Script Principal do Painel -->
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
-    <script src="/js/painel-aluno.js?v=6.3"></script>
+    <script src="/js/painel-aluno.js?v=6.4"></script>
 </body>
 
 </html>

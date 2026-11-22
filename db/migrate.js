@@ -674,6 +674,64 @@ async function runMigrations() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
+        // 19e. Quadro de Missões criado pelo Professor e Adesão dos Alunos
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS missoes_quadro (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                titulo VARCHAR(140) NOT NULL,
+                descricao TEXT NOT NULL,
+                categoria VARCHAR(40) NOT NULL DEFAULT 'tecnica',
+                dificuldade ENUM('facil', 'media', 'dificil', 'epica') NOT NULL DEFAULT 'media',
+                pilar_foco VARCHAR(30) NULL DEFAULT NULL,
+                modalidade_id INT UNSIGNED NULL DEFAULT NULL,
+                recompensa_xp INT UNSIGNED NOT NULL DEFAULT 50,
+                recompensa_texto VARCHAR(120) NULL DEFAULT NULL,
+                limite_vagas INT UNSIGNED NULL DEFAULT NULL,
+                prazo_dias INT UNSIGNED NULL DEFAULT NULL,
+                ativo TINYINT(1) NOT NULL DEFAULT 1,
+                criado_por BIGINT UNSIGNED NULL DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_missoes_quadro_ativo (ativo, modalidade_id),
+                CONSTRAINT fk_missoes_quadro_mod FOREIGN KEY (modalidade_id) REFERENCES modalidades(id) ON DELETE SET NULL,
+                CONSTRAINT fk_missoes_quadro_prof FOREIGN KEY (criado_por) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS aluno_missoes (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                aluno_id BIGINT UNSIGNED NOT NULL,
+                missao_id INT UNSIGNED NOT NULL,
+                status ENUM('em_andamento', 'aguardando_validacao', 'concluida', 'cancelada') NOT NULL DEFAULT 'em_andamento',
+                nota_aluno VARCHAR(300) NULL DEFAULT NULL,
+                feedback_professor VARCHAR(300) NULL DEFAULT NULL,
+                validado_por BIGINT UNSIGNED NULL DEFAULT NULL,
+                aceita_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                solicitada_conclusao_em DATETIME NULL DEFAULT NULL,
+                concluida_em DATETIME NULL DEFAULT NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uq_aluno_missao (aluno_id, missao_id),
+                INDEX idx_aluno_missoes_status (status),
+                CONSTRAINT fk_aluno_missoes_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+                CONSTRAINT fk_aluno_missoes_missao FOREIGN KEY (missao_id) REFERENCES missoes_quadro(id) ON DELETE CASCADE,
+                CONSTRAINT fk_aluno_missoes_validador FOREIGN KEY (validado_por) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        // Seed inicial idempotente de missões para o Quadro de Missões
+        const [missoesCount] = await pool.query('SELECT COUNT(*) AS total FROM missoes_quadro');
+        if (missoesCount[0].total === 0) {
+            await pool.query(`
+                INSERT INTO missoes_quadro (titulo, descricao, categoria, dificuldade, pilar_foco, modalidade_id, recompensa_xp, recompensa_texto, ativo) VALUES
+                ('100 Chutes Circulares Limpos no Saco', 'Executar 50 chutes com cada perna mantendo quadril rotacionado, guarda alta e retorno na base equilibrada.', 'tecnica', 'facil', 'destreza', NULL, 50, '+50 XP Técnico', 1),
+                ('3 Rounds de Clinch Técnico Controlado', 'Realizar 3 rounds focando em postura ereta, controle de nuca/biceps e saídas rápidas sem travar a respiração.', 'clinch', 'media', 'forca', NULL, 100, '+100 XP & Destaque no Clinch', 1),
+                ('Desafio da Guarda Alta sob Fadiga', 'Finalizar o último round do treino mantendo os dois cotovelos fechados e queixo protegido sem baixar a guarda.', 'sparring', 'dificil', 'vitalidade', NULL, 150, '+150 XP Resistência Elite', 1),
+                ('Leitura & Contra-Ataque: 5 Sequências Limpas', 'Durante drill técnico ou sparring controlado, responder imediatamente após defesa/aparo com combinação limpa.', 'tecnica', 'media', 'inteligencia', NULL, 100, '+100 XP Leitura Tática', 1)
+            `);
+            console.log('🎯 [Bootstrap] Missões iniciais adicionadas ao Quadro de Missões.');
+        }
+
         // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
         const [alunosSemGrad] = await pool.query(`
             SELECT a.id FROM alunos a

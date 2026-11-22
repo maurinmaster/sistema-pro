@@ -194,9 +194,19 @@ const AuthModule = {
         const navFinanceiro = document.getElementById('nav-financeiro');
         const btnNovoAluno = document.getElementById('btn-novo-aluno');
         const navMensagens = document.getElementById('nav-mensagens');
+        const navMissoes = document.getElementById('nav-missoes');
 
         if (navMensagens) {
             navMensagens.style.display = u.cargo === 'admin' ? 'flex' : 'none';
+        }
+        if (navMissoes) {
+            navMissoes.style.display = ['admin', 'professor'].includes(u.cargo) ? 'flex' : 'none';
+        }
+        if (!['admin', 'professor'].includes(u.cargo)) {
+            const viewMissoes = document.getElementById('view-missoes');
+            if (viewMissoes && viewMissoes.classList.contains('active')) {
+                document.getElementById('nav-dashboard')?.click();
+            }
         }
         if (u.cargo !== 'admin') {
             const viewMensagens = document.getElementById('view-mensagens');
@@ -234,6 +244,8 @@ const AuthModule = {
             case 'manage_financeiro':
                 return ['admin', 'recepcao'].includes(cargo);
             case 'promote_faixas':
+                return ['admin', 'professor'].includes(cargo);
+            case 'manage_missoes':
                 return ['admin', 'professor'].includes(cargo);
             case 'manage_mensagens':
                 return cargo === 'admin';

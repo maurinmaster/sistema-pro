@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=4.5">
+    <link rel="stylesheet" href="/css/style.css?v=4.6">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.3">
 </head>
@@ -99,6 +99,15 @@
                     </svg>
                     <span>Wiki de Golpes</span>
                     <span class="nav-badge" id="total-golpes-count" style="display: none;">0</span>
+                </a>
+                <a class="nav-item" data-view="missoes" id="nav-missoes">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    <span>Quadro de Missões</span>
+                    <span class="nav-badge" id="total-missoes-pendentes-count" style="display: none; background: #f59e0b; color: #090d16;">0</span>
                 </a>
                 <a class="nav-item" data-view="mensagens" id="nav-mensagens" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1266,6 +1275,49 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 8: QUADRO DE MISSÕES DO PROFESSOR -->
+                <section class="view-section" id="view-missoes">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 20px; color: #ffffff;">Quadro de Missões &amp; Desafios</h3>
+                            <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-muted);">Crie desafios para os alunos escolherem na página de missões e valide entregas concluídas no tatame.</p>
+                        </div>
+                        <button type="button" class="btn btn-primary" id="btn-nova-missao">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <span>+ Nova Missão</span>
+                        </button>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                        <button type="button" class="btn btn-primary btn-sm" data-missoes-subtab="quadro">🎯 Quadro de Missões</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-missoes-subtab="validacoes">
+                            <span>✅ Validação de Alunos</span>
+                            <span class="nav-badge" id="missoes-validacoes-badge" style="display: none; background: #f59e0b; color: #090d16; margin-left: 4px;">0</span>
+                        </button>
+                    </div>
+
+                    <div id="subtab-missoes-quadro">
+                        <div class="admin-missoes-grid" id="lista-missoes-quadro">
+                            <!-- Renderizado via MissoesModule -->
+                        </div>
+                    </div>
+
+                    <div id="subtab-missoes-validacoes" style="display: none;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+                            <span style="font-size: 13px; color: var(--text-muted);">Entregas enviadas pelos alunos que escolheram missões do quadro:</span>
+                            <select id="filtro-missoes-validacao-status" class="form-select" style="max-width: 240px;">
+                                <option value="aguardando_validacao">Aguardando Validação</option>
+                                <option value="em_andamento">Em Andamento</option>
+                                <option value="concluida">Concluídas / Aprovadas</option>
+                                <option value="todas">Todas</option>
+                            </select>
+                        </div>
+                        <div id="lista-missoes-validacoes" style="display: flex; flex-direction: column; gap: 10px;">
+                            <!-- Renderizado via MissoesModule -->
                         </div>
                     </div>
                 </section>
@@ -3221,10 +3273,114 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO / EDIÇÃO DE MISSÃO         -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-missao">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 id="modal-missao-title">Nova Missão no Quadro</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-missao')">&times;</button>
+            </div>
+            <form id="form-missao">
+                <div class="modal-body">
+                    <input type="hidden" id="missao-id">
+
+                    <div class="form-group">
+                        <label for="missao-titulo">Título da Missão <span class="required">*</span></label>
+                        <input type="text" id="missao-titulo" class="form-input" required minlength="3" maxlength="140"
+                            placeholder="Ex: 100 Chutes Circulares Limpos no Saco">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="missao-descricao">Objetivo &amp; Critério de Conclusão <span class="required">*</span></label>
+                        <textarea id="missao-descricao" class="form-textarea" rows="3" required minlength="5" maxlength="1000"
+                            placeholder="Explique exatamente o que o atleta precisa fazer no tatame para o professor validar..."></textarea>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="missao-categoria">Categoria</label>
+                            <select id="missao-categoria" class="form-select">
+                                <option value="tecnica">Técnica</option>
+                                <option value="sparring">Sparring</option>
+                                <option value="clinch">Clinch</option>
+                                <option value="condicionamento">Condicionamento</option>
+                                <option value="frequencia">Frequência</option>
+                                <option value="disciplina">Disciplina</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="missao-dificuldade">Dificuldade</label>
+                            <select id="missao-dificuldade" class="form-select">
+                                <option value="facil">Fácil</option>
+                                <option value="media" selected>Média</option>
+                                <option value="dificil">Difícil</option>
+                                <option value="epica">Épica</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="missao-pilar">Pilar RPG Trabalhado</label>
+                            <select id="missao-pilar" class="form-select">
+                                <option value="">Geral / Qualquer Pilar</option>
+                                <option value="inteligencia">Inteligência</option>
+                                <option value="destreza">Destreza</option>
+                                <option value="agilidade">Agilidade</option>
+                                <option value="forca">Força</option>
+                                <option value="vitalidade">Vitalidade</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="missao-modalidade-id">Modalidade Alvo</label>
+                            <select id="missao-modalidade-id" class="form-select">
+                                <option value="">Todas as Modalidades</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="missao-xp">Recompensa XP</label>
+                            <input type="number" id="missao-xp" class="form-input" min="0" max="5000" value="50">
+                        </div>
+                        <div class="form-group">
+                            <label for="missao-recompensa-texto">Prêmio / Destaque (Opcional)</label>
+                            <input type="text" id="missao-recompensa-texto" class="form-input" maxlength="120"
+                                placeholder="Ex: Destaque no Quadro / +100 XP">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="missao-vagas">Limite de Vagas (Opcional)</label>
+                            <input type="number" id="missao-vagas" class="form-input" min="1" max="500" placeholder="Ilimitado">
+                        </div>
+                        <div class="form-group">
+                            <label for="missao-prazo">Prazo Sugerido em Dias (Opcional)</label>
+                            <input type="number" id="missao-prazo" class="form-input" min="1" max="365" placeholder="Sem prazo">
+                        </div>
+                    </div>
+
+                    <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-main);">
+                        <input type="checkbox" id="missao-ativo" checked style="width: 16px; height: 16px; accent-color: #10b981;">
+                        <span>Missão ativa e visível no Quadro dos Alunos</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-missao')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Missão</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts da Aplicação (Vanilla JS) -->
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
-    <script src="/js/auth.js?v=1.1"></script>
+    <script src="/js/auth.js?v=1.2"></script>
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
     <script src="/js/aluno-detalhes.js?v=1.5"></script>
     <script src="/js/alunos.js?v=5.4"></script>
@@ -3233,9 +3389,10 @@
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.5"></script>
+    <script src="/js/missoes.js?v=1.0"></script>
     <script src="/js/exames.js?v=3.9"></script>
     <script src="/js/mensagens-config.js?v=1.1"></script>
-    <script src="/js/app.js?v=4.0"></script>
+    <script src="/js/app.js?v=4.1"></script>
 </body>
 
 </html>

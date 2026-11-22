@@ -8900,3 +8900,288 @@ body {
 
 .rpg-story-btn.primary { background: linear-gradient(135deg, #0284c7, #38bdf8); color: #ffffff; }
 .rpg-story-btn.secondary { background: rgba(148, 163, 184, 0.14); border-color: rgba(148, 163, 184, 0.3); color: #f8fafc; }
+
+/* ==========================================================================
+   PÁGINA DEDICADA DE MISSÕES (AUTOMÁTICAS + QUADRO DO PROFESSOR)
+   ========================================================================== */
+.portal-rpg-missoes-cta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(56, 189, 248, 0.12));
+    border: 1px solid rgba(245, 158, 11, 0.32);
+    color: #f8fafc;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+}
+
+.portal-rpg-missoes-cta span:last-child {
+    color: #fbbf24;
+    white-space: nowrap;
+}
+
+.missoes-kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.missoes-kpi-box {
+    background: rgba(14, 19, 31, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.missoes-kpi-box span {
+    font-size: 11px;
+    color: #94a3b8;
+    font-weight: 600;
+}
+
+.missoes-kpi-box strong {
+    font-size: 20px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.missoes-section-block {
+    margin-bottom: 22px;
+}
+
+.missoes-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.missoes-block-header h3 {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 800;
+    color: #f8fafc;
+}
+
+.missoes-block-header p {
+    margin: 2px 0 0 0;
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.missoes-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+    gap: 12px;
+}
+
+.missao-card {
+    background: rgba(14, 19, 31, 0.9);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 15px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.missao-card.auto {
+    border-color: rgba(56, 189, 248, 0.28);
+}
+
+.missao-card.chosen {
+    border-color: rgba(245, 158, 11, 0.38);
+}
+
+.missao-card.done {
+    border-color: rgba(16, 185, 129, 0.4);
+    background: rgba(16, 185, 129, 0.06);
+}
+
+.missao-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.missao-origin-badge {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.missao-origin-badge.auto {
+    background: rgba(56, 189, 248, 0.16);
+    color: #7dd3fc;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.missao-origin-badge.board {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.missao-origin-badge.done {
+    background: rgba(16, 185, 129, 0.18);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.missao-diff-pill {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 999px;
+    text-transform: uppercase;
+}
+
+.missao-diff-pill.facil { background: rgba(16, 185, 129, 0.16); color: #34d399; }
+.missao-diff-pill.media { background: rgba(56, 189, 248, 0.16); color: #38bdf8; }
+.missao-diff-pill.dificil { background: rgba(245, 158, 11, 0.18); color: #fbbf24; }
+.missao-diff-pill.epica { background: rgba(244, 63, 94, 0.18); color: #fb7185; }
+
+.missao-card-title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1.3;
+}
+
+.missao-card-desc {
+    margin: 0;
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.45;
+    flex: 1;
+}
+
+.missao-progress-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.missao-progress-track {
+    flex: 1;
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.missao-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.missao-progress-val {
+    font-size: 11px;
+    font-weight: 800;
+    color: #e2e8f0;
+    white-space: nowrap;
+}
+
+.missao-card-meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #cbd5e1;
+}
+
+.missao-xp-tag {
+    color: #fbbf24;
+    font-weight: 800;
+    background: rgba(245, 158, 11, 0.14);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.missao-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.btn-missao-action {
+    flex: 1;
+    min-height: 36px;
+    padding: 7px 12px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.btn-missao-action.accept {
+    background: linear-gradient(135deg, #f59e0b, #ea580c);
+    color: #ffffff;
+}
+
+.btn-missao-action.complete {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #ffffff;
+}
+
+.btn-missao-action.abandon {
+    flex: 0 0 auto;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+}
+
+.btn-missao-action:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.missao-feedback-box {
+    font-size: 11px;
+    color: #fde68a;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.28);
+    padding: 7px 9px;
+    border-radius: 8px;
+    line-height: 1.35;
+}
+
+@media (max-width: 480px) {
+    .missoes-kpi-strip {
+        gap: 6px;
+    }
+    .missoes-kpi-box {
+        padding: 10px 8px;
+    }
+    .mobile-nav-item {
+        font-size: 9px;
+        padding: 6px 2px;
+    }
+}

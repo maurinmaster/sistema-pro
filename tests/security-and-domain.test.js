@@ -2335,6 +2335,84 @@ test('Gamificação Avançada RPG: Arquétipo, Insígnias, Foco de Evolução e 
     assert.equal(lockPass.pendencias.length, 0);
 });
 
+test('Quadro de Missões e Missões Automáticas: Validação, Geração Automática e Limite de Aceite', () => {
+    const missoes = require('../services/missoesService');
+
+    // 1. Validação de payload do Quadro de Missões
+    assert.equal(missoes.validateMissaoPayload({ titulo: 'Oi', descricao: 'Desc ok' }).valid, false);
+    assert.equal(missoes.validateMissaoPayload({ titulo: 'Chute Circular', descricao: 'abc' }).valid, false);
+    assert.equal(missoes.validateMissaoPayload({ titulo: 'Chute Circular', descricao: 'Treinar 100 chutes', dificuldade: 'insana' }).valid, false);
+    assert.equal(missoes.validateMissaoPayload({ titulo: 'Chute Circular', descricao: 'Treinar 100 chutes', categoria: 'corrida' }).valid, false);
+    assert.equal(missoes.validateMissaoPayload({ titulo: 'Chute Circular', descricao: 'Treinar 100 chutes', recompensa_xp: 99999 }).valid, false);
+
+    const validMissao = missoes.validateMissaoPayload({
+        titulo: '  100 Chutes no Saco  ',
+        descricao: 'Manter a base firme e retorno imediato da guarda.',
+        categoria: 'tecnica',
+        dificuldade: 'dificil',
+        pilar_foco: 'destreza',
+        modalidade_id: '1',
+        recompensa_xp: 120,
+        recompensa_texto: 'Destaque da Semana',
+        limite_vagas: 20,
+        prazo_dias: 7,
+        ativo: true
+    });
+    assert.equal(validMissao.valid, true);
+    assert.equal(validMissao.data.titulo, '100 Chutes no Saco');
+    assert.equal(validMissao.data.modalidade_id, 1);
+    assert.equal(validMissao.data.recompensa_xp, 120);
+    assert.equal(validMissao.data.ativo, 1);
+
+    // 2. Geração de missões automáticas (com RPG + Frequência + Exame + Wiki e sem RPG)
+    const semRpg = missoes.buildAutomaticMissions({
+        avaliacaoRpg: null,
+        streak: { total_semana: 2, meta_semana: 3, meta_atingida: false },
+        prontidaoExame: { total_golpes: 10, golpes_dominados: 4, nivel_nome: 'Prajied Branco', apto_exame: false }
+    });
+    assert.equal(semRpg.length, 2);
+    assert.equal(semRpg[0].tipo, 'frequencia_semanal');
+    assert.equal(semRpg[1].tipo, 'curriculo_wiki');
+
+    const comRpg = missoes.buildAutomaticMissions({
+        avaliacaoRpg: {
+            atual: {
+                foco_evolucao: {
+                    criterios: [
+                        { id: 'saidas_clinch', nome: 'Saídas de clinch', pilar: 'agilidade', pilar_nome: 'Agilidade', pilar_cor: '#22c55e', nota: 1 },
+                        { id: 'controle_distancia', nome: 'Controle de distância', pilar: 'inteligencia', pilar_nome: 'Inteligência', pilar_cor: '#38bdf8', nota: 2 }
+                    ]
+                }
+            },
+            requisitos_exame: {
+                possui_requisitos_rpg: true,
+                proxima_graduacao_nome: 'Prajied Amarelo',
+                progresso_pct: 60,
+                elegivel: false,
+                pendencias: ['Rank B: faltam +5 pts']
+            }
+        },
+        streak: { total_semana: 3, meta_semana: 3, meta_atingida: true },
+        prontidaoExame: { total_golpes: 5, golpes_dominados: 5, nivel_nome: 'Prajied Branco', apto_exame: true }
+    });
+    assert.equal(comRpg.length, 5);
+    assert.equal(comRpg[0].tipo, 'foco_rpg');
+    assert.equal(comRpg[0].progresso_pct, 20);
+    assert.equal(comRpg[2].status, 'concluida');
+    assert.equal(comRpg[3].tipo, 'exame_graduacao');
+    assert.equal(comRpg[4].status, 'concluida');
+
+    // 3. Regras de aceite do Quadro do Professor
+    const activeMissao = { id: 1, ativo: 1, limite_vagas: 2 };
+    assert.equal(missoes.canStudentAcceptMission({ missao: { id: 1, ativo: 0 }, activeCount: 0 }).allowed, false);
+    assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 0, currentEnrollment: { status: 'em_andamento' } }).allowed, false);
+    assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 0, currentEnrollment: { status: 'aguardando_validacao' } }).allowed, false);
+    assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 0, currentEnrollment: { status: 'concluida' } }).allowed, false);
+    assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 3 }).allowed, false);
+    assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 0, totalAceites: 2 }).allowed, false);
+    assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 1, currentEnrollment: { status: 'cancelada' }, totalAceites: 1 }).allowed, true);
+});
+
 test.after(async () => {
     try {
         await pool.end();
