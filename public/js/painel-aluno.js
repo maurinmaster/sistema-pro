@@ -23,6 +23,7 @@ const PainelAlunoApp = {
     wikiSpaBusca: '',
     meusExames: [],
     modalExameAtivoId: null,
+    portalRpgCompareId: null,
 
     escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -419,10 +420,10 @@ const PainelAlunoApp = {
             const btn = document.getElementById('btn-toggle-eval-details');
             if (!drawer || !btn) return;
             const isHidden = drawer.style.display === 'none' || !drawer.style.display;
-            drawer.style.display = isHidden ? 'grid' : 'none';
+            drawer.style.display = isHidden ? 'block' : 'none';
             btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
             const span = btn.querySelector('span');
-            if (span) span.textContent = isHidden ? 'Ocultar Notas ↑' : 'Notas Técnicas ↓';
+            if (span) span.textContent = isHidden ? 'Ocultar Ficha RPG ↑' : 'Ficha RPG ↓';
         });
 
         document.getElementById('btn-open-plan-payment')?.addEventListener('click', () => {
@@ -879,25 +880,10 @@ const PainelAlunoApp = {
                 : 'Sem aferição registrada';
         }
 
-        // Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) no Flanco Direito
-        const notas = data.notas_tecnicas || (aluno && aluno.notas_tecnicas) || {};
-        const setEvalScore = (numId, barId, val) => {
-            const numEl = document.getElementById(numId);
-            const barEl = document.getElementById(barId);
-            if (val !== null && val !== undefined && !isNaN(val)) {
-                const n = Number(val);
-                if (numEl) numEl.textContent = n.toFixed(1);
-                if (barEl) barEl.style.width = `${Math.min(100, Math.max(0, (n / 10) * 100))}%`;
-            } else {
-                if (numEl) numEl.textContent = '--';
-                if (barEl) barEl.style.width = '0%';
-            }
-        };
-
-        setEvalScore('eval-score-clinch', 'eval-bar-clinch', notas.clinch);
-        setEvalScore('eval-score-socos', 'eval-bar-socos', notas.socos);
-        setEvalScore('eval-score-chutes', 'eval-bar-chutes', notas.chutes);
-        setEvalScore('eval-score-postura', 'eval-bar-postura', notas.postura);
+        // Ficha Técnica Gamificada (RPG Muay Thai) no Flanco Direito
+        this._rpgPortalData = data.avaliacao_rpg || null;
+        this._rpgPortalCompareId = this._rpgPortalData?.anterior ? Number(this._rpgPortalData.anterior.id) : null;
+        this.renderPortalRpgCard();
 
         // Atualização dos tags de variação (Deltas) - oculta se delta for 0 para não exibir "=0"
         const updateDeltaTag = (tagId, arrowId, numId, metric) => {
@@ -998,6 +984,11 @@ const PainelAlunoApp = {
             scoreElegibilidade = Math.round(Number(avaliacaoOficial.percentual_obtido));
             isApto = Boolean(avaliacaoOficial.apto);
             temAvaliacao = true;
+        } else if (data?.avaliacao_rpg?.atual && data.avaliacao_rpg.atual.score_total !== null && data.avaliacao_rpg.atual.score_total !== undefined) {
+            scoreElegibilidade = Math.round(Number(data.avaliacao_rpg.atual.score_total));
+            const meta = Number(graduacao?.atual?.porcentagem_minima || 70);
+            isApto = scoreElegibilidade >= meta;
+            temAvaliacao = true;
         } else if (notasProf && notasProf.clinch !== null && notasProf.clinch !== undefined && !isNaN(notasProf.clinch)) {
             const media = (Number(notasProf.clinch) + Number(notasProf.socos || 0) + Number(notasProf.chutes || 0) + Number(notasProf.postura || 0)) / 4;
             scoreElegibilidade = Math.round(media * 10);
@@ -1092,6 +1083,156 @@ const PainelAlunoApp = {
                     </div>
                 `;
             }).join('');
+        }
+    },
+
+    onChangePortalRpgCompare(compareIdStr) {
+        this.portalRpgCompareId = compareIdStr === 'none' ? 'none' : (Number(compareIdStr) || null);
+        this.renderPortalRpgCard();
+    },
+
+    renderPortalRpgCard(rpgPayload = null) {
+        const container = document.getElementById('athlete-rpg-container');
+        if (!container) return;
+
+        const rpg = (rpgPayload && rpgPayload.avaliacao_rpg)
+            ? rpgPayload.avaliacao_rpg
+            : (rpgPayload || this.alunoData?.avaliacao_rpg || null);
+        const historico = Array.isArray(rpg?.historico) ? rpg.historico : [];
+        const atual = rpg?.atual || historico[0] || null;
+
+        if (!atual || typeof window.RpgAvaliacaoUI === 'undefined') {
+            container.innerHTML = `
+                <div class="portal-rpg-card">
+                    <div style="font-size: 12.5px; color: #94a3b8; text-align: center; padding: 10px 6px;">
+                        <strong style="display:block; color:#e2e8f0; margin-bottom:4px;">Avaliação Técnica RPG (Muay Thai)</strong>
+                        Nenhuma avaliação RPG lançada pelo instrutor ainda. Quando você for avaliado nos 20 critérios técnicos, seu Rank de Combate (D a S) e gráfico Radar aparecerão aqui.
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        const ui = window.RpgAvaliacaoUI;
+        const candidates = historico.filter((h) => String(h.id) !== String(atual.id));
+        let anterior = null;
+        if (this.portalRpgCompareId !== 'none') {
+            if (this.portalRpgCompareId) {
+                anterior = candidates.find((h) => String(h.id) === String(this.portalRpgCompareId)) || null;
+            }
+            if (!anterior) {
+                anterior = (rpg?.anterior && String(rpg.anterior.id) !== String(atual.id)) ? rpg.anterior : (candidates[0] || null);
+            }
+        }
+
+        const deltas = anterior
+            ? ((rpg?.anterior && String(anterior.id) === String(rpg.anterior.id) && rpg.deltas)
+                ? rpg.deltas
+                : ui.computeDeltas(atual, anterior))
+            : null;
+
+        const scoreTotal = Math.round(Number(atual.score_total || 0));
+        const aptoSparring = atual.apto_sparring !== false && atual.apto_sparring !== 0;
+        const dataStr = atual.data_avaliacao
+            ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR')
+            : 'Recente';
+        const avaliadorStr = this.escapeHtml(atual.avaliador_nome || 'Instrutor');
+
+        const compareHtml = candidates.length > 0 ? `
+            <div class="portal-rpg-compare">
+                <label for="portal-rpg-compare-select">Comparar radar com:</label>
+                <select id="portal-rpg-compare-select" class="portal-rpg-select">
+                    <option value="none" ${this.portalRpgCompareId === 'none' ? 'selected' : ''}>Sem comparação</option>
+                    ${candidates.map((c) => {
+                        const cDate = c.data_avaliacao ? new Date(c.data_avaliacao).toLocaleDateString('pt-BR') : `#${c.id}`;
+                        const cScore = Math.round(Number(c.score_total || 0));
+                        const cRank = this.escapeHtml(c.rank_combate || 'D');
+                        const selected = anterior && String(anterior.id) === String(c.id) ? 'selected' : '';
+                        return `<option value="${Number(c.id)}" ${selected}>${this.escapeHtml(cDate)} • ${cScore}/100 (Rank ${cRank})</option>`;
+                    }).join('')}
+                </select>
+            </div>
+        ` : '';
+
+        const noteHtml = atual.observacoes_instrutor ? `
+            <div class="portal-rpg-note">
+                <strong style="color:#7dd3fc;">Feedback do Instrutor:</strong> ${this.escapeHtml(atual.observacoes_instrutor)}
+            </div>
+        ` : '';
+
+        const legacyHtml = atual.is_legacy ? `
+            <div style="font-size: 11px; color: #94a3b8; padding: 6px 10px; border-radius: 8px; background: rgba(148, 163, 184, 0.08);">
+                Avaliação convertida do histórico anterior (escala 0–10). Novas avaliações exibirão os 20 critérios completos.
+            </div>
+        ` : '';
+
+        const criteriaDetailsHtml = (!atual.is_legacy && atual.criterios && Object.keys(atual.criterios).length > 0) ? `
+            <details style="margin-top: 2px;">
+                <summary style="cursor: pointer; font-size: 11.5px; color: #7dd3fc; font-weight: 600; user-select: none;">Ver notas dos 20 critérios</summary>
+                <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px;">
+                    ${ui.PILLARS.map((pillar) => {
+                        const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
+                        return `
+                            <div style="background: rgba(15,23,42,0.75); border: 1px solid rgba(148,163,184,0.14); border-top: 2px solid ${pillar.cor}; border-radius: 10px; padding: 8px 10px;">
+                                <div style="font-size: 11px; font-weight: 800; color: ${pillar.cor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
+                                ${items.map((c) => {
+                                    const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
+                                    const lockTxt = !aptoSparring && c.isSparring ? ' (teto 3)' : '';
+                                    return `
+                                        <div style="display:flex; justify-content:space-between; gap:6px; font-size:11px; color:#cbd5e1; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                                            <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:9px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
+                                            <strong style="color:#fff; white-space:nowrap;">${val}/5${this.escapeHtml(lockTxt)}</strong>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </details>
+        ` : '';
+
+        container.innerHTML = `
+            <div class="portal-rpg-card">
+                <div class="portal-rpg-header">
+                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                        ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
+                        <div class="portal-rpg-score">
+                            <strong>${scoreTotal}<span>/100</span></strong>
+                            ${ui.renderDeltaBadgeHtml(deltas ? deltas.score_total : null, ' pts')}
+                        </div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                        ${ui.renderSparringBadgeHtml(aptoSparring)}
+                        <span style="font-size:10.5px; color:#94a3b8;">${this.escapeHtml(dataStr)} • ${avaliadorStr}</span>
+                    </div>
+                </div>
+
+                <div class="portal-rpg-grid">
+                    <div class="portal-rpg-radar-wrap">
+                        ${ui.renderRadarSvg(atual.pilares || {}, anterior ? anterior.pilares : null)}
+                        <div class="rpg-radar-legend">
+                            <span class="rpg-legend-item"><span class="rpg-legend-swatch atual"></span> Atual (${this.escapeHtml(dataStr)})</span>
+                            ${anterior ? `<span class="rpg-legend-item"><span class="rpg-legend-swatch anterior"></span> Anterior (${this.escapeHtml(anterior.data_avaliacao ? new Date(anterior.data_avaliacao).toLocaleDateString('pt-BR') : '')})</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="rpg-pillar-bars-list">
+                        ${ui.renderPillarBarsHtml(atual.pilares || {}, deltas)}
+                    </div>
+                </div>
+
+                ${compareHtml}
+                ${legacyHtml}
+                ${noteHtml}
+                ${criteriaDetailsHtml}
+            </div>
+        `;
+
+        const compareSelect = document.getElementById('portal-rpg-compare-select');
+        if (compareSelect) {
+            compareSelect.addEventListener('change', (e) => {
+                this.onChangePortalRpgCompare(e.target.value);
+            });
         }
     },
 

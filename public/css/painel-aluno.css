@@ -8185,3 +8185,273 @@ body {
     object-fit: contain;
     display: block;
 }
+
+/* ==========================================================================
+   FICHA TÉCNICA RPG (MUAY THAI) NO PORTAL DO ALUNO
+   ========================================================================== */
+.athlete-eval-drawer.athlete-rpg-drawer {
+    display: block;
+    grid-template-columns: none;
+}
+
+.portal-rpg-card {
+    background: rgba(14, 19, 31, 0.88);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.portal-rpg-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.portal-rpg-score {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.portal-rpg-score strong {
+    font-size: 24px;
+    font-weight: 800;
+    color: #ffffff;
+}
+
+.portal-rpg-score strong span {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.portal-rpg-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) 1fr;
+    gap: 14px;
+    align-items: center;
+}
+
+@media (max-width: 680px) {
+    .portal-rpg-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.portal-rpg-radar-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+}
+
+.rpg-radar-svg {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    display: block;
+}
+
+.rpg-radar-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 10.5px;
+    color: #94a3b8;
+    flex-wrap: wrap;
+}
+
+.rpg-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.rpg-legend-swatch {
+    width: 12px;
+    height: 3px;
+    border-radius: 2px;
+}
+
+.rpg-legend-swatch.atual { background: #38bdf8; }
+.rpg-legend-swatch.anterior { border-top: 2px dashed #94a3b8; height: 0; }
+
+.portal-rpg-compare {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #94a3b8;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.portal-rpg-select {
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 11.5px;
+}
+
+.rpg-rank-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px 5px 6px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(15, 23, 42, 0.85);
+}
+
+.rpg-rank-letter {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 16px;
+    color: #090d16;
+}
+
+.rpg-rank-meta {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.rpg-rank-tag {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: #94a3b8;
+    text-transform: uppercase;
+}
+
+.rpg-rank-title {
+    font-size: 12px;
+    color: #ffffff;
+}
+
+.rpg-rank-S { border-color: rgba(244, 63, 94, 0.45); background: rgba(244, 63, 94, 0.14); }
+.rpg-rank-S .rpg-rank-letter { background: linear-gradient(135deg, #fb7185, #f43f5e); color: #fff; }
+.rpg-rank-A { border-color: rgba(245, 158, 11, 0.45); background: rgba(245, 158, 11, 0.14); }
+.rpg-rank-A .rpg-rank-letter { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.rpg-rank-B { border-color: rgba(16, 185, 129, 0.45); background: rgba(16, 185, 129, 0.14); }
+.rpg-rank-B .rpg-rank-letter { background: linear-gradient(135deg, #34d399, #10b981); }
+.rpg-rank-C { border-color: rgba(56, 189, 248, 0.45); background: rgba(56, 189, 248, 0.14); }
+.rpg-rank-C .rpg-rank-letter { background: linear-gradient(135deg, #7dd3fc, #38bdf8); }
+.rpg-rank-D { border-color: rgba(148, 163, 184, 0.35); background: rgba(148, 163, 184, 0.12); }
+.rpg-rank-D .rpg-rank-letter { background: #94a3b8; }
+
+.rpg-sparring-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.rpg-sparring-pill.apto {
+    background: rgba(16, 185, 129, 0.16);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.rpg-sparring-pill.restrito {
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.rpg-delta-pill {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: 999px;
+}
+
+.rpg-delta-pill.pos { background: rgba(16, 185, 129, 0.16); color: #34d399; }
+.rpg-delta-pill.neg { background: rgba(239, 68, 68, 0.16); color: #fca5a5; }
+.rpg-delta-pill.zero { background: rgba(148, 163, 184, 0.14); color: #94a3b8; }
+
+.rpg-pillar-bars-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rpg-pillar-bar-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11.5px;
+    margin-bottom: 3px;
+}
+
+.rpg-pillar-bar-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #e2e8f0;
+    font-weight: 600;
+}
+
+.rpg-pillar-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+}
+
+.rpg-pillar-bar-values {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rpg-pillar-bar-values strong {
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 12px;
+}
+
+.rpg-pillar-bar-values strong span {
+    color: #64748b;
+    font-size: 10px;
+}
+
+.rpg-pillar-track {
+    height: 6px;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.rpg-pillar-fill {
+    height: 100%;
+    border-radius: 999px;
+}
+
+.portal-rpg-note {
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    font-size: 11.5px;
+    color: #cbd5e1;
+    line-height: 1.4;
+}

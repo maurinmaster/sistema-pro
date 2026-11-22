@@ -618,6 +618,19 @@ async function runMigrations() {
         await ensureColumn('aluno_avaliacoes_desempenho', 'nota_chutes', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_socos');
         await ensureColumn('aluno_avaliacoes_desempenho', 'nota_postura', 'DECIMAL(4,1) NOT NULL DEFAULT 0.0 AFTER nota_chutes');
 
+        // 18b. Avaliação Técnica Gamificada (Estilo RPG - Muay Thai: 20 critérios / 5 pilares / Rank D..S)
+        await ensureColumn('aluno_avaliacoes_desempenho', 'modelo_avaliacao', "VARCHAR(20) NOT NULL DEFAULT 'legado' AFTER data_avaliacao");
+        await ensureColumn('aluno_avaliacoes_desempenho', 'apto_sparring', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER modelo_avaliacao');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'score_inteligencia', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER apto_sparring');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'score_destreza', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER score_inteligencia');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'score_agilidade', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER score_destreza');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'score_forca', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER score_agilidade');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'score_vitalidade', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER score_forca');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'score_total', 'TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER score_vitalidade');
+        await ensureColumn('aluno_avaliacoes_desempenho', 'rank_combate', "VARCHAR(2) NOT NULL DEFAULT 'D' AFTER score_total");
+        await ensureColumn('aluno_avaliacoes_desempenho', 'rank_titulo', "VARCHAR(40) NOT NULL DEFAULT 'Iniciante' AFTER rank_combate");
+        await ensureColumn('aluno_avaliacoes_desempenho', 'criterios_json', 'JSON NULL AFTER rank_titulo');
+
         // 19. Soft delete e lixeira para cadastros de alunos
         await ensureColumn('alunos', 'deleted_at', 'DATETIME NULL DEFAULT NULL AFTER updated_at');
         await pool.query('ALTER TABLE alunos ADD INDEX idx_alunos_deleted_at (deleted_at)').catch(() => {});

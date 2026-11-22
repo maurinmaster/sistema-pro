@@ -13,6 +13,7 @@ const pool = require('../db/connection');
 const asaasService = require('../services/asaasService');
 const notificationConfigService = require('../services/notificationConfigService');
 const paymentReconciliationService = require('../services/paymentReconciliationService');
+const rpgEvaluationService = require('../services/rpgEvaluationService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
@@ -448,9 +449,12 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             dias_semana: diasSemana
         };
 
-        // 3.3. Histórico Real de Avaliações Contínuas de Desempenho e Graduações (Sem dados sintéticos)
-        const [desempenhoHistory] = await pool.query(`
-            SELECT aad.id, aad.data_avaliacao, 
+        // 3.3. Histórico Real de Avaliações Técnicas RPG / Desempenho e Graduações (Sem dados sintéticos)
+        const [desempenhoHistoryRows] = await pool.query(`
+            SELECT aad.id, aad.data_avaliacao, aad.modelo_avaliacao, aad.apto_sparring,
+                   aad.score_inteligencia, aad.score_destreza, aad.score_agilidade,
+                   aad.score_forca, aad.score_vitalidade, aad.score_total,
+                   aad.rank_combate, aad.rank_titulo, aad.criterios_json,
                    aad.nota_clinch, aad.nota_socos, aad.nota_chutes, aad.nota_postura,
                    aad.nota_clinch_sparring, aad.nota_condicionamento, aad.observacoes,
                    ue.nome AS professor_nome
@@ -459,6 +463,17 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             WHERE aad.aluno_id = ?
             ORDER BY aad.data_avaliacao DESC, aad.id DESC
         `, [alunoId]);
+
+        const desempenhoHistory = desempenhoHistoryRows.map(r => rpgEvaluationService.normalizeRpgRow(r));
+        const rpgHistory = desempenhoHistory.filter(r => r.is_rpg);
+        const rpgAtual = rpgHistory[0] || null;
+        const rpgAnterior = rpgHistory[1] || null;
+        const avaliacaoRpgPayload = {
+            atual: rpgAtual,
+            anterior: rpgAnterior,
+            deltas: rpgEvaluationService.computeRpgDeltas(rpgAtual, rpgAnterior),
+            historico: rpgHistory
+        };
 
         const [graduacoesHistory] = await pool.query(`
             SELECT aag.id, aag.modalidade_id, aag.graduacao_nivel_id, aag.professor_id,
@@ -1070,6 +1085,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             avisos_campanhas: avisos,
             conquistas,
             notas_tecnicas: notasTecnicas,
+            avaliacao_rpg: avaliacaoRpgPayload,
             golpes_faixa_atual: golpesFaixaAtual,
             faixas_progresso: faixasProgresso,
             faixa_atual: faixaAtualObj,

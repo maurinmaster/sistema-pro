@@ -99,18 +99,18 @@ const EVENT_CATALOG = [
     {
         key: 'avaliacao_desempenho',
         categoria: 'Avaliações & Evolução',
-        titulo: 'Nova Avaliação Técnica de Desempenho',
-        descricao: 'Disparado quando o professor registra notas de Clinch, Socos, Chutes e Postura.',
+        titulo: 'Nova Avaliação Técnica RPG (Muay Thai)',
+        descricao: 'Disparado quando o instrutor registra uma Avaliação Técnica Gamificada (RPG) com Rank, 5 atributos e status de sparring.',
         supportsAluno: true,
         supportsAdmin: false,
-        variaveis: ['{nome}', '{clinch}', '{socos}', '{chutes}', '{postura}', '{observacoes}', '{link}'],
+        variaveis: ['{nome}', '{rank}', '{rank_titulo}', '{score_total}', '{apto_sparring}', '{inteligencia}', '{destreza}', '{agilidade}', '{forca}', '{vitalidade}', '{observacoes}', '{link}'],
         defaults: {
             aluno_whatsapp: true,
             aluno_email: true,
             admin_whatsapp: false,
             admin_email: false,
             incluir_link: true,
-            mensagem_aluno: '🥋 *PRO COMBATE — Avaliação Técnica*\n\nOlá, *{nome}*!\nSeu professor registrou uma nova avaliação de desempenho:\n• *Clinch:* {clinch}/10\n• *Socos:* {socos}/10\n• *Chutes:* {chutes}/10\n• *Postura:* {postura}/10\n{observacoes}',
+            mensagem_aluno: '🥋 *PRO COMBATE — Avaliação Técnica RPG*\n\nOlá, *{nome}*!\nSeu instrutor registrou sua nova ficha de combate:\n🏆 *Rank {rank}* ({rank_titulo}) — *{score_total}/100 pts*\n🥊 *Sparring:* {apto_sparring}\n• *Inteligência:* {inteligencia}/20\n• *Destreza:* {destreza}/20\n• *Agilidade:* {agilidade}/20\n• *Força:* {forca}/20\n• *Vitalidade:* {vitalidade}/20\n{observacoes}',
             mensagem_admin: ''
         }
     },

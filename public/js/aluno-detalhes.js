@@ -5,6 +5,9 @@ const AlunoDetalhesModule = {
     currentData: null,
     currentAvaliacao: null,
     planosCache: [],
+    rpgFormState: { apto_sparring: null, criterios: {} },
+    rpgCompareId: null,
+    rpgExpandedEvalId: null,
 
     init() {
         // Tab switching no Dossiê
@@ -30,26 +33,26 @@ const AlunoDetalhesModule = {
             btnAprovar.addEventListener('click', () => this.aprovarPromocao());
         }
 
-        // Formulário e controles de Avaliação Técnica (Clinch, Socos, Chutes, Postura)
+        // Formulário e controles da Avaliação Técnica RPG (Muay Thai)
         const formDesempenho = document.getElementById('form-avaliacao-desempenho');
         if (formDesempenho) {
             formDesempenho.addEventListener('submit', (e) => this.submitAvaliacaoDesempenho(e));
         }
 
-        const setupDesempenhoSlider = (sliderId, labelId) => {
-            const slider = document.getElementById(sliderId);
-            const label = document.getElementById(labelId);
-            if (slider && label) {
-                slider.addEventListener('input', (e) => {
-                    label.textContent = `${Number(e.target.value).toFixed(1)} / 10`;
-                });
-            }
-        };
+        document.getElementById('btn-sparring-sim')?.addEventListener('click', () => this.setRpgAptoSparring(true));
+        document.getElementById('btn-sparring-nao')?.addEventListener('click', () => this.setRpgAptoSparring(false));
+        document.getElementById('btn-rpg-carregar-ultima')?.addEventListener('click', () => this.carregarUltimaRpgNoFormulario());
 
-        setupDesempenhoSlider('desempenho-nota-clinch', 'label-nota-clinch');
-        setupDesempenhoSlider('desempenho-nota-socos', 'label-nota-socos');
-        setupDesempenhoSlider('desempenho-nota-chutes', 'label-nota-chutes');
-        setupDesempenhoSlider('desempenho-nota-postura', 'label-nota-postura');
+        const criteriosContainer = document.getElementById('rpg-criterios-container');
+        if (criteriosContainer) {
+            criteriosContainer.addEventListener('click', (e) => {
+                const segBtn = e.target.closest('.rpg-seg-btn[data-criterion-id]');
+                if (!segBtn || segBtn.disabled) return;
+                const criterionId = segBtn.getAttribute('data-criterion-id');
+                const val = Number(segBtn.getAttribute('data-val'));
+                this.setRpgCriterionScore(criterionId, val);
+            });
+        }
     },
 
     bindContractEvents() {
@@ -604,148 +607,276 @@ const AlunoDetalhesModule = {
             <div class="table-card">${chkHtml}</div>
         `;
 
-        // TAB 5: DESEMPENHO & SPARRING
-        const desList = data.avaliacoes_desempenho || [];
-        const ultDes = desList[0] || null;
+        // TAB 5: AVALIAÇÃO TÉCNICA GAMIFICADA (ESTILO RPG - MUAY THAI)
+        this.rpgExpandedEvalId = null;
+        const rpgHistInit = data.avaliacao_rpg?.historico || [];
+        this.rpgCompareId = rpgHistInit[1] ? Number(rpgHistInit[1].id) : null;
+        this.renderDesempenhoRpgTab(data, safeAlunoId, encodedAlunoNome);
+    },
 
-        const ultClinchNota = ultDes ? Number(ultDes.nota_clinch_sparring).toFixed(1) : '-';
-        const ultCondNota = ultDes ? Number(ultDes.nota_condicionamento).toFixed(1) : '-';
-        const ultGradPct = avaliacoes.length > 0 ? Number(avaliacoes[0].percentual_obtido || 0) : 0;
+    onChangeRpgCompare(compareIdStr) {
+        this.rpgCompareId = compareIdStr ? Number(compareIdStr) : null;
+        if (!this.currentData) return;
+        const safeAlunoId = Number(this.currentData.aluno?.id || this.currentAlunoId);
+        const encodedAlunoNome = encodeURIComponent(this.currentData.aluno?.nome_completo || 'Aluno').replace(/'/g, '%27');
+        this.renderDesempenhoRpgTab(this.currentData, safeAlunoId, encodedAlunoNome);
+    },
 
+    toggleRpgEvalDetails(evalId) {
+        const numId = Number(evalId);
+        this.rpgExpandedEvalId = this.rpgExpandedEvalId === numId ? null : numId;
+        if (!this.currentData) return;
+        const safeAlunoId = Number(this.currentData.aluno?.id || this.currentAlunoId);
+        const encodedAlunoNome = encodeURIComponent(this.currentData.aluno?.nome_completo || 'Aluno').replace(/'/g, '%27');
+        this.renderDesempenhoRpgTab(this.currentData, safeAlunoId, encodedAlunoNome);
+    },
+
+    renderDesempenhoRpgTab(data, safeAlunoId, encodedAlunoNome) {
         const desTabEl = document.getElementById('dossier-tab-desempenho');
-        if (desTabEl) {
-            desTabEl.innerHTML = `
-                <!-- Cards de Indicadores do Gráfico de Evolução -->
-                <div class="dossier-perf-grid">
-                    <div class="stat-card" style="padding: 16px; border-left: 4px solid #f43f5e; background: rgba(244, 63, 94, 0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 11px; font-weight: 700; color: #f43f5e; text-transform: uppercase;">Graduação</span>
-                            <span style="font-size: 18px; font-weight: 800; color: #ffffff;">${ultGradPct}%</span>
+        if (!desTabEl) return;
+
+        const rpgUI = window.RpgAvaliacaoUI;
+        const desList = data.avaliacoes_desempenho || [];
+        const rpgHistory = (data.avaliacao_rpg && Array.isArray(data.avaliacao_rpg.historico))
+            ? data.avaliacao_rpg.historico
+            : desList.filter(d => d.is_rpg || d.modelo_avaliacao === 'rpg');
+
+        const atual = rpgHistory[0] || null;
+        let anterior = null;
+        if (this.rpgCompareId) {
+            anterior = rpgHistory.find(h => Number(h.id) === Number(this.rpgCompareId) && (!atual || Number(h.id) !== Number(atual.id))) || null;
+        } else if (rpgHistory[1] && this.rpgCompareId === undefined) {
+            anterior = rpgHistory[1];
+        }
+
+        const deltas = atual && anterior && rpgUI ? rpgUI.computeDeltas(atual, anterior) : null;
+
+        let heroHtml = '';
+        if (atual && rpgUI) {
+            const compareOptions = rpgHistory
+                .filter(h => Number(h.id) !== Number(atual.id))
+                .map(h => `<option value="${Number(h.id)}" ${Number(this.rpgCompareId) === Number(h.id) ? 'selected' : ''}>${UI.escapeHtml(UI.formatDate(h.data_avaliacao))} • Rank ${UI.escapeHtml(h.rank_combate)} (${Number(h.score_total)}/100)</option>`)
+                .join('');
+
+            heroHtml = `
+                <div class="rpg-dashboard-grid">
+                    <div class="rpg-radar-card">
+                        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span style="font-size: 11.5px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Radar de Atributos</span>
+                            <span style="font-size: 11px; color: #94a3b8;">${UI.escapeHtml(UI.formatDate(atual.data_avaliacao))}</span>
                         </div>
-                        <h4 style="font-size: 14px; margin: 6px 0 2px 0; color: #ffffff;">Avaliação Técnica</h4>
-                        <div style="font-size: 11px; color: var(--text-muted);">Requisitos da Graduação &amp; Faixas</div>
-                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; margin-top: 10px; overflow: hidden;">
-                            <div style="width: ${Math.min(100, ultGradPct)}%; height: 100%; background: #f43f5e; border-radius: 999px;"></div>
+                        ${rpgUI.renderRadarSvg(atual.pilares, anterior ? anterior.pilares : null)}
+                        <div class="rpg-radar-legend">
+                            <span class="rpg-legend-item"><span class="rpg-legend-swatch atual"></span>Atual (${Number(atual.score_total)} pts)</span>
+                            ${anterior ? `<span class="rpg-legend-item"><span class="rpg-legend-swatch anterior"></span>${UI.escapeHtml(UI.formatDate(anterior.data_avaliacao))} (${Number(anterior.score_total)} pts)</span>` : ''}
                         </div>
+                        ${rpgHistory.length > 1 ? `
+                            <div class="rpg-compare-row">
+                                <label for="rpg-compare-select" style="font-size: 11px; color: #94a3b8; font-weight: 600;">Comparar com:</label>
+                                <select id="rpg-compare-select" class="select-filter" style="padding: 5px 8px; font-size: 11.5px;" onchange="AlunoDetalhesModule.onChangeRpgCompare(this.value)">
+                                    <option value="">Sem sobreposição</option>
+                                    ${compareOptions}
+                                </select>
+                            </div>
+                        ` : ''}
                     </div>
 
-                    <div class="stat-card" style="padding: 16px; border-left: 4px solid #0ea5e9; background: rgba(14, 165, 233, 0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 11px; font-weight: 700; color: #38bdf8; text-transform: uppercase;">Combate</span>
-                            <span style="font-size: 18px; font-weight: 800; color: #ffffff;">${ultClinchNota}<span style="font-size: 12px; color: var(--text-muted);">/10</span></span>
+                    <div class="rpg-stats-card">
+                        <div class="rpg-summary-header">
+                            ${rpgUI.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
+                            <div class="rpg-score-hero">
+                                <strong>${Number(atual.score_total)}<span>/100</span></strong>
+                                ${deltas ? rpgUI.renderDeltaBadgeHtml(deltas.score_total, ' pts') : ''}
+                            </div>
+                            ${rpgUI.renderSparringBadgeHtml(Boolean(atual.apto_sparring))}
                         </div>
-                        <h4 style="font-size: 14px; margin: 6px 0 2px 0; color: #ffffff;">Clinch &amp; Sparring</h4>
-                        <div style="font-size: 11px; color: var(--text-muted);">Esgrima, joelhadas e combate</div>
-                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; margin-top: 10px; overflow: hidden;">
-                            <div style="width: ${ultDes ? Math.min(100, Number(ultDes.nota_clinch_sparring) * 10) : 0}%; height: 100%; background: #0ea5e9; border-radius: 999px;"></div>
-                        </div>
-                    </div>
 
-                    <div class="stat-card" style="padding: 16px; border-left: 4px solid #d97706; background: rgba(217, 119, 6, 0.05);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 11px; font-weight: 700; color: #f59e0b; text-transform: uppercase;">Condicionamento</span>
-                            <span style="font-size: 18px; font-weight: 800; color: #ffffff;">${ultCondNota}<span style="font-size: 12px; color: var(--text-muted);">/10</span></span>
+                        <div class="rpg-pillar-bars-list">
+                            ${rpgUI.renderPillarBarsHtml(atual.pilares, deltas)}
                         </div>
-                        <h4 style="font-size: 14px; margin: 6px 0 2px 0; color: #ffffff;">Condicionamento Físico</h4>
-                        <div style="font-size: 11px; color: var(--text-muted);">Cardio, potência e gás nos rounds</div>
-                        <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.08); border-radius: 999px; margin-top: 10px; overflow: hidden;">
-                            <div style="width: ${ultDes ? Math.min(100, Number(ultDes.nota_condicionamento) * 10) : 0}%; height: 100%; background: #d97706; border-radius: 999px;"></div>
-                        </div>
+
+                        ${atual.observacoes_instrutor ? `
+                            <div class="rpg-instructor-note">
+                                <strong style="color: #38bdf8; display: block; margin-bottom: 3px;">Feedback do Instrutor &amp; Metas Prajied:</strong>
+                                ${UI.escapeHtml(atual.observacoes_instrutor)}
+                            </div>
+                        ` : ''}
                     </div>
                 </div>
-
-                <!-- Botão de Ação & Título -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                    <div>
-                        <h4 style="font-family: var(--font-heading); margin: 0; font-size: 16px; color: #ffffff;">Avaliações Técnicas do Professor</h4>
-                        <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">Notas de 0 a 10 nos quesitos: Clinch, Socos, Chutes e Postura.</p>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" style="min-height: 40px;" onclick="AlunoDetalhesModule.openModalDesempenho(${safeAlunoId}, '${encodedAlunoNome}')">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                        <span>Avaliar Quesitos Técnicos</span>
-                    </button>
+            `;
+        } else {
+            heroHtml = `
+                <div class="stat-card" style="padding: 22px; text-align: center; margin-bottom: 18px; border: 1px dashed rgba(56, 189, 248, 0.3);">
+                    <div style="font-size: 28px; margin-bottom: 6px;">🥋</div>
+                    <h4 style="margin: 0 0 6px 0; color: #ffffff; font-size: 15px;">Ficha Técnica RPG de Combate</h4>
+                    <p style="margin: 0; font-size: 12.5px; color: var(--text-muted);">
+                        Este aluno ainda não possui uma avaliação RPG (20 critérios / 5 atributos). Clique no botão abaixo para preencher em menos de 1 minuto.
+                    </p>
                 </div>
+            `;
+        }
 
-                <!-- Tabela / Cards de Avaliações -->
-                <div class="table-card">
-                    ${desList.length === 0 ? `
-                        <div style="text-align: center; padding: 36px; color: var(--text-muted);">
-                            Nenhuma avaliação técnica de Clinch, Socos, Chutes ou Postura registrada ainda.<br>
-                            <span style="font-size: 12px;">Clique no botão acima para lançar a avaliação técnica do atleta.</span>
-                        </div>
-                    ` : `
-                        <div class="table-responsive dossier-desktop-table">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Data</th>
-                                        <th>Clinch</th>
-                                        <th>Socos</th>
-                                        <th>Chutes</th>
-                                        <th>Postura</th>
-                                        <th>Avaliador</th>
-                                        <th>Observações</th>
-                                        <th>Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    ${desList.map(d => `
+        const renderExpandedBlock = (d) => {
+            if (Number(this.rpgExpandedEvalId) !== Number(d.id)) return '';
+            if (!rpgUI || !(d.is_rpg || d.modelo_avaliacao === 'rpg')) return '';
+            return `
+                <div style="margin-top: 8px;">
+                    ${rpgUI.renderCriteriaBreakdownHtml(d.criterios, Boolean(d.apto_sparring))}
+                </div>
+            `;
+        };
+
+        desTabEl.innerHTML = `
+            ${heroHtml}
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h4 style="font-family: var(--font-heading); margin: 0; font-size: 16px; color: #ffffff;">Histórico de Avaliações Técnicas RPG</h4>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 2px 0 0 0;">20 critérios técnicos consolidados em Inteligência, Destreza, Agilidade, Força e Vitalidade.</p>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm" style="min-height: 40px;" onclick="AlunoDetalhesModule.openModalDesempenho(${safeAlunoId}, '${encodedAlunoNome}')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                    <span>Nova Avaliação RPG</span>
+                </button>
+            </div>
+
+            <div class="table-card">
+                ${desList.length === 0 ? `
+                    <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+                        Nenhuma avaliação registrada ainda para este atleta.
+                    </div>
+                ` : `
+                    <div class="table-responsive dossier-desktop-table">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Rank / Score</th>
+                                    <th>Sparring</th>
+                                    <th>5 Pilares RPG (0-20)</th>
+                                    <th>Instrutor</th>
+                                    <th style="text-align: right;">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${desList.map((d) => {
+                                    const isRpg = d.is_rpg || d.modelo_avaliacao === 'rpg';
+                                    const isExpanded = Number(this.rpgExpandedEvalId) === Number(d.id);
+                                    if (!isRpg) {
+                                        return `
+                                            <tr>
+                                                <td style="font-weight: 700;">${UI.formatDate(d.data_avaliacao)}</td>
+                                                <td><span class="status-badge status-pending">Modelo Anterior</span></td>
+                                                <td>—</td>
+                                                <td style="font-size: 11.5px; color: #94a3b8;">
+                                                    Clinch ${Number(d.nota_clinch ?? d.nota_clinch_sparring ?? 0).toFixed(1)} • Socos ${Number(d.nota_socos || 0).toFixed(1)} • Chutes ${Number(d.nota_chutes || 0).toFixed(1)} • Postura ${Number(d.nota_postura || 0).toFixed(1)}
+                                                </td>
+                                                <td><span style="font-size: 12px; color: #cbd5e1;">${UI.escapeHtml(d.professor_nome || 'Professor')}</span></td>
+                                                <td style="text-align: right;">
+                                                    <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 4px 10px; font-size: 11px;"
+                                                        onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})">
+                                                        Excluir
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }
+                                    const p = d.pilares || {};
+                                    return `
                                         <tr>
-                                            <td style="font-weight: 700;">${UI.formatDate(d.data_avaliacao)}</td>
-                                            <td><span style="font-weight: 700; color: #38bdf8; background: rgba(14, 165, 233, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">${Number(d.nota_clinch ?? d.nota_clinch_sparring ?? 0).toFixed(1)}</span></td>
-                                            <td><span style="font-weight: 700; color: #f87171; background: rgba(239, 68, 68, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">${Number(d.nota_socos ?? 0).toFixed(1)}</span></td>
-                                            <td><span style="font-weight: 700; color: #fbbf24; background: rgba(245, 158, 11, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">${Number(d.nota_chutes ?? 0).toFixed(1)}</span></td>
-                                            <td><span style="font-weight: 700; color: #34d399; background: rgba(16, 185, 129, 0.12); padding: 3px 8px; border-radius: 6px; font-size: 12px;">${Number(d.nota_postura ?? 0).toFixed(1)}</span></td>
-                                            <td><span style="font-size: 12px; color: #cbd5e1;">${UI.escapeHtml(d.professor_nome || 'Professor')}</span></td>
-                                            <td><span style="font-size: 12px; color: #94a3b8;">${UI.escapeHtml(d.observacoes || 'Sem observações')}</span></td>
+                                            <td style="font-weight: 700; white-space: nowrap;">${UI.formatDate(d.data_avaliacao)}</td>
                                             <td>
-                                                <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 4px 10px; font-size: 11px;"
-                                                    onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})" title="Excluir avaliação">
+                                                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                                    ${rpgUI ? rpgUI.renderRankBadgeHtml(d.rank_combate, d.rank_titulo, 'sm') : `<strong>Rank ${UI.escapeHtml(d.rank_combate)}</strong>`}
+                                                    <strong style="color: #ffffff; font-size: 13px;">${Number(d.score_total)}/100</strong>
+                                                </div>
+                                            </td>
+                                            <td>${rpgUI ? rpgUI.renderSparringBadgeHtml(Boolean(d.apto_sparring)) : (d.apto_sparring ? 'Sim' : 'Não')}</td>
+                                            <td style="font-size: 11.5px; color: #cbd5e1; white-space: nowrap;">
+                                                <span style="color:#38bdf8;font-weight:700;">INT ${Number(p.inteligencia ?? d.score_inteligencia ?? 0)}</span> •
+                                                <span style="color:#a855f7;font-weight:700;">DES ${Number(p.destreza ?? d.score_destreza ?? 0)}</span> •
+                                                <span style="color:#22c55e;font-weight:700;">AGI ${Number(p.agilidade ?? d.score_agilidade ?? 0)}</span> •
+                                                <span style="color:#f97316;font-weight:700;">FOR ${Number(p.forca ?? d.score_forca ?? 0)}</span> •
+                                                <span style="color:#ef4444;font-weight:700;">VIT ${Number(p.vitalidade ?? d.score_vitalidade ?? 0)}</span>
+                                            </td>
+                                            <td><span style="font-size: 12px; color: #cbd5e1;">${UI.escapeHtml(d.professor_nome || 'Instrutor')}</span></td>
+                                            <td style="text-align: right; white-space: nowrap;">
+                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 9px; font-size: 11px; margin-right: 4px;"
+                                                    onclick="AlunoDetalhesModule.toggleRpgEvalDetails(${Number(d.id)})">
+                                                    ${isExpanded ? 'Ocultar 20 itens' : 'Ver 20 itens'}
+                                                </button>
+                                                <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3); padding: 4px 9px; font-size: 11px;"
+                                                    onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})">
                                                     Excluir
                                                 </button>
                                             </td>
                                         </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="dossier-mobile-list">
-                            ${desList.map(d => `
+                                        ${isExpanded ? `
+                                            <tr>
+                                                <td colspan="6" style="background: rgba(15, 23, 42, 0.55); padding: 14px;">
+                                                    ${d.observacoes_instrutor ? `<div style="font-size: 12px; color: #cbd5e1; margin-bottom: 10px;"><strong>Obs:</strong> ${UI.escapeHtml(d.observacoes_instrutor)}</div>` : ''}
+                                                    ${renderExpandedBlock(d)}
+                                                </td>
+                                            </tr>
+                                        ` : ''}
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="dossier-mobile-list">
+                        ${desList.map((d) => {
+                            const isRpg = d.is_rpg || d.modelo_avaliacao === 'rpg';
+                            const isExpanded = Number(this.rpgExpandedEvalId) === Number(d.id);
+                            if (!isRpg) {
+                                return `
+                                    <div class="dossier-mobile-card">
+                                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                                            <strong style="color:#fff;">${UI.formatDate(d.data_avaliacao)}</strong>
+                                            <span style="font-size:11px;color:#94a3b8;">Modelo Anterior</span>
+                                        </div>
+                                        <button type="button" class="btn btn-secondary btn-sm" style="width:100%;color:#ef4444;border-color:rgba(239,68,68,0.3);"
+                                            onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})">Excluir Avaliação</button>
+                                    </div>
+                                `;
+                            }
+                            const p = d.pilares || {};
+                            return `
                                 <div class="dossier-mobile-card">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-                                        <strong style="color: #ffffff; font-size: 13.5px;">${UI.formatDate(d.data_avaliacao)}</strong>
-                                        <span style="font-size: 12px; color: var(--text-muted);">Avaliador: ${UI.escapeHtml(d.professor_nome || 'Professor')}</span>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                                        <strong style="color:#ffffff;font-size:13.5px;">${UI.formatDate(d.data_avaliacao)}</strong>
+                                        <strong style="color:#38bdf8;font-size:14px;">${Number(d.score_total)}/100</strong>
                                     </div>
-                                    <div class="dossier-notes-grid">
-                                        <div style="background: rgba(14, 165, 233, 0.1); padding: 8px 10px; border-radius: 8px; display: flex; justify-content: space-between; font-size: 12px;">
-                                            <span style="color: #cbd5e1;">Clinch</span>
-                                            <strong style="color: #38bdf8;">${Number(d.nota_clinch ?? d.nota_clinch_sparring ?? 0).toFixed(1)}</strong>
-                                        </div>
-                                        <div style="background: rgba(239, 68, 68, 0.1); padding: 8px 10px; border-radius: 8px; display: flex; justify-content: space-between; font-size: 12px;">
-                                            <span style="color: #cbd5e1;">Socos</span>
-                                            <strong style="color: #f87171;">${Number(d.nota_socos ?? 0).toFixed(1)}</strong>
-                                        </div>
-                                        <div style="background: rgba(245, 158, 11, 0.1); padding: 8px 10px; border-radius: 8px; display: flex; justify-content: space-between; font-size: 12px;">
-                                            <span style="color: #cbd5e1;">Chutes</span>
-                                            <strong style="color: #fbbf24;">${Number(d.nota_chutes ?? 0).toFixed(1)}</strong>
-                                        </div>
-                                        <div style="background: rgba(16, 185, 129, 0.1); padding: 8px 10px; border-radius: 8px; display: flex; justify-content: space-between; font-size: 12px;">
-                                            <span style="color: #cbd5e1;">Postura</span>
-                                            <strong style="color: #34d399;">${Number(d.nota_postura ?? 0).toFixed(1)}</strong>
-                                        </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+                                        ${rpgUI ? rpgUI.renderRankBadgeHtml(d.rank_combate, d.rank_titulo, 'sm') : ''}
+                                        ${rpgUI ? rpgUI.renderSparringBadgeHtml(Boolean(d.apto_sparring)) : ''}
                                     </div>
-                                    ${d.observacoes ? `<div style="font-size: 12px; color: #94a3b8; word-break: break-word;">${UI.escapeHtml(d.observacoes)}</div>` : ''}
-                                    <button type="button" class="btn btn-secondary btn-sm" style="width: 100%; min-height: 38px; justify-content: center; color: #ef4444; border-color: rgba(239, 68, 68, 0.3);"
-                                        onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})">
-                                        Excluir Avaliação
-                                    </button>
+                                    <div style="font-size:11.5px;color:#cbd5e1;display:flex;flex-wrap:wrap;gap:6px;">
+                                        <span>INT ${Number(p.inteligencia ?? 0)}</span> •
+                                        <span>DES ${Number(p.destreza ?? 0)}</span> •
+                                        <span>AGI ${Number(p.agilidade ?? 0)}</span> •
+                                        <span>FOR ${Number(p.forca ?? 0)}</span> •
+                                        <span>VIT ${Number(p.vitalidade ?? 0)}</span>
+                                    </div>
+                                    ${d.observacoes_instrutor ? `<div style="font-size:12px;color:#94a3b8;">${UI.escapeHtml(d.observacoes_instrutor)}</div>` : ''}
+                                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                                        <button type="button" class="btn btn-secondary btn-sm" style="min-height:38px;justify-content:center;"
+                                            onclick="AlunoDetalhesModule.toggleRpgEvalDetails(${Number(d.id)})">
+                                            ${isExpanded ? 'Ocultar 20 itens' : 'Ver 20 itens'}
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm" style="min-height:38px;justify-content:center;color:#ef4444;border-color:rgba(239,68,68,0.3);"
+                                            onclick="AlunoDetalhesModule.deleteAvaliacaoDesempenho(${Number(d.id)})">
+                                            Excluir
+                                        </button>
+                                    </div>
+                                    ${renderExpandedBlock(d)}
                                 </div>
-                            `).join('')}
-                        </div>
-                    `}
-                </div>
-            `;
-        }
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+        `;
     },
 
     // ==========================================
@@ -1241,45 +1372,215 @@ const AlunoDetalhesModule = {
         }
     },
 
-    // 8. Modal e Registro de Avaliações Técnicas (Clinch, Socos, Chutes, Postura)
+    // 8. Modal e Registro da Avaliação Técnica Gamificada (RPG Muay Thai)
     openModalDesempenho(alunoId, alunoNome) {
+        const rpgUI = window.RpgAvaliacaoUI;
         document.getElementById('desempenho-aluno-id').value = alunoId;
         const sub = document.getElementById('desempenho-modal-sub');
         if (sub && alunoNome) {
-            sub.textContent = `Atleta: ${decodeURIComponent(alunoNome)} • Notas de 0 a 10`;
+            sub.textContent = `Atleta: ${decodeURIComponent(alunoNome)} • 20 critérios (0 a 5)`;
         }
         const dataInput = document.getElementById('desempenho-data');
         if (dataInput) {
             dataInput.value = new Date().toISOString().split('T')[0];
         }
 
-        const setSliderValue = (sliderId, labelId, val) => {
-            const slider = document.getElementById(sliderId);
-            const label = document.getElementById(labelId);
-            if (slider) slider.value = val;
-            if (label) label.textContent = `${Number(val).toFixed(1)} / 10`;
+        const criteriosIniciais = {};
+        if (rpgUI) {
+            rpgUI.CRITERIA.forEach(c => { criteriosIniciais[c.id] = 0; });
+        }
+        this.rpgFormState = {
+            apto_sparring: null,
+            criterios: criteriosIniciais
         };
-
-        setSliderValue('desempenho-nota-clinch', 'label-nota-clinch', '8.0');
-        setSliderValue('desempenho-nota-socos', 'label-nota-socos', '8.0');
-        setSliderValue('desempenho-nota-chutes', 'label-nota-chutes', '8.0');
-        setSliderValue('desempenho-nota-postura', 'label-nota-postura', '8.0');
 
         const obsInput = document.getElementById('desempenho-obs');
         if (obsInput) obsInput.value = '';
 
+        const btnCarregarUltima = document.getElementById('btn-rpg-carregar-ultima');
+        const hasPriorRpg = Boolean(this.currentData?.avaliacao_rpg?.historico?.length > 0);
+        if (btnCarregarUltima) {
+            btnCarregarUltima.style.display = hasPriorRpg ? 'inline-flex' : 'none';
+        }
+
+        this.syncRpgSparringButtonsUi();
+        this.renderRpgFormCriteria();
+        this.updateRpgLiveScoreboard();
+
         UI.openModal('modal-avaliacao-desempenho');
+    },
+
+    carregarUltimaRpgNoFormulario() {
+        const ultima = this.currentData?.avaliacao_rpg?.atual;
+        const rpgUI = window.RpgAvaliacaoUI;
+        if (!ultima || !rpgUI) return;
+
+        const baseCriterios = {};
+        rpgUI.CRITERIA.forEach((c) => {
+            const val = ultima.criterios && ultima.criterios[c.id] !== undefined ? Number(ultima.criterios[c.id]) : 0;
+            baseCriterios[c.id] = Math.max(0, Math.min(5, isNaN(val) ? 0 : val));
+        });
+
+        this.rpgFormState.criterios = baseCriterios;
+        this.setRpgAptoSparring(Boolean(ultima.apto_sparring));
+        UI.showToast('Última avaliação RPG carregada como base!', 'info');
+    },
+
+    syncRpgSparringButtonsUi() {
+        const btnSim = document.getElementById('btn-sparring-sim');
+        const btnNao = document.getElementById('btn-sparring-nao');
+        const lockAlert = document.getElementById('rpg-sparring-lock-alert');
+        const st = this.rpgFormState.apto_sparring;
+
+        if (btnSim) btnSim.classList.toggle('active-sim', st === true);
+        if (btnNao) btnNao.classList.toggle('active-nao', st === false);
+        if (lockAlert) lockAlert.style.display = st === false ? 'flex' : 'none';
+    },
+
+    setRpgAptoSparring(isApto) {
+        this.rpgFormState.apto_sparring = Boolean(isApto);
+        const rpgUI = window.RpgAvaliacaoUI;
+
+        if (!this.rpgFormState.apto_sparring && rpgUI) {
+            let ajustados = false;
+            rpgUI.CRITERIA.forEach((c) => {
+                if (c.isSparring && Number(this.rpgFormState.criterios[c.id] || 0) > 3) {
+                    this.rpgFormState.criterios[c.id] = 3;
+                    ajustados = true;
+                }
+            });
+            if (ajustados) {
+                UI.showToast('Critérios [SPARRING] limitados a 3 pontos para simulado controlado.', 'warning');
+            }
+        }
+
+        this.syncRpgSparringButtonsUi();
+        this.renderRpgFormCriteria();
+        this.updateRpgLiveScoreboard();
+    },
+
+    setRpgCriterionScore(criterionId, val) {
+        const rpgUI = window.RpgAvaliacaoUI;
+        if (!rpgUI) return;
+        const criterion = rpgUI.CRITERIA.find(c => c.id === criterionId);
+        if (!criterion) return;
+
+        let safeVal = Math.max(0, Math.min(5, Math.round(Number(val) || 0)));
+        if (this.rpgFormState.apto_sparring === false && criterion.isSparring && safeVal > 3) {
+            safeVal = 3;
+            UI.showToast('Trava ativa: aluno não apto ao sparring possui teto máximo de 3 neste critério.', 'warning');
+        }
+
+        this.rpgFormState.criterios[criterionId] = safeVal;
+        this.renderRpgFormCriteria();
+        this.updateRpgLiveScoreboard();
+    },
+
+    renderRpgFormCriteria() {
+        const container = document.getElementById('rpg-criterios-container');
+        const rpgUI = window.RpgAvaliacaoUI;
+        if (!container || !rpgUI) return;
+
+        const isSparLocked = this.rpgFormState.apto_sparring === false;
+        const totals = rpgUI.calculateTotals(this.rpgFormState.criterios, this.rpgFormState.apto_sparring !== false);
+
+        container.innerHTML = rpgUI.PILLARS.map((pillar) => {
+            const criteriaList = rpgUI.CRITERIA.filter(c => c.pilar === pillar.id);
+            const subTotal = totals.pilares[pillar.id] || 0;
+
+            return `
+                <div class="rpg-pillar-card" style="border-left: 3px solid ${pillar.cor};">
+                    <div class="rpg-pillar-card-header">
+                        <div>
+                            <h5>${UI.escapeHtml(pillar.nome)}</h5>
+                            <p>${UI.escapeHtml(pillar.subtitulo)}</p>
+                        </div>
+                        <span class="rpg-pillar-subtotal" style="color: ${pillar.cor};">${subTotal} / 20 pts</span>
+                    </div>
+                    ${criteriaList.map((c) => {
+                        const curVal = Number(this.rpgFormState.criterios[c.id] || 0);
+                        const landmarksHtml = c.landmarks
+                            ? `<div class="rpg-landmarks-row">${Object.values(c.landmarks).map(txt => `<span class="rpg-landmark-chip">${UI.escapeHtml(txt)}</span>`).join('')}</div>`
+                            : '';
+
+                        return `
+                            <div class="rpg-criterion-row">
+                                <div class="rpg-criterion-top">
+                                    <span class="rpg-criterion-name">
+                                        <span>${c.numero}. ${UI.escapeHtml(c.nome)}</span>
+                                        ${c.isSparring ? `<span class="rpg-sparring-tag" title="Limitado ao máximo de 3 pontos quando Apto para Sparring = Não">SPARRING</span>` : ''}
+                                    </span>
+                                    <div class="rpg-seg-group" role="group" aria-label="${UI.escapeHtml(c.nome)}">
+                                        ${[0, 1, 2, 3, 4, 5].map((n) => {
+                                            const blocked = isSparLocked && c.isSparring && n > 3;
+                                            return `
+                                                <button type="button"
+                                                    class="rpg-seg-btn ${curVal === n ? 'active' : ''}"
+                                                    data-criterion-id="${UI.escapeHtml(c.id)}"
+                                                    data-val="${n}"
+                                                    ${blocked ? 'disabled title="Bloqueado (máx. 3 para simulado controlado)"' : ''}>
+                                                    ${n}
+                                                </button>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                                <div class="rpg-criterion-legend">
+                                    <span>0: ${UI.escapeHtml(c.minLabel)}</span>
+                                    <span style="text-align: right;">5: ${UI.escapeHtml(c.maxLabel)}</span>
+                                </div>
+                                ${landmarksHtml}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }).join('');
+    },
+
+    updateRpgLiveScoreboard() {
+        const rpgUI = window.RpgAvaliacaoUI;
+        if (!rpgUI) return;
+
+        const isSparAllowed = this.rpgFormState.apto_sparring !== false;
+        const calc = rpgUI.calculateTotals(this.rpgFormState.criterios, isSparAllowed);
+
+        const rankWrap = document.getElementById('rpg-live-rank-wrap');
+        const totalEl = document.getElementById('rpg-live-score-total');
+        const sparPill = document.getElementById('rpg-live-sparring-pill');
+        const stripEl = document.getElementById('rpg-live-pillars-strip');
+
+        if (rankWrap) rankWrap.innerHTML = rpgUI.renderRankBadgeHtml(calc.rank.codigo, calc.rank.titulo, 'sm');
+        if (totalEl) totalEl.innerHTML = `${calc.total}<span>/100</span>`;
+        if (sparPill) {
+            if (this.rpgFormState.apto_sparring === null) {
+                sparPill.innerHTML = `<span class="rpg-sparring-pill restrito" style="opacity:0.85;">Defina Sparring</span>`;
+            } else {
+                sparPill.innerHTML = rpgUI.renderSparringBadgeHtml(this.rpgFormState.apto_sparring);
+            }
+        }
+        if (stripEl) {
+            stripEl.innerHTML = rpgUI.PILLARS.map(p => `
+                <div class="rpg-live-pillar-chip">
+                    <span style="color: ${p.cor}; font-weight: 800;">${UI.escapeHtml(p.sigla)}</span>
+                    <strong>${calc.pilares[p.id]}/20</strong>
+                </div>
+            `).join('');
+        }
     },
 
     async submitAvaliacaoDesempenho(e) {
         e.preventDefault();
+        if (this.rpgFormState.apto_sparring === null) {
+            UI.showToast('Selecione se o aluno está Apto para Sparring (Sim ou Não).', 'warning');
+            const scrollEl = document.querySelector('.rpg-modal-scroll-body');
+            if (scrollEl) scrollEl.scrollTop = 0;
+            return;
+        }
+
         const alunoId = document.getElementById('desempenho-aluno-id').value;
         const data_avaliacao = document.getElementById('desempenho-data').value;
-        const nota_clinch = parseFloat(document.getElementById('desempenho-nota-clinch')?.value || 8.0);
-        const nota_socos = parseFloat(document.getElementById('desempenho-nota-socos')?.value || 8.0);
-        const nota_chutes = parseFloat(document.getElementById('desempenho-nota-chutes')?.value || 8.0);
-        const nota_postura = parseFloat(document.getElementById('desempenho-nota-postura')?.value || 8.0);
-        const observacoes = (document.getElementById('desempenho-obs')?.value || '').trim();
+        const observacoes_instrutor = (document.getElementById('desempenho-obs')?.value || '').trim();
 
         const btn = document.getElementById('btn-salvar-desempenho');
         if (btn) {
@@ -1289,20 +1590,18 @@ const AlunoDetalhesModule = {
 
         try {
             const res = await API.post(`/alunos/${alunoId}/avaliacoes-desempenho`, {
+                modelo_avaliacao: 'rpg',
                 data_avaliacao,
-                nota_clinch,
-                nota_socos,
-                nota_chutes,
-                nota_postura,
-                observacoes
+                apto_sparring: this.rpgFormState.apto_sparring,
+                criterios: this.rpgFormState.criterios,
+                observacoes_instrutor
             });
 
-            if (!res.success) throw new Error(res.error || 'Erro ao registrar avaliação.');
+            if (!res.success) throw new Error(res.error || 'Erro ao registrar avaliação RPG.');
 
-            UI.showToast('Avaliação técnica (Clinch, Socos, Chutes, Postura) registrada com sucesso!', 'success');
+            UI.showToast(res.message || 'Avaliação Técnica RPG registrada com sucesso!', 'success');
             UI.closeModal('modal-avaliacao-desempenho');
 
-            // Recarrega o dossiê e permanece na aba de desempenho
             await this.openDossier(this.currentAlunoId);
             this.switchTab('desempenho');
             if (window.AlunosModule) AlunosModule.loadAlunos();
@@ -1312,7 +1611,7 @@ const AlunoDetalhesModule = {
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = `💾 Salvar Avaliação`;
+                btn.innerHTML = `💾 Salvar Avaliação RPG`;
             }
         }
     },

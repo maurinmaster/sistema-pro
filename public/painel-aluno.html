@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.8">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=5.9">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -867,8 +867,8 @@
                 <!-- Barra Inferior de Ações Rápidas com peso visual equilibrado -->
                 <div class="athlete-bio-actions-bar">
                     <div class="meas-quick-actions">
-                        <button type="button" class="btn-meas-action" id="btn-toggle-eval-details" aria-expanded="false" title="Ver Notas Técnicas do Professor">
-                            <span>Notas Técnicas ↓</span>
+                        <button type="button" class="btn-meas-action" id="btn-toggle-eval-details" aria-expanded="false" title="Ver Ficha Técnica RPG (Muay Thai)">
+                            <span>Ficha RPG ↓</span>
                         </button>
                         <button type="button" class="btn-meas-action btn-meas-accent" id="btn-modal-medidas" title="Lançar Nova Medição">
                             <span>+ Medir</span>
@@ -876,71 +876,11 @@
                     </div>
                 </div>
 
-                <!-- Painel Recolhível de Notas Técnicas do Professor (Clinch, Socos, Chutes, Postura) -->
-                <div class="athlete-eval-drawer" id="athlete-eval-drawer" style="display: none;">
-                    <div class="bio-stat-card eval-stat-card" title="Nota de Clinch">
-                        <span class="bio-stat-label">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.3">
-                                <path d="M18 20V10M12 20V4M6 20v-6" />
-                            </svg>
-                            <span>Clinch</span>
-                        </span>
-                        <div class="bio-stat-val">
-                            <span class="stat-num eval-num" id="eval-score-clinch">--</span>
-                            <span class="stat-unit">/10</span>
-                        </div>
-                        <div class="eval-mini-bar-track">
-                            <div class="eval-mini-bar-fill bar-clinch" id="eval-bar-clinch" style="width: 0%;"></div>
-                        </div>
-                    </div>
-
-                    <div class="bio-stat-card eval-stat-card" title="Nota de Socos">
-                        <span class="bio-stat-label">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.3">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 8v8M8 12h8" />
-                            </svg>
-                            <span>Socos</span>
-                        </span>
-                        <div class="bio-stat-val">
-                            <span class="stat-num eval-num" id="eval-score-socos">--</span>
-                            <span class="stat-unit">/10</span>
-                        </div>
-                        <div class="eval-mini-bar-track">
-                            <div class="eval-mini-bar-fill bar-socos" id="eval-bar-socos" style="width: 0%;"></div>
-                        </div>
-                    </div>
-
-                    <div class="bio-stat-card eval-stat-card" title="Nota de Chutes">
-                        <span class="bio-stat-label">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.3">
-                                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-                            </svg>
-                            <span>Chutes</span>
-                        </span>
-                        <div class="bio-stat-val">
-                            <span class="stat-num eval-num" id="eval-score-chutes">--</span>
-                            <span class="stat-unit">/10</span>
-                        </div>
-                        <div class="eval-mini-bar-track">
-                            <div class="eval-mini-bar-fill bar-chutes" id="eval-bar-chutes" style="width: 0%;"></div>
-                        </div>
-                    </div>
-
-                    <div class="bio-stat-card eval-stat-card" title="Nota de Postura">
-                        <span class="bio-stat-label">
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.3">
-                                <circle cx="12" cy="7" r="4" />
-                                <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
-                            </svg>
-                            <span>Postura</span>
-                        </span>
-                        <div class="bio-stat-val">
-                            <span class="stat-num eval-num" id="eval-score-postura">--</span>
-                            <span class="stat-unit">/10</span>
-                        </div>
-                        <div class="eval-mini-bar-track">
-                            <div class="eval-mini-bar-fill bar-postura" id="eval-bar-postura" style="width: 0%;"></div>
+                <!-- Painel Recolhível da Avaliação Técnica Gamificada (RPG Muay Thai) -->
+                <div class="athlete-eval-drawer athlete-rpg-drawer" id="athlete-eval-drawer" style="display: none;">
+                    <div id="athlete-rpg-container" class="portal-rpg-card">
+                        <div style="text-align: center; padding: 18px; color: #94a3b8; font-size: 12.5px;">
+                            Nenhuma avaliação técnica RPG registrada ainda.
                         </div>
                     </div>
                 </div>
@@ -1854,7 +1794,8 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/painel-aluno.js?v=6.1"></script>
+    <script src="/js/rpg-avaliacao.js?v=1.0"></script>
+    <script src="/js/painel-aluno.js?v=6.2"></script>
 </body>
 
 </html>

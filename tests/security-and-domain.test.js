@@ -1168,7 +1168,13 @@ test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exi
             { expiresIn: '1h', algorithm: 'HS256' }
         );
 
-        // 1. Professor registra avaliação com os 4 quesitos de 0 a 10
+        // 1. Professor registra Avaliação Técnica RPG com 20 critérios (0 a 5)
+        const rpgService = require('../services/rpgEvaluationService');
+        const criteriosPayload = {};
+        rpgService.RPG_CRITERIA.forEach((c) => {
+            criteriosPayload[c.id] = 4;
+        });
+
         const postRes = await fetch(`${baseUrl}/api/alunos/1/avaliacoes-desempenho`, {
             method: 'POST',
             headers: {
@@ -1176,12 +1182,11 @@ test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exi
                 'Authorization': `Bearer ${profToken}`
             },
             body: JSON.stringify({
+                modelo_avaliacao: 'rpg',
                 data_avaliacao: '2026-11-12',
-                nota_clinch: 9.5,
-                nota_socos: 8.5,
-                nota_chutes: 9.0,
-                nota_postura: 8.0,
-                observacoes: 'Excelente base e evolução nos chutes e clinch'
+                apto_sparring: true,
+                criterios: criteriosPayload,
+                observacoes_instrutor: 'Excelente base e evolução nos 5 pilares RPG'
             })
         });
 
@@ -1191,23 +1196,19 @@ test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exi
         assert.ok(postData.data.id, 'Deve retornar o ID da avaliação criada');
         avaliacaoId = postData.data.id;
 
-        assert.equal(postData.data.nota_clinch, 9.5);
-        assert.equal(postData.data.nota_socos, 8.5);
-        assert.equal(postData.data.nota_chutes, 9.0);
-        assert.equal(postData.data.nota_postura, 8.0);
+        assert.equal(postData.data.score_total, 80);
+        assert.equal(postData.data.rank_combate, 'A');
+        assert.equal(postData.data.pilares.inteligencia, 16);
 
-        // 2. Consulta Meu Painel e valida que as 4 notas técnicas aparecem consolidadas
+        // 2. Consulta Meu Painel e valida que a avaliação RPG aparece consolidada
         const painelRes = await fetch(`${baseUrl}/api/aluno/meu-painel?aluno_id=1`);
         assert.equal(painelRes.status, 200);
         const painelData = await painelRes.json();
 
         assert.equal(painelData.success, true);
-        assert.ok(painelData.notas_tecnicas, 'Deve retornar objeto notas_tecnicas');
-        assert.equal(painelData.notas_tecnicas.clinch, 9.5);
-        assert.equal(painelData.notas_tecnicas.socos, 8.5);
-        assert.equal(painelData.notas_tecnicas.chutes, 9.0);
-        assert.equal(painelData.notas_tecnicas.postura, 8.0);
-        assert.equal(painelData.aluno.notas_tecnicas.clinch, 9.5);
+        assert.ok(painelData.avaliacao_rpg?.atual, 'Deve retornar objeto avaliacao_rpg.atual');
+        assert.equal(painelData.avaliacao_rpg.atual.score_total, 80);
+        assert.equal(painelData.avaliacao_rpg.atual.rank_combate, 'A');
 
     } finally {
         if (avaliacaoId) {
@@ -2108,6 +2109,102 @@ test('Conciliação de Pagamentos: Classificação Gateway vs Manual/Avulso e Re
         asaas_status: 'PENDING'
     });
     assert.equal(faturaPagaComStatusAsaasPendente.origem, 'manual');
+});
+
+test('Avaliação Técnica RPG (Muay Thai): 20 Critérios, Trava de Sparring, Ranks e Deltas', () => {
+    const rpg = require('../services/rpgEvaluationService');
+
+    assert.equal(rpg.RPG_PILLARS.length, 5);
+    assert.equal(rpg.RPG_CRITERIA.length, 20);
+
+    const sparringIds = rpg.RPG_CRITERIA.filter(c => c.isSparring).map(c => c.id);
+    assert.deepEqual(sparringIds, [
+        'controle_emocional_sparring',
+        'controle_tecnica_sparring',
+        'controle_forca_golpes'
+    ]);
+
+    // Sem apto_sparring definido deve falhar
+    const missingSpar = rpg.evaluateRpgPayload({ criterios: {} });
+    assert.equal(missingSpar.valid, false);
+
+    // Nota fora do intervalo 0..5 ou decimal deve falhar
+    const baseAllFive = {};
+    rpg.RPG_CRITERIA.forEach((c) => { baseAllFive[c.id] = 5; });
+    const invalidDecimal = rpg.evaluateRpgPayload({
+        apto_sparring: true,
+        criterios: { ...baseAllFive, precisao: 4.5 }
+    });
+    assert.equal(invalidDecimal.valid, false);
+
+    // Regra de trava: apto_sparring = false limita [SPARRING] ao máximo 3
+    const lockedRes = rpg.evaluateRpgPayload({
+        apto_sparring: false,
+        data_avaliacao: '2026-11-21',
+        criterios: baseAllFive,
+        observacoes_instrutor: 'Focar em guarda antes do sparring livre.'
+    });
+    assert.equal(lockedRes.valid, true);
+    assert.equal(lockedRes.data.trava_sparring_aplicada, true);
+    assert.equal(lockedRes.data.criterios.controle_emocional_sparring, 3);
+    assert.equal(lockedRes.data.criterios.controle_tecnica_sparring, 3);
+    assert.equal(lockedRes.data.criterios.controle_forca_golpes, 3);
+    assert.equal(lockedRes.data.score_inteligencia, 18);
+    assert.equal(lockedRes.data.score_destreza, 18);
+    assert.equal(lockedRes.data.score_agilidade, 20);
+    assert.equal(lockedRes.data.score_forca, 18);
+    assert.equal(lockedRes.data.score_vitalidade, 20);
+    assert.equal(lockedRes.data.score_total, 94);
+    assert.equal(lockedRes.data.rank_combate, 'S');
+
+    // Faixas oficiais de Rank
+    assert.equal(rpg.classifyRpgRank(0).codigo, 'D');
+    assert.equal(rpg.classifyRpgRank(25).codigo, 'D');
+    assert.equal(rpg.classifyRpgRank(26).codigo, 'C');
+    assert.equal(rpg.classifyRpgRank(50).codigo, 'C');
+    assert.equal(rpg.classifyRpgRank(51).codigo, 'B');
+    assert.equal(rpg.classifyRpgRank(75).codigo, 'B');
+    assert.equal(rpg.classifyRpgRank(76).codigo, 'A');
+    assert.equal(rpg.classifyRpgRank(90).codigo, 'A');
+    assert.equal(rpg.classifyRpgRank(91).codigo, 'S');
+    assert.equal(rpg.classifyRpgRank(100).codigo, 'S');
+
+    // Cálculo de deltas evolutivos
+    const curNorm = rpg.normalizeRpgRow({
+        modelo_avaliacao: 'rpg',
+        apto_sparring: 1,
+        score_inteligencia: 16,
+        score_destreza: 14,
+        score_agilidade: 15,
+        score_forca: 13,
+        score_vitalidade: 17,
+        score_total: 75,
+        rank_combate: 'B',
+        rank_titulo: 'Combatente'
+    });
+    const prevNorm = rpg.normalizeRpgRow({
+        modelo_avaliacao: 'rpg',
+        apto_sparring: 0,
+        score_inteligencia: 14,
+        score_destreza: 15,
+        score_agilidade: 13,
+        score_forca: 13,
+        score_vitalidade: 14,
+        score_total: 69,
+        rank_combate: 'B',
+        rank_titulo: 'Combatente'
+    });
+    const deltas = rpg.computeRpgDeltas(curNorm, prevNorm);
+    assert.deepEqual(deltas, {
+        score_total: 6,
+        pilares: {
+            inteligencia: 2,
+            destreza: -1,
+            agilidade: 2,
+            forca: 0,
+            vitalidade: 3
+        }
+    });
 });
 
 test.after(async () => {

@@ -490,6 +490,34 @@
         gap: 10px;
     }
 
+    .rpg-dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .rpg-prereq-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .rpg-sparring-toggle {
+        grid-template-columns: 1fr;
+    }
+
+    .rpg-live-pillars-strip {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 4px;
+    }
+
+    .rpg-seg-group {
+        width: 100%;
+    }
+
+    .rpg-seg-btn {
+        min-width: 0;
+        height: 40px;
+        font-size: 13.5px;
+    }
+
     .dossier-desktop-table {
         display: none;
     }

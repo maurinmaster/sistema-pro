@@ -12,6 +12,7 @@ const MatriculaService = require('../services/matriculaService');
 const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
 const notificationConfigService = require('../services/notificationConfigService');
+const rpgEvaluationService = require('../services/rpgEvaluationService');
 
 // Configuração do Multer para armazenamento de fotos de perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -480,14 +481,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
             LIMIT 30
         `, [id]);
 
-        // 6. Avaliações Contínuas de Desempenho (Clinch-Sparring e Condicionamento)
-        const [avaliacoesDesempenho] = await pool.query(`
+        // 6. Avaliações Técnicas Gamificadas (RPG) & Histórico
+        const [avaliacoesDesempenhoRows] = await pool.query(`
             SELECT aad.*, ue.nome AS professor_nome
             FROM aluno_avaliacoes_desempenho aad
             LEFT JOIN usuarios_equipe ue ON ue.id = aad.professor_id
             WHERE aad.aluno_id = ?
             ORDER BY aad.data_avaliacao DESC, aad.id DESC
         `, [id]);
+
+        const avaliacoesDesempenho = avaliacoesDesempenhoRows.map(r => rpgEvaluationService.normalizeRpgRow(r));
+        const rpgOnly = avaliacoesDesempenho.filter(r => r.is_rpg);
+        const rpgAtual = rpgOnly[0] || null;
+        const rpgAnterior = rpgOnly[1] || null;
 
         res.json({
             success: true,
@@ -496,6 +502,12 @@ router.get('/:id', authenticateToken, async (req, res) => {
                 graduacoes,
                 avaliacoes,
                 avaliacoes_desempenho: avaliacoesDesempenho,
+                avaliacao_rpg: {
+                    atual: rpgAtual,
+                    anterior: rpgAnterior,
+                    deltas: rpgEvaluationService.computeRpgDeltas(rpgAtual, rpgAnterior),
+                    historico: rpgOnly
+                },
                 matricula: matriculas[0] || null,
                 matriculas_historico: matriculas,
                 faturas,
@@ -1024,7 +1036,7 @@ router.post('/:id/avaliacoes-graduacao', authenticateToken, authorizeRoles('admi
     }
 });
 
-// POST /api/alunos/:id/avaliacoes-desempenho - Registrar avaliação técnica (Clinch, Socos, Chutes, Postura)
+// POST /api/alunos/:id/avaliacoes-desempenho - Registrar Avaliação Técnica Gamificada (RPG Muay Thai)
 router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
     try {
         const alunoId = parseInt(req.params.id, 10);
@@ -1032,98 +1044,104 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
         }
 
-        const {
-            data_avaliacao,
-            nota_clinch,
-            nota_socos,
-            nota_chutes,
-            nota_postura,
-            nota_clinch_sparring,
-            nota_condicionamento,
-            observacoes
-        } = req.body;
-
-        // Suporte aos 4 quesitos solicitados: Clinch, Socos, Chutes, Postura (0 a 10)
-        // Fallback para campos legados caso enviado por interface antiga
-        const rawClinch = parseFloat(nota_clinch !== undefined ? nota_clinch : nota_clinch_sparring);
-        const rawSocos = parseFloat(nota_socos !== undefined ? nota_socos : (nota_condicionamento !== undefined ? nota_condicionamento : 0));
-        const rawChutes = parseFloat(nota_chutes !== undefined ? nota_chutes : (nota_condicionamento !== undefined ? nota_condicionamento : 0));
-        const rawPostura = parseFloat(nota_postura !== undefined ? nota_postura : (nota_clinch_sparring !== undefined ? nota_clinch_sparring : 0));
-
-        if (isNaN(rawClinch) || rawClinch < 0 || rawClinch > 10) {
-            return res.status(400).json({ success: false, error: 'A nota de Clinch deve estar entre 0.0 e 10.0.' });
-        }
-        if (isNaN(rawSocos) || rawSocos < 0 || rawSocos > 10) {
-            return res.status(400).json({ success: false, error: 'A nota de Socos deve estar entre 0.0 e 10.0.' });
-        }
-        if (isNaN(rawChutes) || rawChutes < 0 || rawChutes > 10) {
-            return res.status(400).json({ success: false, error: 'A nota de Chutes deve estar entre 0.0 e 10.0.' });
-        }
-        if (isNaN(rawPostura) || rawPostura < 0 || rawPostura > 10) {
-            return res.status(400).json({ success: false, error: 'A nota de Postura deve estar entre 0.0 e 10.0.' });
+        const evalRes = rpgEvaluationService.evaluateRpgPayload(req.body || {});
+        if (!evalRes.valid) {
+            return res.status(400).json({ success: false, error: evalRes.error });
         }
 
-        // Validação da data
-        let dataAval = data_avaliacao;
-        if (!dataAval || isNaN(Date.parse(dataAval))) {
-            dataAval = new Date().toISOString().split('T')[0];
-        }
-
+        const parsed = evalRes.data;
         const professorId = req.user && req.user.id ? req.user.id : null;
-        const cleanObs = observacoes ? String(observacoes).trim().substring(0, 500) : null;
-
-        // Campos legados calculados para compatibilidade
-        const legacyClinch = rawClinch;
-        const legacyCond = Number(((rawSocos + rawChutes + rawPostura) / 3).toFixed(1));
 
         const [result] = await pool.query(`
-            INSERT INTO aluno_avaliacoes_desempenho 
-            (aluno_id, professor_id, data_avaliacao, nota_clinch, nota_socos, nota_chutes, nota_postura, nota_clinch_sparring, nota_condicionamento, observacoes)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `, [alunoId, professorId, dataAval, rawClinch, rawSocos, rawChutes, rawPostura, legacyClinch, legacyCond, cleanObs]);
+            INSERT INTO aluno_avaliacoes_desempenho (
+                aluno_id, professor_id, data_avaliacao, modelo_avaliacao, apto_sparring,
+                score_inteligencia, score_destreza, score_agilidade, score_forca, score_vitalidade,
+                score_total, rank_combate, rank_titulo, criterios_json,
+                nota_clinch, nota_socos, nota_chutes, nota_postura, nota_clinch_sparring, nota_condicionamento,
+                observacoes
+            ) VALUES (?, ?, ?, 'rpg', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            alunoId,
+            professorId,
+            parsed.data_avaliacao,
+            parsed.apto_sparring ? 1 : 0,
+            parsed.score_inteligencia,
+            parsed.score_destreza,
+            parsed.score_agilidade,
+            parsed.score_forca,
+            parsed.score_vitalidade,
+            parsed.score_total,
+            parsed.rank_combate,
+            parsed.rank_titulo,
+            JSON.stringify(parsed.criterios),
+            parsed.legacy.nota_clinch,
+            parsed.legacy.nota_socos,
+            parsed.legacy.nota_chutes,
+            parsed.legacy.nota_postura,
+            parsed.legacy.nota_clinch_sparring,
+            parsed.legacy.nota_condicionamento,
+            parsed.observacoes_instrutor
+        ]);
+
+        const obsText = parsed.observacoes_instrutor;
+        const sparringLabel = parsed.apto_sparring ? 'Sim (Apto)' : 'Não (Simulado Controlado - máx. 3)';
+        const dataFmt = parsed.data_avaliacao
+            ? new Date(parsed.data_avaliacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+            : '';
 
         notificationConfigService.dispatchEvent('avaliacao_desempenho', {
             alunoId: Number(req.params.id),
             variables: {
-                clinch: String(rawClinch),
-                socos: String(rawSocos),
-                chutes: String(rawChutes),
-                postura: String(rawPostura),
-                observacoes: cleanObs ? `📝 Obs: ${cleanObs}` : ''
+                rank: parsed.rank_combate,
+                rank_titulo: parsed.rank_titulo,
+                score_total: String(parsed.score_total),
+                apto_sparring: sparringLabel,
+                inteligencia: String(parsed.score_inteligencia),
+                destreza: String(parsed.score_destreza),
+                agilidade: String(parsed.score_agilidade),
+                forca: String(parsed.score_forca),
+                vitalidade: String(parsed.score_vitalidade),
+                clinch: String(parsed.legacy.nota_clinch),
+                socos: String(parsed.legacy.nota_socos),
+                chutes: String(parsed.legacy.nota_chutes),
+                postura: String(parsed.legacy.nota_postura),
+                observacoes: obsText ? `📝 Obs: ${obsText}` : ''
             },
             detalhes: [
-                { label: 'Data da Avaliação', value: dataAval ? new Date(dataAval).toLocaleDateString('pt-BR') : '' },
-                { label: 'Clinch', value: `${rawClinch}/10` },
-                { label: 'Socos', value: `${rawSocos}/10` },
-                { label: 'Chutes', value: `${rawChutes}/10` },
-                { label: 'Postura', value: `${rawPostura}/10` },
-                { label: 'Observações', value: cleanObs || '' }
+                { label: 'Data da Avaliação', value: dataFmt },
+                { label: 'Rank / Pontuação', value: `Rank ${parsed.rank_combate} (${parsed.rank_titulo}) — ${parsed.score_total}/100` },
+                { label: 'Apto para Sparring', value: sparringLabel },
+                { label: 'Inteligência', value: `${parsed.score_inteligencia}/20` },
+                { label: 'Destreza', value: `${parsed.score_destreza}/20` },
+                { label: 'Agilidade', value: `${parsed.score_agilidade}/20` },
+                { label: 'Força', value: `${parsed.score_forca}/20` },
+                { label: 'Vitalidade', value: `${parsed.score_vitalidade}/20` },
+                { label: 'Observações', value: obsText || '' }
             ]
+        });
+
+        const normalizedSaved = rpgEvaluationService.normalizeRpgRow({
+            id: result.insertId,
+            aluno_id: alunoId,
+            professor_id: professorId,
+            ...parsed,
+            observacoes: obsText
         });
 
         res.status(201).json({
             success: true,
-            message: 'Avaliação técnica (Clinch, Socos, Chutes, Postura) registrada com sucesso!',
-            data: {
-                id: result.insertId,
-                aluno_id: alunoId,
-                data_avaliacao: dataAval,
-                nota_clinch: rawClinch,
-                nota_socos: rawSocos,
-                nota_chutes: rawChutes,
-                nota_postura: rawPostura,
-                nota_clinch_sparring: legacyClinch,
-                nota_condicionamento: legacyCond,
-                observacoes: cleanObs
-            }
+            message: parsed.trava_sparring_aplicada
+                ? `Avaliação RPG salva (Rank ${parsed.rank_combate} • ${parsed.score_total}/100). Critérios de sparring ajustados ao teto 3.`
+                : `Avaliação Técnica RPG registrada com sucesso (Rank ${parsed.rank_combate} • ${parsed.score_total}/100)!`,
+            data: normalizedSaved
         });
     } catch (err) {
-        console.error('Erro ao salvar avaliação de desempenho:', err);
-        res.status(500).json({ success: false, error: 'Erro interno ao salvar avaliação de desempenho.' });
+        console.error('Erro ao salvar avaliação técnica RPG:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao salvar avaliação técnica RPG.' });
     }
 });
 
-// GET /api/alunos/:id/avaliacoes-desempenho - Listar avaliações de Clinch-Sparring e Condicionamento
+// GET /api/alunos/:id/avaliacoes-desempenho - Listar avaliações técnicas RPG e histórico
 router.get('/:id/avaliacoes-desempenho', authenticateToken, async (req, res) => {
     try {
         const alunoId = parseInt(req.params.id, 10);
@@ -1139,10 +1157,13 @@ router.get('/:id/avaliacoes-desempenho', authenticateToken, async (req, res) => 
             ORDER BY aad.data_avaliacao DESC, aad.id DESC
         `, [alunoId]);
 
-        res.json({ success: true, data: rows });
+        res.json({
+            success: true,
+            data: rows.map(r => rpgEvaluationService.normalizeRpgRow(r))
+        });
     } catch (err) {
-        console.error('Erro ao buscar avaliações de desempenho:', err);
-        res.status(500).json({ success: false, error: 'Erro interno ao consultar avaliações de desempenho.' });
+        console.error('Erro ao buscar avaliações técnicas:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao consultar avaliações técnicas.' });
     }
 });
 
