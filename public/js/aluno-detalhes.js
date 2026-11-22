@@ -631,6 +631,42 @@ const AlunoDetalhesModule = {
         this.renderDesempenhoRpgTab(this.currentData, safeAlunoId, encodedAlunoNome);
     },
 
+    openRpgStatusCard() {
+        if (!this.currentData || typeof window.RpgAvaliacaoUI === 'undefined') return;
+        const rpgHist = (this.currentData.avaliacao_rpg && Array.isArray(this.currentData.avaliacao_rpg.historico))
+            ? this.currentData.avaliacao_rpg.historico
+            : (this.currentData.avaliacoes_desempenho || []).filter(d => d.is_rpg || d.modelo_avaliacao === 'rpg');
+        const atual = rpgHist[0] || null;
+        if (!atual) {
+            UI.showToast('Registre uma avaliação RPG antes de gerar o card.', 'warning');
+            return;
+        }
+        let anterior = null;
+        if (this.rpgCompareId) {
+            anterior = rpgHist.find(h => Number(h.id) === Number(this.rpgCompareId) && Number(h.id) !== Number(atual.id)) || null;
+        }
+        const aluno = this.currentData.aluno || {};
+        const grads = Array.isArray(this.currentData.graduacoes) ? this.currentData.graduacoes : [];
+        const gradAtiva = grads.find(g => (g.atual === 1 || g.atual === true) && (g.modalidade_nome || '').toLowerCase().includes('muay'))
+            || grads.find(g => g.atual === 1 || g.atual === true)
+            || grads[0]
+            || null;
+        const gradNome = gradAtiva
+            ? `${gradAtiva.modalidade_nome ? gradAtiva.modalidade_nome + ' • ' : ''}${gradAtiva.nivel_nome || 'Atleta'}`
+            : 'Muay Thai • Atleta';
+
+        window.RpgAvaliacaoUI.openStatusCardModal({
+            alunoNome: aluno.nome_completo || 'Atleta',
+            fotoUrl: aluno.foto_perfil_url || null,
+            graduacaoNome: gradNome,
+            corPrimaria: gradAtiva?.cor_hex_primaria || '#ffffff',
+            corSecundaria: gradAtiva?.cor_hex_secundaria || '#0f172a',
+            atual,
+            anterior,
+            academiaNome: 'PRO COMBATE'
+        });
+    },
+
     renderDesempenhoRpgTab(data, safeAlunoId, encodedAlunoNome) {
         const desTabEl = document.getElementById('dossier-tab-desempenho');
         if (!desTabEl) return;
@@ -650,6 +686,7 @@ const AlunoDetalhesModule = {
         }
 
         const deltas = atual && anterior && rpgUI ? rpgUI.computeDeltas(atual, anterior) : null;
+        const requisitosExame = data.avaliacao_rpg?.requisitos_exame || null;
 
         let heroHtml = '';
         if (atual && rpgUI) {
@@ -658,14 +695,22 @@ const AlunoDetalhesModule = {
                 .map(h => `<option value="${Number(h.id)}" ${Number(this.rpgCompareId) === Number(h.id) ? 'selected' : ''}>${UI.escapeHtml(UI.formatDate(h.data_avaliacao))} • Rank ${UI.escapeHtml(h.rank_combate)} (${Number(h.score_total)}/100)</option>`)
                 .join('');
 
+            const arquetipoObj = atual.arquetipo || rpgUI.computeArchetype(atual.pilares, atual.score_total);
+            const focoObj = atual.foco_evolucao || rpgUI.computeTrainingFocus(atual.criterios, atual.pilares);
+            const badgesArr = (Array.isArray(atual.badges) && atual.badges.length > 0)
+                ? atual.badges
+                : rpgUI.computeBadges(atual.criterios, Boolean(atual.apto_sparring));
+
             heroHtml = `
+                ${rpgUI.renderFocusMissionCardHtml(focoObj)}
+
                 <div class="rpg-dashboard-grid">
                     <div class="rpg-radar-card">
                         <div style="width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
                             <span style="font-size: 11.5px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Radar de Atributos</span>
                             <span style="font-size: 11px; color: #94a3b8;">${UI.escapeHtml(UI.formatDate(atual.data_avaliacao))}</span>
                         </div>
-                        ${rpgUI.renderRadarSvg(atual.pilares, anterior ? anterior.pilares : null)}
+                        ${rpgUI.renderRadarSvg(atual.pilares, anterior ? anterior.pilares : null, deltas)}
                         <div class="rpg-radar-legend">
                             <span class="rpg-legend-item"><span class="rpg-legend-swatch atual"></span>Atual (${Number(atual.score_total)} pts)</span>
                             ${anterior ? `<span class="rpg-legend-item"><span class="rpg-legend-swatch anterior"></span>${UI.escapeHtml(UI.formatDate(anterior.data_avaliacao))} (${Number(anterior.score_total)} pts)</span>` : ''}
@@ -679,6 +724,9 @@ const AlunoDetalhesModule = {
                                 </select>
                             </div>
                         ` : ''}
+                        <button type="button" class="btn btn-secondary btn-sm rpg-story-trigger-btn" onclick="AlunoDetalhesModule.openRpgStatusCard()">
+                            <span>📸 Gerar Card de Status (Stories 9:16)</span>
+                        </button>
                     </div>
 
                     <div class="rpg-stats-card">
@@ -689,6 +737,10 @@ const AlunoDetalhesModule = {
                                 ${deltas ? rpgUI.renderDeltaBadgeHtml(deltas.score_total, ' pts') : ''}
                             </div>
                             ${rpgUI.renderSparringBadgeHtml(Boolean(atual.apto_sparring))}
+                        </div>
+
+                        <div style="margin-bottom: 12px;">
+                            ${rpgUI.renderArchetypePillHtml(arquetipoObj)}
                         </div>
 
                         <div class="rpg-pillar-bars-list">
@@ -703,6 +755,9 @@ const AlunoDetalhesModule = {
                         ` : ''}
                     </div>
                 </div>
+
+                ${rpgUI.renderBadgesGridHtml(badgesArr)}
+                ${rpgUI.renderExamProgressionCardHtml(requisitosExame)}
             `;
         } else {
             heroHtml = `
@@ -713,6 +768,7 @@ const AlunoDetalhesModule = {
                         Este aluno ainda não possui uma avaliação RPG (20 critérios / 5 atributos). Clique no botão abaixo para preencher em menos de 1 minuto.
                     </p>
                 </div>
+                ${rpgUI ? rpgUI.renderExamProgressionCardHtml(requisitosExame) : ''}
             `;
         }
 

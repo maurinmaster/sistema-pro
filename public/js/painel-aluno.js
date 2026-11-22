@@ -1091,6 +1091,41 @@ const PainelAlunoApp = {
         this.renderPortalRpgCard();
     },
 
+    openPortalRpgStatusCard() {
+        const rpg = this.alunoData?.avaliacao_rpg || null;
+        const historico = Array.isArray(rpg?.historico) ? rpg.historico : [];
+        const atual = rpg?.atual || historico[0] || null;
+        if (!atual || typeof window.RpgAvaliacaoUI === 'undefined') return;
+
+        const candidates = historico.filter((h) => String(h.id) !== String(atual.id));
+        let anterior = null;
+        if (this.portalRpgCompareId !== 'none') {
+            if (this.portalRpgCompareId) {
+                anterior = candidates.find((h) => String(h.id) === String(this.portalRpgCompareId)) || null;
+            }
+            if (!anterior) {
+                anterior = (rpg?.anterior && String(rpg.anterior.id) !== String(atual.id)) ? rpg.anterior : (candidates[0] || null);
+            }
+        }
+
+        const aluno = this.alunoData?.aluno || {};
+        const grad = this.alunoData?.graduacao?.muay_thai || this.alunoData?.graduacao?.atual || null;
+        const gradNome = grad
+            ? `${grad.modalidade ? grad.modalidade + ' • ' : 'Muay Thai • '}${grad.nivel_nome || 'Atleta'}`
+            : 'Muay Thai • Atleta';
+
+        window.RpgAvaliacaoUI.openStatusCardModal({
+            alunoNome: aluno.nome_completo || aluno.primeiro_nome || 'Atleta',
+            fotoUrl: aluno.foto_perfil_url || null,
+            graduacaoNome: gradNome,
+            corPrimaria: grad?.cor_primaria || '#ffffff',
+            corSecundaria: grad?.cor_secundaria || '#0f172a',
+            atual,
+            anterior,
+            academiaNome: 'PRO COMBATE'
+        });
+    },
+
     renderPortalRpgCard(rpgPayload = null) {
         const container = document.getElementById('athlete-rpg-container');
         if (!container) return;
@@ -1100,20 +1135,22 @@ const PainelAlunoApp = {
             : (rpgPayload || this.alunoData?.avaliacao_rpg || null);
         const historico = Array.isArray(rpg?.historico) ? rpg.historico : [];
         const atual = rpg?.atual || historico[0] || null;
+        const ui = window.RpgAvaliacaoUI;
+        const requisitosExame = rpg?.requisitos_exame || null;
 
-        if (!atual || typeof window.RpgAvaliacaoUI === 'undefined') {
+        if (!atual || typeof ui === 'undefined') {
             container.innerHTML = `
                 <div class="portal-rpg-card">
                     <div style="font-size: 12.5px; color: #94a3b8; text-align: center; padding: 10px 6px;">
                         <strong style="display:block; color:#e2e8f0; margin-bottom:4px;">Avaliação Técnica RPG (Muay Thai)</strong>
                         Nenhuma avaliação RPG lançada pelo instrutor ainda. Quando você for avaliado nos 20 critérios técnicos, seu Rank de Combate (D a S) e gráfico Radar aparecerão aqui.
                     </div>
+                    ${(typeof ui !== 'undefined' && requisitosExame) ? ui.renderExamProgressionCardHtml(requisitosExame) : ''}
                 </div>
             `;
             return;
         }
 
-        const ui = window.RpgAvaliacaoUI;
         const candidates = historico.filter((h) => String(h.id) !== String(atual.id));
         let anterior = null;
         if (this.portalRpgCompareId !== 'none') {
@@ -1137,6 +1174,12 @@ const PainelAlunoApp = {
             ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR')
             : 'Recente';
         const avaliadorStr = this.escapeHtml(atual.avaliador_nome || 'Instrutor');
+
+        const arquetipoObj = atual.arquetipo || ui.computeArchetype(atual.pilares, scoreTotal);
+        const focoObj = atual.foco_evolucao || ui.computeTrainingFocus(atual.criterios, atual.pilares);
+        const badgesArr = (Array.isArray(atual.badges) && atual.badges.length > 0)
+            ? atual.badges
+            : ui.computeBadges(atual.criterios, aptoSparring);
 
         const compareHtml = candidates.length > 0 ? `
             <div class="portal-rpg-compare">
@@ -1194,6 +1237,8 @@ const PainelAlunoApp = {
 
         container.innerHTML = `
             <div class="portal-rpg-card">
+                ${ui.renderFocusMissionCardHtml(focoObj)}
+
                 <div class="portal-rpg-header">
                     <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
                         ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
@@ -1208,13 +1253,18 @@ const PainelAlunoApp = {
                     </div>
                 </div>
 
+                ${ui.renderArchetypePillHtml(arquetipoObj)}
+
                 <div class="portal-rpg-grid">
                     <div class="portal-rpg-radar-wrap">
-                        ${ui.renderRadarSvg(atual.pilares || {}, anterior ? anterior.pilares : null)}
+                        ${ui.renderRadarSvg(atual.pilares || {}, anterior ? anterior.pilares : null, deltas)}
                         <div class="rpg-radar-legend">
                             <span class="rpg-legend-item"><span class="rpg-legend-swatch atual"></span> Atual (${this.escapeHtml(dataStr)})</span>
                             ${anterior ? `<span class="rpg-legend-item"><span class="rpg-legend-swatch anterior"></span> Anterior (${this.escapeHtml(anterior.data_avaliacao ? new Date(anterior.data_avaliacao).toLocaleDateString('pt-BR') : '')})</span>` : ''}
                         </div>
+                        <button type="button" id="btn-portal-gerar-card-rpg" class="portal-rpg-story-btn">
+                            <span>📸 Gerar Card de Status (Stories 9:16)</span>
+                        </button>
                     </div>
                     <div class="rpg-pillar-bars-list">
                         ${ui.renderPillarBarsHtml(atual.pilares || {}, deltas)}
@@ -1222,6 +1272,8 @@ const PainelAlunoApp = {
                 </div>
 
                 ${compareHtml}
+                ${ui.renderBadgesGridHtml(badgesArr)}
+                ${ui.renderExamProgressionCardHtml(requisitosExame)}
                 ${legacyHtml}
                 ${noteHtml}
                 ${criteriaDetailsHtml}
@@ -1232,6 +1284,12 @@ const PainelAlunoApp = {
         if (compareSelect) {
             compareSelect.addEventListener('change', (e) => {
                 this.onChangePortalRpgCompare(e.target.value);
+            });
+        }
+        const storyBtn = document.getElementById('btn-portal-gerar-card-rpg');
+        if (storyBtn) {
+            storyBtn.addEventListener('click', () => {
+                this.openPortalRpgStatusCard();
             });
         }
     },

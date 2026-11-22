@@ -3,6 +3,39 @@ const router = express.Router();
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
+const VALID_RPG_RANKS = ['D', 'C', 'B', 'A', 'S'];
+
+function parseRpgGraduationRequirements(body = {}) {
+    const rawRank = body.rpg_rank_minimo;
+    let rpgRankMinimo = null;
+    if (rawRank !== undefined && rawRank !== null && String(rawRank).trim() !== '') {
+        const up = String(rawRank).trim().toUpperCase();
+        if (!VALID_RPG_RANKS.includes(up)) {
+            return { error: 'Rank mínimo RPG inválido. Utilize D, C, B, A ou S.' };
+        }
+        rpgRankMinimo = up;
+    }
+
+    const rawMinAttr = body.rpg_pontuacao_minima_atributo;
+    let rpgPontuacaoMinimaAtributo = null;
+    if (rawMinAttr !== undefined && rawMinAttr !== null && String(rawMinAttr).trim() !== '') {
+        const num = Number(rawMinAttr);
+        if (!Number.isInteger(num) || num < 1 || num > 20) {
+            return { error: 'Pontuação mínima por atributo RPG deve ser um número inteiro entre 1 e 20.' };
+        }
+        rpgPontuacaoMinimaAtributo = num;
+    }
+
+    const rawSpar = body.rpg_exige_apto_sparring;
+    const rpgExigeAptoSparring = (rawSpar === true || rawSpar === 1 || rawSpar === '1' || rawSpar === 'true') ? 1 : 0;
+
+    return {
+        rpg_rank_minimo: rpgRankMinimo,
+        rpg_pontuacao_minima_atributo: rpgPontuacaoMinimaAtributo,
+        rpg_exige_apto_sparring: rpgExigeAptoSparring
+    };
+}
+
 // GET /api/modalidades - Listar modalidades e seus níveis de graduação
 router.get('/', authenticateToken, async (req, res) => {
     try {
@@ -14,7 +47,7 @@ router.get('/', authenticateToken, async (req, res) => {
         `);
 
         const [niveis] = await pool.query(`
-            SELECT id, modalidade_id, nome, cor_hex_primaria, cor_hex_secundaria, graus, ordem_hierarquica, aulas_minimas_exigidas, tempo_minimo_meses, requisitos_lista_json, total_itens, porcentagem_minima, prajied_icone_url
+            SELECT id, modalidade_id, nome, cor_hex_primaria, cor_hex_secundaria, graus, ordem_hierarquica, aulas_minimas_exigidas, tempo_minimo_meses, requisitos_lista_json, total_itens, porcentagem_minima, rpg_rank_minimo, rpg_pontuacao_minima_atributo, rpg_exige_apto_sparring, prajied_icone_url
             FROM graduacoes_niveis
             ORDER BY modalidade_id ASC, ordem_hierarquica ASC
         `);
@@ -221,6 +254,10 @@ router.post('/:id/niveis', authenticateToken, authorizeRoles('admin', 'professor
 
         const totalItens = cleanedReqs.length;
         const minPct = Math.min(Math.max(parseFloat(porcentagem_minima) || 70.00, 10.00), 100.00);
+        const rpgReqs = parseRpgGraduationRequirements(req.body);
+        if (rpgReqs.error) {
+            return res.status(400).json({ success: false, error: rpgReqs.error });
+        }
 
         // Calcula a ordem hierárquica automaticamente se não for passada
         let ordem = ordem_hierarquica;
@@ -236,8 +273,10 @@ router.post('/:id/niveis', authenticateToken, authorizeRoles('admin', 'professor
             INSERT INTO graduacoes_niveis (
                 modalidade_id, nome, cor_hex_primaria, cor_hex_secundaria, graus, 
                 ordem_hierarquica, aulas_minimas_exigidas, tempo_minimo_meses,
-                requisitos_lista_json, total_itens, porcentagem_minima, prajied_icone_url
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                requisitos_lista_json, total_itens, porcentagem_minima,
+                rpg_rank_minimo, rpg_pontuacao_minima_atributo, rpg_exige_apto_sparring,
+                prajied_icone_url
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             modalidade_id,
             nome.trim(),
@@ -250,6 +289,9 @@ router.post('/:id/niveis', authenticateToken, authorizeRoles('admin', 'professor
             JSON.stringify(cleanedReqs),
             totalItens,
             minPct,
+            rpgReqs.rpg_rank_minimo,
+            rpgReqs.rpg_pontuacao_minima_atributo,
+            rpgReqs.rpg_exige_apto_sparring,
             prajied_icone_url ? String(prajied_icone_url).trim() : null
         ]);
 
@@ -322,6 +364,10 @@ router.put('/niveis/:nivelId', authenticateToken, authorizeRoles('admin', 'profe
 
         const totalItens = cleanedReqs.length;
         const minPct = Math.min(Math.max(parseFloat(porcentagem_minima) || 70.00, 10.00), 100.00);
+        const rpgReqs = parseRpgGraduationRequirements(req.body);
+        if (rpgReqs.error) {
+            return res.status(400).json({ success: false, error: rpgReqs.error });
+        }
 
         const [result] = await pool.query(`
             UPDATE graduacoes_niveis SET
@@ -335,6 +381,9 @@ router.put('/niveis/:nivelId', authenticateToken, authorizeRoles('admin', 'profe
                 requisitos_lista_json = ?,
                 total_itens = ?,
                 porcentagem_minima = ?,
+                rpg_rank_minimo = ?,
+                rpg_pontuacao_minima_atributo = ?,
+                rpg_exige_apto_sparring = ?,
                 prajied_icone_url = ?
             WHERE id = ?
         `, [
@@ -348,6 +397,9 @@ router.put('/niveis/:nivelId', authenticateToken, authorizeRoles('admin', 'profe
             JSON.stringify(cleanedReqs),
             totalItens,
             minPct,
+            rpgReqs.rpg_rank_minimo,
+            rpgReqs.rpg_pontuacao_minima_atributo,
+            rpgReqs.rpg_exige_apto_sparring,
             prajied_icone_url ? String(prajied_icone_url).trim() : null,
             nivelId
         ]);

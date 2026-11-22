@@ -242,6 +242,402 @@ const RPG_CRITERIA = [
 ];
 
 const CRITERIA_BY_ID = new Map(RPG_CRITERIA.map(c => [c.id, c]));
+const PILLARS_BY_ID = new Map(RPG_PILLARS.map(p => [p.id, p]));
+
+const RPG_RANK_ORDER = { D: 1, C: 2, B: 3, A: 4, S: 5 };
+const RPG_RANK_MIN_SCORE = { D: 0, C: 26, B: 51, A: 76, S: 91 };
+
+const RPG_ARCHETYPE_PAIRS = {
+    'destreza+inteligencia': {
+        id: 'estrategista_cirurgico',
+        titulo: 'Estrategista Cirúrgico',
+        subtitulo: 'Combina leitura tática apurada com execução técnica precisa',
+        cor: '#a855f7'
+    },
+    'forca+vitalidade': {
+        id: 'tanque_de_pressao',
+        titulo: 'Tanque de Pressão',
+        subtitulo: 'Impõe ritmo pesado, absorve pressão e mantém volume físico',
+        cor: '#ef4444'
+    },
+    'agilidade+destreza': {
+        id: 'velocista_francoatirador',
+        titulo: 'Velocista / Francoatirador',
+        subtitulo: 'Entra e sai rápido com precisão cirúrgica nos alvos',
+        cor: '#22c55e'
+    },
+    'forca+inteligencia': {
+        id: 'controlador_de_clinch',
+        titulo: 'Controlador de Clinch',
+        subtitulo: 'Domina a curta distância neutralizando o oponente com inteligência e força',
+        cor: '#f97316'
+    },
+    'agilidade+inteligencia': {
+        id: 'contra_atacante_fantasma',
+        titulo: 'Contra-Atacante Fantasma',
+        subtitulo: 'Lê as intenções do adversário e responde antes da guarda fechar',
+        cor: '#38bdf8'
+    },
+    'agilidade+vitalidade': {
+        id: 'ritmo_incessante',
+        titulo: 'Ritmo Incessante',
+        subtitulo: 'Movimentação contínua com fôlego constante do 1º ao último round',
+        cor: '#10b981'
+    },
+    'destreza+forca': {
+        id: 'nocauteador_tecnico',
+        titulo: 'Nocauteador Técnico',
+        subtitulo: 'Une alinhamento biomecânico limpo com potência máxima de impacto',
+        cor: '#f59e0b'
+    },
+    'destreza+vitalidade': {
+        id: 'guerreiro_resiliente',
+        titulo: 'Guerreiro Resiliente',
+        subtitulo: 'Mantém técnica limpa, guarda fechada e postura firme mesmo sob fadiga',
+        cor: '#ec4899'
+    },
+    'inteligencia+vitalidade': {
+        id: 'mestre_da_cadencia',
+        titulo: 'Mestre da Cadência',
+        subtitulo: 'Administra energia, respiração e distância para vencer nos momentos decisivos',
+        cor: '#06b6d4'
+    },
+    'agilidade+forca': {
+        id: 'explosao_pura',
+        titulo: 'Explosão Pura',
+        subtitulo: 'Combina velocidade de execução com combinações pesadas de alto impacto',
+        cor: '#fb7185'
+    }
+};
+
+const RPG_BADGES_CATALOG = [
+    {
+        id: 'muralha',
+        nome: 'Muralha',
+        icone: '🛡️',
+        cor: '#38bdf8',
+        criterios_ids: ['defesas', 'manutencao_guarda_fadiga'],
+        requisito: 'Atingir nota 5/5 em Defesas e 5/5 em Manutenção de guarda sob fadiga',
+        check: (c) => Number(c.defesas) === 5 && Number(c.manutencao_guarda_fadiga) === 5
+    },
+    {
+        id: 'sniper',
+        nome: 'Sniper',
+        icone: '🎯',
+        cor: '#a855f7',
+        criterios_ids: ['precisao', 'contra_ataques'],
+        requisito: 'Atingir nota 5/5 em Precisão e 5/5 em Contra-ataques',
+        check: (c) => Number(c.precisao) === 5 && Number(c.contra_ataques) === 5
+    },
+    {
+        id: 'pulmao_de_aco',
+        nome: 'Pulmão de Aço',
+        icone: '🫁',
+        cor: '#ef4444',
+        criterios_ids: ['resistencia_cardiovascular', 'recuperacao_entre_rounds'],
+        requisito: 'Atingir nota 5/5 em Resistência cardiovascular (Gás) e 5/5 em Recuperação entre rounds',
+        check: (c) => Number(c.resistencia_cardiovascular) === 5 && Number(c.recuperacao_entre_rounds) === 5
+    },
+    {
+        id: 'parceiro_confianca',
+        nome: 'Parceiro de Confiança',
+        icone: '🤝',
+        cor: '#10b981',
+        criterios_ids: ['controle_forca_golpes', 'controle_emocional_sparring'],
+        requisito: 'Estar Apto para Sparring e atingir 5/5 em Controle de força nos golpes e 5/5 em Controle emocional no sparring',
+        check: (c, aptoSparring) => aptoSparring !== false && Number(c.controle_forca_golpes) === 5 && Number(c.controle_emocional_sparring) === 5
+    },
+    {
+        id: 'rei_do_clinch',
+        nome: 'Rei do Clinch',
+        icone: '👑',
+        cor: '#f59e0b',
+        criterios_ids: ['dominio_clinch_tatico', 'saidas_clinch', 'forca_isometrica_clinch'],
+        requisito: 'Atingir nota 5/5 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
+        check: (c) => Number(c.dominio_clinch_tatico) === 5 && Number(c.saidas_clinch) === 5 && Number(c.forca_isometrica_clinch) === 5
+    },
+    {
+        id: 'intocavel',
+        nome: 'Intocável',
+        icone: '⚡',
+        cor: '#22c55e',
+        criterios_ids: ['jogo_pernas_footwork', 'tempo_reacao'],
+        requisito: 'Atingir nota 5/5 em Jogo de pernas (Footwork e Ângulos) e 5/5 em Tempo de reação',
+        check: (c) => Number(c.jogo_pernas_footwork) === 5 && Number(c.tempo_reacao) === 5
+    }
+];
+
+/**
+ * Classifica o Arquétipo automático de lutador a partir dos 5 atributos (0..20).
+ */
+function computeFighterArchetype(pilares = {}, scoreTotal = null) {
+    const entries = RPG_PILLARS.map((pillar, idx) => ({
+        id: pillar.id,
+        nome: pillar.nome,
+        sigla: pillar.sigla,
+        idx,
+        score: Math.max(0, Math.min(20, Number(pilares?.[pillar.id] ?? 0) || 0))
+    }));
+
+    const totalCalculado = entries.reduce((sum, e) => sum + e.score, 0);
+    const total = scoreTotal !== null && scoreTotal !== undefined ? Number(scoreTotal) || 0 : totalCalculado;
+
+    if (total <= 0) {
+        return {
+            id: 'em_formacao',
+            titulo: 'Em Formação',
+            subtitulo: 'Aguardando evolução nos atributos técnicos',
+            top_pilares: [],
+            equilibrado: false,
+            cor: '#94a3b8'
+        };
+    }
+
+    const scores = entries.map(e => e.score);
+    const maxVal = Math.max(...scores);
+    const minVal = Math.min(...scores);
+
+    if (maxVal - minVal <= 2) {
+        return {
+            id: 'lutador_completo',
+            titulo: 'Lutador Completo (All-Rounder)',
+            subtitulo: 'Atributos equilibrados em todas as dimensões de combate (variação <= 2 pts)',
+            top_pilares: [],
+            equilibrado: true,
+            cor: '#38bdf8'
+        };
+    }
+
+    const sorted = [...entries].sort((a, b) => (b.score - a.score) || (a.idx - b.idx));
+    const top1 = sorted[0];
+    const top2 = sorted[1];
+    const pairKey = [top1.id, top2.id].sort().join('+');
+    const matched = RPG_ARCHETYPE_PAIRS[pairKey];
+
+    return {
+        id: matched ? matched.id : pairKey,
+        titulo: matched ? matched.titulo : `${top1.nome} + ${top2.nome}`,
+        subtitulo: matched ? matched.subtitulo : `Predominância em ${top1.nome} e ${top2.nome}`,
+        top_pilares: [top1.id, top2.id],
+        equilibrado: false,
+        cor: matched ? matched.cor : '#38bdf8'
+    };
+}
+
+/**
+ * Avalia quais das 6 insígnias RPG estão desbloqueadas pelos critérios.
+ */
+function computeRpgBadges(criteriosMap = null, aptoSparring = true) {
+    const hasCriteria = Boolean(criteriosMap && typeof criteriosMap === 'object' && !Array.isArray(criteriosMap));
+    const safeCriteria = hasCriteria ? criteriosMap : {};
+
+    return RPG_BADGES_CATALOG.map((badge) => {
+        const desbloqueada = hasCriteria ? Boolean(badge.check(safeCriteria, aptoSparring)) : false;
+        return {
+            id: badge.id,
+            nome: badge.nome,
+            icone: badge.icone,
+            cor: badge.cor,
+            criterios_ids: [...badge.criterios_ids],
+            requisito: badge.requisito,
+            desbloqueada
+        };
+    });
+}
+
+/**
+ * Identifica os 2 critérios de menor pontuação (desempatando pelo pilar com menor nota geral).
+ */
+function computeTrainingFocus(criteriosMap = null, pilares = {}) {
+    if (!criteriosMap || typeof criteriosMap !== 'object' || Array.isArray(criteriosMap)) {
+        return null;
+    }
+
+    const ranked = RPG_CRITERIA.map((criterion) => {
+        const raw = Number(criteriosMap[criterion.id] ?? 0);
+        const nota = Number.isFinite(raw) ? Math.max(0, Math.min(5, raw)) : 0;
+        const pilarScore = Number(pilares?.[criterion.pilar] ?? 0) || 0;
+        const pillarMeta = PILLARS_BY_ID.get(criterion.pilar);
+        return {
+            id: criterion.id,
+            numero: criterion.numero,
+            nome: criterion.nome,
+            pilar: criterion.pilar,
+            pilar_nome: pillarMeta ? pillarMeta.nome : criterion.pilar,
+            pilar_cor: pillarMeta ? pillarMeta.cor : '#94a3b8',
+            nota,
+            pilar_score: pilarScore
+        };
+    });
+
+    ranked.sort((a, b) => (a.nota - b.nota) || (a.pilar_score - b.pilar_score) || (a.numero - b.numero));
+
+    const foco = ranked.slice(0, 2);
+    if (foco.length < 2) return null;
+
+    const [c1, c2] = foco;
+    const todosNoMaximo = c1.nota === 5 && c2.nota === 5;
+    const mensagem = todosNoMaximo
+        ? 'Domínio máximo em todos os 20 critérios técnicos! Foco em consistência de combate.'
+        : `Melhorar ${c1.nome} (${c1.nota}/5) e ${c2.nome} (${c2.nota}/5) para a próxima avaliação.`;
+
+    return {
+        titulo: 'Foco de Treino / Missão Atual',
+        criterios: foco,
+        mensagem
+    };
+}
+
+/**
+ * Avalia elegibilidade e pendências da avaliação RPG atual frente à próxima graduação (Trava de Progressão).
+ */
+function evaluateExamProgressionLock(avaliacaoAtual = null, proximaGraduacao = null) {
+    if (!proximaGraduacao) return null;
+
+    const proxId = proximaGraduacao.id || proximaGraduacao.nivel_id || null;
+    const proxNome = proximaGraduacao.nome || proximaGraduacao.nivel_nome || 'Próxima Graduação';
+    const rankMinRaw = proximaGraduacao.rpg_rank_minimo ? String(proximaGraduacao.rpg_rank_minimo).trim().toUpperCase() : null;
+    const rankMinimo = rankMinRaw && RPG_RANK_ORDER[rankMinRaw] ? rankMinRaw : null;
+
+    const minAttrRaw = proximaGraduacao.rpg_pontuacao_minima_atributo;
+    const minAtributo = (minAttrRaw !== null && minAttrRaw !== undefined && minAttrRaw !== '' && Number(minAttrRaw) > 0)
+        ? Math.min(20, Math.max(1, Math.round(Number(minAttrRaw))))
+        : null;
+
+    const exigeSparring = Boolean(Number(proximaGraduacao.rpg_exige_apto_sparring));
+
+    if (!rankMinimo && !minAtributo && !exigeSparring) {
+        return {
+            possui_requisitos_rpg: false,
+            proxima_graduacao_id: proxId,
+            proxima_graduacao_nome: proxNome,
+            cor_primaria: proximaGraduacao.cor_hex_primaria || proximaGraduacao.cor_primaria || '#ffffff',
+            cor_secundaria: proximaGraduacao.cor_hex_secundaria || proximaGraduacao.cor_secundaria || '#111827',
+            requisitos: {
+                rank_minimo: null,
+                pontuacao_minima_por_atributo: null,
+                exige_apto_sparring: false
+            },
+            elegivel: true,
+            progresso_pct: 100,
+            checks: [],
+            pendencias: [],
+            resumo: 'Sem requisitos RPG mínimos configurados para esta graduação.'
+        };
+    }
+
+    const checks = [];
+    const pendencias = [];
+    const progressParts = [];
+    const temAvaliacao = Boolean(avaliacaoAtual && avaliacaoAtual.is_rpg !== false);
+
+    if (rankMinimo) {
+        const currentRank = temAvaliacao ? String(avaliacaoAtual.rank_combate || 'D').toUpperCase() : null;
+        const currentScore = temAvaliacao ? Number(avaliacaoAtual.score_total || 0) : 0;
+        const targetMinScore = RPG_RANK_MIN_SCORE[rankMinimo];
+        const atingido = Boolean(temAvaliacao && currentRank && RPG_RANK_ORDER[currentRank] >= RPG_RANK_ORDER[rankMinimo]);
+
+        let ratio = 0;
+        if (atingido) {
+            ratio = 1;
+        } else if (temAvaliacao && targetMinScore > 0) {
+            ratio = Math.min(1, Math.max(0, currentScore / targetMinScore));
+        }
+        progressParts.push(ratio);
+
+        let detalhe = '';
+        if (!temAvaliacao) {
+            detalhe = `Rank mínimo ${rankMinimo} (${targetMinScore}+ pts) — aguardando avaliação RPG`;
+            pendencias.push(`Atingir Rank ${rankMinimo} (${targetMinScore}+ pts) — nenhuma avaliação RPG registrada`);
+        } else if (atingido) {
+            detalhe = `Atingido: Rank ${currentRank} (${currentScore}/100 pts)`;
+        } else {
+            const falta = Math.max(1, targetMinScore - currentScore);
+            detalhe = `Atual Rank ${currentRank} (${currentScore}/100) — faltam +${falta} pts para Rank ${rankMinimo}`;
+            pendencias.push(`Rank ${rankMinimo}: faltam +${falta} pts no total (atual: Rank ${currentRank}, ${currentScore} pts)`);
+        }
+
+        checks.push({
+            tipo: 'rank_minimo',
+            label: `Rank Mínimo ${rankMinimo}`,
+            atingido,
+            detalhe
+        });
+    }
+
+    if (minAtributo) {
+        const pilaresMap = temAvaliacao ? (avaliacaoAtual.pilares || {}) : {};
+        let ratiosSum = 0;
+        const faltasPilares = [];
+
+        for (const p of RPG_PILLARS) {
+            const val = temAvaliacao ? Number(pilaresMap[p.id] ?? 0) : 0;
+            ratiosSum += Math.min(1, Math.max(0, val / minAtributo));
+            if (!temAvaliacao || val < minAtributo) {
+                const diff = minAtributo - val;
+                faltasPilares.push(`${p.nome}: ${val}/${minAtributo} pts (faltam +${diff})`);
+            }
+        }
+
+        const avgRatio = ratiosSum / RPG_PILLARS.length;
+        progressParts.push(avgRatio);
+
+        const atingido = temAvaliacao && faltasPilares.length === 0;
+        if (!atingido) {
+            for (const fp of faltasPilares) {
+                pendencias.push(fp);
+            }
+        }
+
+        checks.push({
+            tipo: 'pontuacao_minima_por_atributo',
+            label: `Nenhum atributo abaixo de ${minAtributo}/20 pts`,
+            atingido,
+            detalhe: atingido
+                ? `Todos os 5 atributos atingiram o piso de ${minAtributo} pts`
+                : faltasPilares.join(' • ')
+        });
+    }
+
+    if (exigeSparring) {
+        const atingido = Boolean(temAvaliacao && avaliacaoAtual.apto_sparring);
+        progressParts.push(atingido ? 1 : 0);
+
+        if (!atingido) {
+            pendencias.push('Necessário estar liberado como "Apto para Sparring"');
+        }
+
+        checks.push({
+            tipo: 'exige_apto_sparring',
+            label: 'Apto para Sparring',
+            atingido,
+            detalhe: atingido
+                ? 'Atleta liberado para Sparring Livre'
+                : (temAvaliacao ? 'Atualmente em Simulado Controlado (não apto)' : 'Aguardando avaliação com liberação de sparring')
+        });
+    }
+
+    const progressoPct = progressParts.length > 0
+        ? Math.round((progressParts.reduce((a, b) => a + b, 0) / progressParts.length) * 100)
+        : 100;
+
+    return {
+        possui_requisitos_rpg: true,
+        proxima_graduacao_id: proxId,
+        proxima_graduacao_nome: proxNome,
+        cor_primaria: proximaGraduacao.cor_hex_primaria || proximaGraduacao.cor_primaria || '#ffffff',
+        cor_secundaria: proximaGraduacao.cor_hex_secundaria || proximaGraduacao.cor_secundaria || '#111827',
+        requisitos: {
+            rank_minimo: rankMinimo,
+            pontuacao_minima_por_atributo: minAtributo,
+            exige_apto_sparring: exigeSparring
+        },
+        elegivel: pendencias.length === 0,
+        progresso_pct: Math.min(100, Math.max(0, progressoPct)),
+        checks,
+        pendencias
+    };
+}
 
 /**
  * Classifica o Rank de combate a partir da pontuação geral (0 a 100).
@@ -328,6 +724,10 @@ function evaluateRpgPayload(body = {}) {
         pilares.vitalidade
     );
     const rank = classifyRpgRank(scoreTotal);
+    const arquetipo = computeFighterArchetype(pilares, scoreTotal);
+    const badges = computeRpgBadges(criteriosSanitizados, aptoSparring);
+    const badgesDesbloqueadas = badges.filter(b => b.desbloqueada);
+    const focoEvolucao = computeTrainingFocus(criteriosSanitizados, pilares);
 
     let dataAval = body.data_avaliacao;
     if (!dataAval || !/^\d{4}-\d{2}-\d{2}$/.test(String(dataAval).trim())) {
@@ -364,6 +764,10 @@ function evaluateRpgPayload(body = {}) {
             rank,
             rank_combate: rank.codigo,
             rank_titulo: rank.titulo,
+            arquetipo,
+            badges,
+            badges_desbloqueadas: badgesDesbloqueadas,
+            foco_evolucao: focoEvolucao,
             criterios: criteriosSanitizados,
             observacoes_instrutor: observacoesInstrutor,
             legacy: {
@@ -399,26 +803,36 @@ function normalizeRpgRow(dbRow = {}) {
     const isRpg = String(dbRow.modelo_avaliacao || '').toLowerCase() === 'rpg';
     const scoreTotal = Number(dbRow.score_total || 0);
     const rankInfo = classifyRpgRank(scoreTotal);
-    const criterios = safeParseCriteriaJson(dbRow.criterios_json);
+    const criterios = safeParseCriteriaJson(dbRow.criterios_json || dbRow.criterios);
+    const pilares = {
+        inteligencia: Number(dbRow.score_inteligencia || 0),
+        destreza: Number(dbRow.score_destreza || 0),
+        agilidade: Number(dbRow.score_agilidade || 0),
+        forca: Number(dbRow.score_forca || 0),
+        vitalidade: Number(dbRow.score_vitalidade || 0)
+    };
+    const aptoSparring = Boolean(dbRow.apto_sparring);
+    const arquetipo = isRpg ? computeFighterArchetype(pilares, scoreTotal) : null;
+    const badges = isRpg ? computeRpgBadges(criterios, aptoSparring) : computeRpgBadges(null, false);
+    const badgesDesbloqueadas = badges.filter(b => b.desbloqueada);
+    const focoEvolucao = isRpg ? computeTrainingFocus(criterios, pilares) : null;
 
     return {
         ...dbRow,
         is_rpg: isRpg,
         modelo_avaliacao: isRpg ? 'rpg' : 'legado',
-        apto_sparring: Boolean(dbRow.apto_sparring),
-        pilares: {
-            inteligencia: Number(dbRow.score_inteligencia || 0),
-            destreza: Number(dbRow.score_destreza || 0),
-            agilidade: Number(dbRow.score_agilidade || 0),
-            forca: Number(dbRow.score_forca || 0),
-            vitalidade: Number(dbRow.score_vitalidade || 0)
-        },
+        apto_sparring: aptoSparring,
+        pilares,
         score_total: scoreTotal,
         rank_combate: dbRow.rank_combate || rankInfo.codigo,
         rank_titulo: dbRow.rank_titulo || rankInfo.titulo,
         rank_cor: rankInfo.cor,
+        arquetipo,
+        badges,
+        badges_desbloqueadas: badgesDesbloqueadas,
+        foco_evolucao: focoEvolucao,
         criterios,
-        observacoes_instrutor: dbRow.observacoes || null
+        observacoes_instrutor: dbRow.observacoes || dbRow.observacoes_instrutor || null
     };
 }
 
@@ -449,7 +863,15 @@ module.exports = {
     RPG_PILLARS,
     RPG_CRITERIA,
     CRITERIA_BY_ID,
+    RPG_RANK_ORDER,
+    RPG_RANK_MIN_SCORE,
+    RPG_ARCHETYPE_PAIRS,
+    RPG_BADGES_CATALOG,
     classifyRpgRank,
+    computeFighterArchetype,
+    computeRpgBadges,
+    computeTrainingFocus,
+    evaluateExamProgressionLock,
     evaluateRpgPayload,
     normalizeRpgRow,
     computeRpgDeltas

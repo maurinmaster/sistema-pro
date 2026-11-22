@@ -2207,6 +2207,134 @@ test('Avaliação Técnica RPG (Muay Thai): 20 Critérios, Trava de Sparring, Ra
     });
 });
 
+test('Gamificação Avançada RPG: Arquétipo, Insígnias, Foco de Evolução e Trava de Exame', () => {
+    const rpg = require('../services/rpgEvaluationService');
+
+    // 1. Arquétipo: Sem pontuação vs Equilíbrio vs Todos os 10 pares em ambas as ordens
+    assert.equal(rpg.computeFighterArchetype({ inteligencia: 0, destreza: 0, agilidade: 0, forca: 0, vitalidade: 0 }, 0).titulo, 'Em Formação');
+
+    const balanced = rpg.computeFighterArchetype({ inteligencia: 14, destreza: 15, agilidade: 16, forca: 15, vitalidade: 14 }, 74);
+    assert.equal(balanced.titulo, 'Lutador Completo (All-Rounder)');
+    assert.equal(balanced.equilibrado, true);
+
+    const pairCases = [
+        ['inteligencia', 'destreza', 'Estrategista Cirúrgico'],
+        ['forca', 'vitalidade', 'Tanque de Pressão'],
+        ['agilidade', 'destreza', 'Velocista / Francoatirador'],
+        ['inteligencia', 'forca', 'Controlador de Clinch'],
+        ['inteligencia', 'agilidade', 'Contra-Atacante Fantasma'],
+        ['agilidade', 'vitalidade', 'Ritmo Incessante'],
+        ['destreza', 'forca', 'Nocauteador Técnico'],
+        ['destreza', 'vitalidade', 'Guerreiro Resiliente'],
+        ['inteligencia', 'vitalidade', 'Mestre da Cadência'],
+        ['agilidade', 'forca', 'Explosão Pura']
+    ];
+
+    for (const [p1, p2, expectedTitle] of pairCases) {
+        const pillarsA = { inteligencia: 6, destreza: 6, agilidade: 6, forca: 6, vitalidade: 6, [p1]: 18, [p2]: 15 };
+        const pillarsB = { inteligencia: 6, destreza: 6, agilidade: 6, forca: 6, vitalidade: 6, [p1]: 15, [p2]: 18 };
+        assert.equal(rpg.computeFighterArchetype(pillarsA, 51).titulo, expectedTitle, `Ordem ${p1}>${p2}`);
+        assert.equal(rpg.computeFighterArchetype(pillarsB, 51).titulo, expectedTitle, `Ordem ${p2}>${p1}`);
+    }
+
+    // 2. Insígnias: verificação individual e trava de sparring em "Parceiro de Confiança"
+    const baseFour = {};
+    rpg.RPG_CRITERIA.forEach((c) => { baseFour[c.id] = 4; });
+
+    const onlyMuralha = rpg.computeRpgBadges({ ...baseFour, defesas: 5, manutencao_guarda_fadiga: 5 }, true);
+    assert.equal(onlyMuralha.find(b => b.id === 'muralha').desbloqueada, true);
+    assert.equal(onlyMuralha.filter(b => b.desbloqueada).length, 1);
+
+    const partialClinch = rpg.computeRpgBadges({ ...baseFour, dominio_clinch_tatico: 5, saidas_clinch: 5, forca_isometrica_clinch: 4 }, true);
+    assert.equal(partialClinch.find(b => b.id === 'rei_do_clinch').desbloqueada, false);
+
+    const fullClinchAndSniper = rpg.computeRpgBadges({
+        ...baseFour,
+        dominio_clinch_tatico: 5, saidas_clinch: 5, forca_isometrica_clinch: 5,
+        precisao: 5, contra_ataques: 5,
+        resistencia_cardiovascular: 5, recuperacao_entre_rounds: 5,
+        jogo_pernas_footwork: 5, tempo_reacao: 5,
+        controle_forca_golpes: 5, controle_emocional_sparring: 5
+    }, true);
+    assert.equal(fullClinchAndSniper.find(b => b.id === 'rei_do_clinch').desbloqueada, true);
+    assert.equal(fullClinchAndSniper.find(b => b.id === 'sniper').desbloqueada, true);
+    assert.equal(fullClinchAndSniper.find(b => b.id === 'pulmao_de_aco').desbloqueada, true);
+    assert.equal(fullClinchAndSniper.find(b => b.id === 'intocavel').desbloqueada, true);
+    assert.equal(fullClinchAndSniper.find(b => b.id === 'parceiro_confianca').desbloqueada, true);
+
+    const sparringLockedBadge = rpg.computeRpgBadges({ ...baseFour, controle_forca_golpes: 5, controle_emocional_sparring: 5 }, false);
+    assert.equal(sparringLockedBadge.find(b => b.id === 'parceiro_confianca').desbloqueada, false);
+
+    // 3. Foco de Evolução ("Missão Atual"): escolhe os 2 piores e desempata pelo pilar mais baixo
+    const focusMap = {};
+    rpg.RPG_CRITERIA.forEach((c) => { focusMap[c.id] = 4; });
+    focusMap.contra_ataques = 2;        // inteligencia (pilar = 14)
+    focusMap.saidas_clinch = 2;         // agilidade (pilar = 11)
+    focusMap.potencia_impacto = 2;      // forca (pilar = 9)
+    focusMap.explosao_combinacoes = 1;  // forca (pilar = 9)
+    focusMap.forca_isometrica_clinch = 2;
+
+    const focusPilares = { inteligencia: 14, destreza: 16, agilidade: 11, forca: 9, vitalidade: 16 };
+    const focusRes = rpg.computeTrainingFocus(focusMap, focusPilares);
+    assert.ok(focusRes);
+    assert.equal(focusRes.criterios.length, 2);
+    assert.equal(focusRes.criterios[0].id, 'explosao_combinacoes');
+    assert.equal(focusRes.criterios[0].nota, 1);
+    assert.equal(focusRes.criterios[1].pilar, 'forca'); // empate nota 2 quebrado pelo menor pilar (forca=9)
+    assert.equal(focusRes.criterios[1].nota, 2);
+    assert.ok(focusRes.mensagem.includes('Melhorar'));
+
+    // 4. Requisitos de Exame (Trava de Progressão)
+    const noLock = rpg.evaluateExamProgressionLock(null, { id: 2, nome: 'Prajied Amarelo' });
+    assert.equal(noLock.possui_requisitos_rpg, false);
+    assert.equal(noLock.elegivel, true);
+
+    const avalIncompleta = rpg.normalizeRpgRow({
+        modelo_avaliacao: 'rpg',
+        apto_sparring: 0,
+        score_inteligencia: 11,
+        score_destreza: 10,
+        score_agilidade: 10,
+        score_forca: 8,
+        score_vitalidade: 9,
+        score_total: 48,
+        rank_combate: 'C',
+        rank_titulo: 'Praticante'
+    });
+    const nextNivelComTrava = {
+        id: 3,
+        nome: 'Prajied Azul Claro',
+        rpg_rank_minimo: 'B',
+        rpg_pontuacao_minima_atributo: 10,
+        rpg_exige_apto_sparring: 1
+    };
+    const lockFail = rpg.evaluateExamProgressionLock(avalIncompleta, nextNivelComTrava);
+    assert.equal(lockFail.possui_requisitos_rpg, true);
+    assert.equal(lockFail.elegivel, false);
+    assert.ok(lockFail.progresso_pct > 0 && lockFail.progresso_pct < 100);
+    assert.ok(lockFail.pendencias.some(p => p.includes('Rank B')));
+    assert.ok(lockFail.pendencias.some(p => p.includes('Força: 8/10')));
+    assert.ok(lockFail.pendencias.some(p => p.includes('Vitalidade: 9/10')));
+    assert.ok(lockFail.pendencias.some(p => p.includes('Apto para Sparring')));
+
+    const avalApta = rpg.normalizeRpgRow({
+        modelo_avaliacao: 'rpg',
+        apto_sparring: 1,
+        score_inteligencia: 14,
+        score_destreza: 13,
+        score_agilidade: 12,
+        score_forca: 11,
+        score_vitalidade: 15,
+        score_total: 65,
+        rank_combate: 'B',
+        rank_titulo: 'Combatente'
+    });
+    const lockPass = rpg.evaluateExamProgressionLock(avalApta, nextNivelComTrava);
+    assert.equal(lockPass.elegivel, true);
+    assert.equal(lockPass.progresso_pct, 100);
+    assert.equal(lockPass.pendencias.length, 0);
+});
+
 test.after(async () => {
     try {
         await pool.end();

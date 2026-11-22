@@ -195,6 +195,13 @@ const GraduacoesModule = {
                                     <div><strong>Graus/Khans:</strong> ${Number(n.graus) > 0 ? `Até ${Number(n.graus)} graus` : 'Faixa única'}</div>
                                     <div><strong>Exigência mínima:</strong> ${n.aulas_minimas_exigidas ? `<span>${Number(n.aulas_minimas_exigidas)} treinos</span>` : 'Livre'} • ${n.tempo_minimo_meses ? `<span>${Number(n.tempo_minimo_meses)} meses</span>` : 'Sem carência'}</div>
                                     <div style="color: var(--primary-light);"><strong>Especificações:</strong> ${Number(n.total_itens || 0)} itens • <strong>Mínimo p/ passar:</strong> ${Number(n.porcentagem_minima || 70)}%</div>
+                                    ${(n.rpg_rank_minimo || n.rpg_pontuacao_minima_atributo || Number(n.rpg_exige_apto_sparring) === 1) ? `
+                                        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;">
+                                            ${n.rpg_rank_minimo ? `<span style="padding: 1px 7px; font-size: 10.5px; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 9999px; color: #fcd34d; font-weight: 700;">Rank &ge; ${UI.escapeHtml(n.rpg_rank_minimo)}</span>` : ''}
+                                            ${n.rpg_pontuacao_minima_atributo ? `<span style="padding: 1px 7px; font-size: 10.5px; background: rgba(168, 85, 247, 0.14); border: 1px solid rgba(168, 85, 247, 0.35); border-radius: 9999px; color: #d8b4fe; font-weight: 700;">Pilares &ge; ${Number(n.rpg_pontuacao_minima_atributo)}/20</span>` : ''}
+                                            ${Number(n.rpg_exige_apto_sparring) === 1 ? `<span style="padding: 1px 7px; font-size: 10.5px; background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: 9999px; color: #6ee7b7; font-weight: 700;">Apto Sparring</span>` : ''}
+                                        </div>
+                                    ` : ''}
                                     <div><strong style="color: #38bdf8;">Golpes da Wiki:</strong> ${(n.golpes && n.golpes.length > 0) ? `<span style="padding: 1px 7px; font-size: 10.5px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 9999px; color: #38bdf8; font-weight: 700;">${n.golpes.length} ${n.golpes.length === 1 ? 'movimento' : 'movimentos'}</span>` : '<span style="color: var(--text-muted); font-size: 11px;">Nenhum vinculado</span>'}</div>
                                 </div>
 
@@ -414,6 +421,13 @@ const GraduacoesModule = {
                 const pctEl = document.getElementById('nivel-porcentagem-minima');
                 if (pctEl) pctEl.value = n.porcentagem_minima ? Number(n.porcentagem_minima) : 70;
 
+                const rankMinEl = document.getElementById('nivel-rpg-rank-minimo');
+                if (rankMinEl) rankMinEl.value = n.rpg_rank_minimo || '';
+                const minAttrEl = document.getElementById('nivel-rpg-min-atributo');
+                if (minAttrEl) minAttrEl.value = n.rpg_pontuacao_minima_atributo || '';
+                const sparEl = document.getElementById('nivel-rpg-exige-sparring');
+                if (sparEl) sparEl.checked = Boolean(Number(n.rpg_exige_apto_sparring));
+
                 try {
                     if (n.requisitos_lista_json) {
                         const parsed = typeof n.requisitos_lista_json === 'string'
@@ -447,6 +461,12 @@ const GraduacoesModule = {
             }
             const pctEl = document.getElementById('nivel-porcentagem-minima');
             if (pctEl) pctEl.value = 70;
+            const rankMinEl = document.getElementById('nivel-rpg-rank-minimo');
+            if (rankMinEl) rankMinEl.value = '';
+            const minAttrEl = document.getElementById('nivel-rpg-min-atributo');
+            if (minAttrEl) minAttrEl.value = '';
+            const sparEl = document.getElementById('nivel-rpg-exige-sparring');
+            if (sparEl) sparEl.checked = false;
             this.currentRequisitos = [];
             this.currentNivelGolpes = [];
             if (titleEl) titleEl.textContent = 'Adicionar Nova Faixa / Nível';
@@ -474,6 +494,10 @@ const GraduacoesModule = {
         const id = document.getElementById('nivel-id').value;
 
         const pctVal = parseFloat(document.getElementById('nivel-porcentagem-minima')?.value || '70');
+        const rankMinVal = document.getElementById('nivel-rpg-rank-minimo')?.value || null;
+        const minAttrStr = document.getElementById('nivel-rpg-min-atributo')?.value?.trim();
+        const minAttrVal = minAttrStr ? parseInt(minAttrStr, 10) : null;
+        const exigeSparring = Boolean(document.getElementById('nivel-rpg-exige-sparring')?.checked);
 
         const body = {
             nome: document.getElementById('nivel-nome').value,
@@ -484,6 +508,9 @@ const GraduacoesModule = {
             aulas_minimas_exigidas: document.getElementById('nivel-aulas').value ? parseInt(document.getElementById('nivel-aulas').value, 10) : null,
             tempo_minimo_meses: document.getElementById('nivel-meses').value ? parseInt(document.getElementById('nivel-meses').value, 10) : null,
             porcentagem_minima: Number.isNaN(pctVal) ? 70 : pctVal,
+            rpg_rank_minimo: rankMinVal || null,
+            rpg_pontuacao_minima_atributo: (minAttrVal && !Number.isNaN(minAttrVal)) ? minAttrVal : null,
+            rpg_exige_apto_sparring: exigeSparring ? 1 : 0,
             prajied_icone_url: document.getElementById('nivel-prajied-icone')?.value || null,
             requisitos_lista: this.currentRequisitos,
             golpes_ids: this.currentNivelGolpes.map(g => g.id || g.golpe_id).filter(Boolean)

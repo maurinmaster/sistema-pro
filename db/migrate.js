@@ -631,6 +631,11 @@ async function runMigrations() {
         await ensureColumn('aluno_avaliacoes_desempenho', 'rank_titulo', "VARCHAR(40) NOT NULL DEFAULT 'Iniciante' AFTER rank_combate");
         await ensureColumn('aluno_avaliacoes_desempenho', 'criterios_json', 'JSON NULL AFTER rank_titulo');
 
+        // 18c. Requisitos RPG opcionais por nível de graduação (Trava de Progressão p/ Exame)
+        await ensureColumn('graduacoes_niveis', 'rpg_rank_minimo', 'VARCHAR(2) NULL DEFAULT NULL AFTER porcentagem_minima');
+        await ensureColumn('graduacoes_niveis', 'rpg_pontuacao_minima_atributo', 'TINYINT UNSIGNED NULL DEFAULT NULL AFTER rpg_rank_minimo');
+        await ensureColumn('graduacoes_niveis', 'rpg_exige_apto_sparring', 'TINYINT(1) NOT NULL DEFAULT 0 AFTER rpg_pontuacao_minima_atributo');
+
         // 19. Soft delete e lixeira para cadastros de alunos
         await ensureColumn('alunos', 'deleted_at', 'DATETIME NULL DEFAULT NULL AFTER updated_at');
         await pool.query('ALTER TABLE alunos ADD INDEX idx_alunos_deleted_at (deleted_at)').catch(() => {});

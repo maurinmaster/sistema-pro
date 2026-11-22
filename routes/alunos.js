@@ -348,6 +348,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
                 gn.requisitos_lista_json,
                 gn.total_itens,
                 gn.porcentagem_minima,
+                gn.prajied_icone_url,
+                gn.rpg_rank_minimo,
+                gn.rpg_pontuacao_minima_atributo,
+                gn.rpg_exige_apto_sparring,
                 m.nome AS modalidade_nome,
                 ue.nome AS professor_avaliador
             FROM aluno_graduacoes ag
@@ -371,7 +375,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
             `, [id, ag.modalidade_id, ag.graduacao_nivel_id]);
 
             const [nextNivelRows] = await pool.query(`
-                SELECT id, nome, cor_hex_primaria, cor_hex_secundaria, ordem_hierarquica, requisitos_lista_json, total_itens, porcentagem_minima
+                SELECT id, nome, cor_hex_primaria, cor_hex_secundaria, ordem_hierarquica, requisitos_lista_json, total_itens, porcentagem_minima, rpg_rank_minimo, rpg_pontuacao_minima_atributo, rpg_exige_apto_sparring
                 FROM graduacoes_niveis
                 WHERE modalidade_id = ? AND ordem_hierarquica > ?
                 ORDER BY ordem_hierarquica ASC
@@ -494,6 +498,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
         const rpgOnly = avaliacoesDesempenho.filter(r => r.is_rpg);
         const rpgAtual = rpgOnly[0] || null;
         const rpgAnterior = rpgOnly[1] || null;
+        const targetAval = avaliacoes.find(a => (a.modalidade_nome || '').toLowerCase().includes('muay') && a.proxima_graduacao)
+            || avaliacoes.find(a => a.proxima_graduacao)
+            || null;
+        const requisitosExame = rpgEvaluationService.evaluateExamProgressionLock(
+            rpgAtual,
+            targetAval ? targetAval.proxima_graduacao : null
+        );
 
         res.json({
             success: true,
@@ -506,7 +517,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
                     atual: rpgAtual,
                     anterior: rpgAnterior,
                     deltas: rpgEvaluationService.computeRpgDeltas(rpgAtual, rpgAnterior),
-                    historico: rpgOnly
+                    historico: rpgOnly,
+                    requisitos_exame: requisitosExame
                 },
                 matricula: matriculas[0] || null,
                 matriculas_historico: matriculas,

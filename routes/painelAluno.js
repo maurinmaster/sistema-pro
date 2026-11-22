@@ -731,15 +731,22 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
         if (graduacaoAtual && graduacaoAtual.modalidade_id) {
             const [proxRows] = await pool.query(`
                 SELECT gn.id AS nivel_id, gn.nome AS nivel_nome, gn.cor_hex_primaria, gn.cor_hex_secundaria,
-                       gn.ordem_hierarquica, gn.porcentagem_minima, gn.prajied_icone_url
+                       gn.ordem_hierarquica, gn.porcentagem_minima, gn.prajied_icone_url,
+                       gn.rpg_rank_minimo, gn.rpg_pontuacao_minima_atributo, gn.rpg_exige_apto_sparring
                 FROM graduacoes_niveis gn
-                WHERE gn.modalidade_id = ? AND gn.ordem_hierarquica = ?
+                WHERE gn.modalidade_id = ? AND gn.ordem_hierarquica > ?
+                ORDER BY gn.ordem_hierarquica ASC
                 LIMIT 1
-            `, [graduacaoAtual.modalidade_id, (graduacaoAtual.ordem_hierarquica || 1) + 1]);
+            `, [graduacaoAtual.modalidade_id, graduacaoAtual.ordem_hierarquica || 0]);
             if (proxRows.length > 0) {
                 proximaGraduacao = proxRows[0];
             }
         }
+
+        avaliacaoRpgPayload.requisitos_exame = rpgEvaluationService.evaluateExamProgressionLock(
+            rpgAtual,
+            proximaGraduacao
+        );
 
         let exameProximo = null;
         try {
