@@ -611,10 +611,6 @@ const AlunosModule = {
                 const safeAvatar = UI.sanitizeUrl(a.foto_perfil_url, fallbackAvatar);
                 const isMenor = a.idade !== null && a.idade < 18;
                 const menorBadge = isMenor ? `<span class="minor-tag">MENOR</span>` : '';
-                const streakSemanas = Number(a.streak_semanas || 0);
-                const streakFlameBadge = streakSemanas >= 1
-                    ? `<span class="streak-flame-inline" title="Ofensiva semanal ativa (${streakSemanas} ${streakSemanas === 1 ? 'semana' : 'semanas'})">🔥 ${streakSemanas} ${streakSemanas === 1 ? 'sem' : 'sem'}</span>`
-                    : '';
 
                 let dotClass = 'status-dot-inativo';
                 let dotTitle = 'Inativo';
@@ -668,7 +664,6 @@ const AlunosModule = {
                                         <a href="javascript:void(0)" class="aluno-nome-link" onclick="AlunoDetalhesModule.openDossier(${safeId})">
                                             ${safeNome}
                                         </a>
-                                        ${streakFlameBadge}
                                         ${menorBadge}
                                     </div>
                                     <div class="aluno-info-secondary">
@@ -783,8 +778,6 @@ const AlunosModule = {
         document.getElementById('minor-alert-box').style.display = 'none';
         const chkWa = document.getElementById('aluno-receber-whatsapp');
         if (chkWa) chkWa.checked = true;
-        const chkRanking = document.getElementById('aluno-exibir-ranking');
-        if (chkRanking) chkRanking.checked = true;
         this.updateGraduacaoSelect('');
         UI.openModal('modal-aluno');
     },
@@ -802,8 +795,6 @@ const AlunosModule = {
             document.getElementById('aluno-whatsapp').value = aluno.telefone_whatsapp || '';
             const chkWa = document.getElementById('aluno-receber-whatsapp');
             if (chkWa) chkWa.checked = aluno.receber_whatsapp !== 0 && aluno.receber_whatsapp !== false;
-            const chkRanking = document.getElementById('aluno-exibir-ranking');
-            if (chkRanking) chkRanking.checked = aluno.exibir_no_ranking !== 0 && aluno.exibir_no_ranking !== false;
             document.getElementById('aluno-email').value = aluno.email || '';
             document.getElementById('aluno-status').value = aluno.status || 'ativo';
             document.getElementById('aluno-foto').value = aluno.foto_perfil_url || '';
@@ -912,7 +903,6 @@ const AlunosModule = {
             genero: document.getElementById('aluno-genero').value,
             telefone_whatsapp: document.getElementById('aluno-whatsapp').value,
             receber_whatsapp: document.getElementById('aluno-receber-whatsapp')?.checked !== false,
-            exibir_no_ranking: document.getElementById('aluno-exibir-ranking')?.checked !== false,
             email,
             ...(id ? {} : { senha }),
             status: document.getElementById('aluno-status').value,

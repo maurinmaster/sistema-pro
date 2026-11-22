@@ -732,43 +732,6 @@ async function runMigrations() {
             console.log('🎯 [Bootstrap] Missões iniciais adicionadas ao Quadro de Missões.');
         }
 
-        // 19f. Sistema de XP Automático, Ofensiva Semanal (Streak), Skill Tree e Mural de Líderes
-        await ensureColumn('turmas', 'tipo_aula', "ENUM('regular', 'especial') NOT NULL DEFAULT 'regular' AFTER horario_fim");
-        await ensureColumn('turmas', 'xp_base', 'SMALLINT UNSIGNED NOT NULL DEFAULT 10 AFTER tipo_aula');
-
-        await ensureColumn('checkins', 'tipo_aula', "ENUM('regular', 'especial') NOT NULL DEFAULT 'regular' AFTER metodo");
-        await ensureColumn('checkins', 'xp_ganho', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER tipo_aula');
-        await ensureColumn('checkins', 'multiplicador_xp', 'DECIMAL(3,2) NOT NULL DEFAULT 1.00 AFTER xp_ganho');
-
-        await ensureColumn('alunos', 'xp_total', 'INT UNSIGNED NOT NULL DEFAULT 0 AFTER titulo_ativo');
-        await ensureColumn('alunos', 'streak_semanas', 'SMALLINT UNSIGNED NOT NULL DEFAULT 0 AFTER xp_total');
-        await ensureColumn('alunos', 'meta_semanal_treinos', 'TINYINT UNSIGNED NOT NULL DEFAULT 3 AFTER streak_semanas');
-        await ensureColumn('alunos', 'exibir_no_ranking', 'TINYINT(1) NOT NULL DEFAULT 1 AFTER meta_semanal_treinos');
-
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS aluno_xp_logs (
-                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                aluno_id BIGINT UNSIGNED NOT NULL,
-                origem ENUM('checkin_regular', 'checkin_especial', 'avaliacao_rpg', 'missao_concluida', 'bonus_manual') NOT NULL,
-                referencia_id BIGINT UNSIGNED NULL DEFAULT NULL,
-                xp_base INT NOT NULL DEFAULT 0,
-                multiplicador DECIMAL(3,2) NOT NULL DEFAULT 1.00,
-                xp_final INT NOT NULL DEFAULT 0,
-                descricao VARCHAR(180) NULL DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                INDEX idx_xp_logs_aluno_data (aluno_id, created_at),
-                INDEX idx_xp_logs_data (created_at),
-                CONSTRAINT fk_xp_logs_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-        `);
-
-        await ensureColumn('wiki_golpes', 'ramo_habilidade', 'VARCHAR(30) NULL DEFAULT NULL AFTER categoria');
-        await ensureColumn('wiki_golpes', 'habilidade_prerequisito_id', 'INT UNSIGNED NULL DEFAULT NULL AFTER ramo_habilidade');
-        await ensureColumn('wiki_golpes', 'video_url', 'VARCHAR(255) NULL DEFAULT NULL AFTER imagem_capa');
-
-        await ensureColumn('aluno_golpes_progresso', 'validado_por', 'BIGINT UNSIGNED NULL DEFAULT NULL AFTER status');
-        await ensureColumn('aluno_golpes_progresso', 'validado_em', 'DATETIME NULL DEFAULT NULL AFTER validado_por');
-
         // 20. Garante que todo atleta cadastrado sem graduação receba a primeira graduação inicial
         const [alunosSemGrad] = await pool.query(`
             SELECT a.id FROM alunos a

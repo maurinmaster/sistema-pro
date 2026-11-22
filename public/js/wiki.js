@@ -313,15 +313,6 @@ const WikiModule = {
         }).join('');
     },
 
-    populatePrerequisitoSelect(excludeId = null, selectedId = '') {
-        const sel = document.getElementById('golpe-prerequisito');
-        if (!sel) return;
-        const list = (this.golpes || []).filter(g => !excludeId || Number(g.id) !== Number(excludeId));
-        sel.innerHTML = '<option value="">Nenhum (Desbloqueado no Prajied)</option>' + list.map(g =>
-            `<option value="${Number(g.id)}" ${String(g.id) === String(selectedId || '') ? 'selected' : ''}>${UI.escapeHtml(g.nome)}${g.categoria ? ` (${UI.escapeHtml(g.categoria)})` : ''}</option>`
-        ).join('');
-    },
-
     openModalNovoGolpe() {
         this.uploadsEmAndamento = 0;
         this.setUploadState(0);
@@ -331,11 +322,6 @@ const WikiModule = {
         document.getElementById('golpe-modalidade').value = '';
         document.getElementById('golpe-categoria').value = 'Movimentação';
         document.getElementById('golpe-nivel').value = 'iniciante';
-        const ramoSel = document.getElementById('golpe-ramo');
-        if (ramoSel) ramoSel.value = '';
-        this.populatePrerequisitoSelect(null, '');
-        const videoInput = document.getElementById('golpe-video-url');
-        if (videoInput) videoInput.value = '';
         document.getElementById('golpe-descricao').value = '';
         document.getElementById('input-qtd-passos-rapido').value = '3';
 
@@ -379,11 +365,6 @@ const WikiModule = {
             document.getElementById('golpe-modalidade').value = g.modalidade_id || '';
             document.getElementById('golpe-categoria').value = g.categoria || 'Movimentação';
             document.getElementById('golpe-nivel').value = g.nivel_dificuldade || 'iniciante';
-            const ramoSel = document.getElementById('golpe-ramo');
-            if (ramoSel) ramoSel.value = g.ramo_habilidade || '';
-            this.populatePrerequisitoSelect(g.id, g.habilidade_prerequisito_id || '');
-            const videoInput = document.getElementById('golpe-video-url');
-            if (videoInput) videoInput.value = g.video_url || '';
             document.getElementById('golpe-descricao').value = g.descricao_geral || '';
 
             // Capa
@@ -626,12 +607,9 @@ const WikiModule = {
         const nome = document.getElementById('golpe-nome').value.trim();
         const modalidade_id = document.getElementById('golpe-modalidade').value || null;
         const categoria = document.getElementById('golpe-categoria').value || 'Movimentação';
-        const ramo_habilidade = document.getElementById('golpe-ramo')?.value || null;
-        const habilidade_prerequisito_id = document.getElementById('golpe-prerequisito')?.value || null;
         const nivel_dificuldade = document.getElementById('golpe-nivel').value || 'iniciante';
         const descricao_geral = document.getElementById('golpe-descricao').value.trim();
         const imagem_capa = document.getElementById('golpe-imagem-capa')?.value.trim() || null;
-        const video_url = document.getElementById('golpe-video-url')?.value.trim() || null;
 
         if (!nome) {
             UI.showToast('Informe o nome do golpe ou movimento.', 'warning');
@@ -655,12 +633,9 @@ const WikiModule = {
             nome,
             modalidade_id,
             categoria,
-            ramo_habilidade,
-            habilidade_prerequisito_id,
             nivel_dificuldade,
             descricao_geral,
             imagem_capa,
-            video_url,
             passos
         };
 

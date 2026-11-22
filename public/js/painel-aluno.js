@@ -453,7 +453,7 @@ const PainelAlunoApp = {
             if (dockWiki) dockWiki.href = `/wiki-aluno.html?aluno_id=${encodeURIComponent(queryAlunoId)}`;
         }
 
-        // Abas do Dock com alternância dinâmica SPA (Visão Geral, Wiki, Faturas, Graduações, Missões e Ranking)
+        // Abas do Dock com alternância dinâmica SPA (Visão Geral, Wiki, Faturas, Graduações e Missões)
         document.querySelectorAll('.dock-btn[data-tab]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tab = btn.dataset.tab;
@@ -465,48 +465,11 @@ const PainelAlunoApp = {
                     this.switchView('graduacoes');
                 } else if (tab === 'missoes') {
                     this.switchView('missoes');
-                } else if (tab === 'ranking') {
-                    this.switchView('ranking');
                 } else if (tab === 'visao-geral') {
                     this.switchView('dashboard');
                     this.scrollToSection('.content-header');
                 }
             });
-        });
-
-        document.getElementById('btn-open-ranking-header')?.addEventListener('click', () => {
-            this.switchView('ranking');
-        });
-        document.getElementById('mobile-btn-ranking')?.addEventListener('click', () => {
-            this.switchView('ranking');
-        });
-
-        // Alternância na Wiki: Árvore de Habilidades vs Catálogo por Faixa
-        document.querySelectorAll('#wiki-view-mode-switch [data-wiki-mode]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this.setWikiDisplayMode(btn.dataset.wikiMode || 'skill-tree');
-            });
-        });
-
-        // Mural de Líderes Saudável (Abas, Filtros e Privacidade Opt-out)
-        document.querySelectorAll('#ranking-tabs-nav [data-ranking-tab]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('#ranking-tabs-nav [data-ranking-tab]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.rankingAbaAtual = btn.dataset.rankingTab || 'assiduidade';
-                this.loadRankingView();
-            });
-        });
-        document.getElementById('ranking-filter-prajied')?.addEventListener('change', (e) => {
-            this.rankingFiltroPrajied = e.target.value || '';
-            this.loadRankingView();
-        });
-        document.getElementById('ranking-filter-atributo')?.addEventListener('change', (e) => {
-            this.rankingFiltroAtributo = e.target.value || 'score_total';
-            this.loadRankingView();
-        });
-        document.getElementById('toggle-exibir-ranking')?.addEventListener('change', (e) => {
-            this.toggleRankingPrivacy(Boolean(e.target.checked));
         });
 
         // Filtros de Categoria do Quadro de Missões do Professor
@@ -552,7 +515,7 @@ const PainelAlunoApp = {
             });
         }
 
-        // Suporte a histórico e navegação por hash (#wiki, #dashboard, #faturas, #graduacoes, #evolucao, #missoes, #ranking)
+        // Suporte a histórico e navegação por hash (#wiki vs #dashboard vs #faturas vs #graduacoes vs #evolucao vs #missoes)
         window.addEventListener('popstate', () => {
             if (window.location.hash === '#faturas') {
                 this.switchView('faturas', false);
@@ -562,8 +525,6 @@ const PainelAlunoApp = {
                 this.switchView('evolucao', false);
             } else if (window.location.hash === '#missoes') {
                 this.switchView('missoes', false);
-            } else if (window.location.hash === '#ranking') {
-                this.switchView('ranking', false);
             } else if (window.location.hash === '#wiki') {
                 this.switchView('wiki', false);
             } else {
@@ -579,8 +540,6 @@ const PainelAlunoApp = {
             this.switchView('evolucao', false);
         } else if (window.location.hash === '#missoes') {
             this.switchView('missoes', false);
-        } else if (window.location.hash === '#ranking') {
-            this.switchView('ranking', false);
         } else if (window.location.hash === '#wiki') {
             this.switchView('wiki', false);
         }
@@ -796,45 +755,6 @@ const PainelAlunoApp = {
         if (cardAthleteName) cardAthleteName.textContent = aluno.nome_completo || aluno.primeiro_nome;
         const cardTopAthleteName = document.getElementById('card-top-athlete-name');
         if (cardTopAthleteName) cardTopAthleteName.textContent = aluno.nome_completo || aluno.primeiro_nome;
-
-        // Indicador de Chama de Ofensiva (>= 1 semana) + Barra de XP / Nível Contínuo
-        const gamif = data.gamificacao || {};
-        const ofensivaData = gamif.ofensiva || frequencia?.streak || {};
-        const streakSemanas = Number(aluno.streak_semanas ?? ofensivaData.streak_semanas ?? 0);
-        const streakFlamePill = document.getElementById('athlete-streak-flame-pill');
-        if (streakFlamePill) {
-            if (streakSemanas >= 1) {
-                streakFlamePill.style.display = 'inline-flex';
-                streakFlamePill.textContent = `🔥 ${streakSemanas} ${streakSemanas === 1 ? 'semana' : 'semanas'}`;
-            } else {
-                streakFlamePill.style.display = 'none';
-            }
-        }
-
-        const xpInfo = aluno.xp_level || gamif.xp_level || {
-            nivel: Math.floor((Number(aluno.xp_total || 0)) / 100) + 1,
-            xp_total: Number(aluno.xp_total || 0),
-            xp_no_nivel: Number(aluno.xp_total || 0) % 100,
-            xp_meta_nivel: 100,
-            xp_para_proximo: 100 - (Number(aluno.xp_total || 0) % 100),
-            progresso_pct: Number(aluno.xp_total || 0) % 100
-        };
-        const xpLevelBadge = document.getElementById('xp-level-badge');
-        const xpMultBadge = document.getElementById('xp-multiplier-badge');
-        const xpTotalCounter = document.getElementById('xp-total-counter');
-        const xpProgressFill = document.getElementById('xp-progress-fill');
-        const xpProgressText = document.getElementById('xp-level-progress-text');
-        const xpNextText = document.getElementById('xp-level-next-text');
-
-        if (xpLevelBadge) xpLevelBadge.textContent = `Nível ${Number(xpInfo.nivel || 1)}`;
-        if (xpTotalCounter) xpTotalCounter.textContent = `${Number(xpInfo.xp_total || 0)} XP`;
-        if (xpProgressFill) xpProgressFill.style.width = `${Math.min(100, Math.max(0, Number(xpInfo.progresso_pct || 0)))}%`;
-        if (xpProgressText) xpProgressText.textContent = `${Number(xpInfo.xp_no_nivel || 0)} / ${Number(xpInfo.xp_meta_nivel || 100)} XP neste nível`;
-        if (xpNextText) xpNextText.textContent = `Faltam ${Number(xpInfo.xp_para_proximo || 100)} XP p/ Nível ${Number(xpInfo.nivel || 1) + 1}`;
-        if (xpMultBadge) {
-            const multAtivo = Number(ofensivaData.multiplicador_ativo ?? frequencia?.streak?.multiplicador_xp ?? 1) >= 1.5;
-            xpMultBadge.style.display = multAtivo ? 'inline-flex' : 'none';
-        }
 
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
         const cardModalityEl = document.getElementById('card-athlete-modality');
@@ -1438,35 +1358,19 @@ const PainelAlunoApp = {
         const percentText = document.getElementById('streak-percent-text');
         const progressBar = document.getElementById('streak-progress-bar');
         const rulerContainer = document.getElementById('weekly-streak-ruler');
-        const multBanner = document.getElementById('streak-multiplier-banner');
 
-        const semanas = Number(streakData.streak_semanas ?? streakData.semanas_consecutivas ?? 0);
-        const treinos = Number(streakData.total_semana || 0);
-        const meta = Number(streakData.meta_semanal ?? streakData.meta_semana ?? 3);
-        const pct = Number(streakData.percentual_semana || 0);
-        const ofensivaAtiva = Boolean(streakData.ofensiva_ativa) || Number(streakData.multiplicador_xp || 1) >= 1.5;
+        const semanas = streakData.semanas_consecutivas || 0;
+        const treinos = streakData.total_semana || 0;
+        const meta = streakData.meta_semana || 3;
+        const pct = streakData.percentual_semana || 0;
 
-        if (flameCount) {
-            flameCount.textContent = semanas >= 1 ? String(semanas) : '';
-            flameCount.style.display = semanas >= 1 ? 'inline-flex' : 'none';
-        }
+        if (flameCount) flameCount.textContent = semanas;
         if (summarySubtitle) {
             summarySubtitle.textContent = `${treinos} de ${meta} concluídos nesta semana`;
         }
         if (metaText) metaText.textContent = `Meta: ${meta} treinos`;
         if (percentText) percentText.textContent = `${pct}%`;
         if (progressBar) progressBar.style.width = `${pct}%`;
-        if (multBanner) {
-            multBanner.classList.toggle('is-active', ofensivaAtiva);
-            if (ofensivaAtiva) {
-                multBanner.textContent = `🔥 Ofensiva Ativa (${semanas} ${semanas === 1 ? 'semana' : 'semanas'})! Check-ins valem 1.5x XP esta semana`;
-            } else if (treinos >= meta) {
-                multBanner.textContent = '✅ Meta batida! Multiplicador 1.5x XP será ativado na próxima semana';
-            } else {
-                const falta = Math.max(0, meta - treinos);
-                multBanner.textContent = `Falta${falta === 1 ? '' : 'm'} ${falta} treino${falta === 1 ? '' : 's'} esta semana para liberar 1.5x XP na próxima`;
-            }
-        }
 
         if (rulerContainer && Array.isArray(streakData.dias_semana)) {
             // Garante exibição apenas dos 5 dias úteis (Seg a Sex), sem Sáb e Dom
@@ -2599,9 +2503,6 @@ const PainelAlunoApp = {
         const editWrap = document.getElementById('conta-telefone-edit-wrap');
         if (editWrap) editWrap.style.display = 'none';
 
-        const toggleRanking = document.getElementById('toggle-exibir-ranking');
-        if (toggleRanking) toggleRanking.checked = aluno.exibir_no_ranking !== false && aluno.exibir_no_ranking !== 0;
-
         modal.style.display = 'flex';
     },
 
@@ -3148,7 +3049,7 @@ const PainelAlunoApp = {
      * Alterna instantaneamente a visão entre Dashboard, Wiki, Faturas, Graduações, Evolução e Missões
      */
     switchView(viewName, updateHash = true) {
-        this.currentView = ['wiki', 'faturas', 'graduacoes', 'evolucao', 'missoes', 'ranking'].includes(viewName) ? viewName : 'dashboard';
+        this.currentView = ['wiki', 'faturas', 'graduacoes', 'evolucao', 'missoes'].includes(viewName) ? viewName : 'dashboard';
 
         const dashboardView = document.getElementById('spa-view-dashboard');
         const wikiView = document.getElementById('spa-view-wiki');
@@ -3156,42 +3057,15 @@ const PainelAlunoApp = {
         const graduacoesView = document.getElementById('spa-view-graduacoes');
         const evolucaoView = document.getElementById('spa-view-evolucao');
         const missoesView = document.getElementById('spa-view-missoes');
-        const rankingView = document.getElementById('spa-view-ranking');
         const rightPanel = document.querySelector('.right-panel-dark');
         const shell = document.querySelector('.dashboard-shell');
 
-        if (this.currentView === 'ranking') {
+        if (this.currentView === 'missoes') {
             if (dashboardView) dashboardView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
-            if (missoesView) missoesView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'block';
-            if (rightPanel) rightPanel.style.display = 'none';
-            if (shell) shell.classList.add('wiki-spa-expanded');
-
-            const aluno = this.alunoData?.aluno || {};
-            const rName = document.getElementById('ranking-header-student-name');
-            const rAvatar = document.getElementById('ranking-header-avatar-img');
-            if (rName) rName.textContent = aluno.nome_completo || aluno.primeiro_nome || 'Atleta';
-            if (rAvatar && aluno.foto_perfil_url) rAvatar.src = aluno.foto_perfil_url;
-
-            document.querySelectorAll('.dock-btn[data-tab]').forEach(b => {
-                b.classList.toggle('active', b.dataset.tab === 'ranking');
-            });
-            document.querySelectorAll('.mobile-nav-item[data-tab]').forEach(b => {
-                b.classList.remove('active');
-            });
-
-            this.loadRankingView();
-        } else if (this.currentView === 'missoes') {
-            if (dashboardView) dashboardView.style.display = 'none';
-            if (wikiView) wikiView.style.display = 'none';
-            if (faturasView) faturasView.style.display = 'none';
-            if (graduacoesView) graduacoesView.style.display = 'none';
-            if (evolucaoView) evolucaoView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'none';
             if (missoesView) missoesView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3216,7 +3090,6 @@ const PainelAlunoApp = {
             if (faturasView) faturasView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (missoesView) missoesView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3241,7 +3114,6 @@ const PainelAlunoApp = {
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
             if (missoesView) missoesView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'none';
             if (faturasView) faturasView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3262,7 +3134,6 @@ const PainelAlunoApp = {
             if (faturasView) faturasView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
             if (missoesView) missoesView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'none';
             if (graduacoesView) graduacoesView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3281,7 +3152,6 @@ const PainelAlunoApp = {
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
             if (missoesView) missoesView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'none';
             if (wikiView) wikiView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = 'none';
             if (shell) shell.classList.add('wiki-spa-expanded');
@@ -3302,7 +3172,6 @@ const PainelAlunoApp = {
             if (graduacoesView) graduacoesView.style.display = 'none';
             if (evolucaoView) evolucaoView.style.display = 'none';
             if (missoesView) missoesView.style.display = 'none';
-            if (rankingView) rankingView.style.display = 'none';
             if (dashboardView) dashboardView.style.display = 'block';
             if (rightPanel) rightPanel.style.display = '';
             if (shell) shell.classList.remove('wiki-spa-expanded');
@@ -3318,7 +3187,7 @@ const PainelAlunoApp = {
         }
 
         if (updateHash) {
-            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', evolucao: '#evolucao', missoes: '#missoes', ranking: '#ranking', wiki: '#wiki', dashboard: '#dashboard' };
+            const hashMap = { faturas: '#faturas', graduacoes: '#graduacoes', evolucao: '#evolucao', missoes: '#missoes', wiki: '#wiki', dashboard: '#dashboard' };
             const hash = hashMap[this.currentView] || '#dashboard';
             if (window.location.hash !== hash) {
                 history.pushState(null, '', hash);
@@ -3775,11 +3644,11 @@ const PainelAlunoApp = {
             spaTitle.textContent = `Wiki Marcial • ${mt.nivel_nome || 'Graduação'}`;
         }
         if (spaDesc && mt) {
-            spaDesc.textContent = `Currículo técnico oficial do seu nível (${mt.nivel_nome}) e Árvore de Habilidades interativa.`;
+            spaDesc.textContent = `Currículo técnico oficial do seu nível (${mt.nivel_nome}) e acervo de faixas anteriores.`;
         }
 
-        const activeMode = this.wikiDisplayMode || 'skill-tree';
-        this.setWikiDisplayMode(activeMode);
+        this.renderWikiSpaBeltTabs();
+        this.renderWikiSpaGrid();
     },
 
     /**
@@ -4097,41 +3966,6 @@ const PainelAlunoApp = {
                     <span class="curriculum-tag">${this.escapeHtml(g.categoria || 'Técnica')}</span>
                     <span class="curriculum-tag curriculum-tag-diff-${(g.nivel_dificuldade || 'iniciante').toLowerCase()}">${diffLabel}</span>
                 `;
-            }
-
-            const skillMetaEl = document.getElementById('modal-tecnica-skill-meta');
-            if (skillMetaEl) {
-                const ctx = this.currentSkillNodeContext || null;
-                this.currentSkillNodeContext = null;
-                const chips = [];
-                if (ctx && ctx.ramo_nome) {
-                    chips.push(`<span class="curriculum-tag">${this.escapeHtml(ctx.ramo_nome)}</span>`);
-                } else if (g.ramo_habilidade) {
-                    chips.push(`<span class="curriculum-tag">${this.escapeHtml(g.ramo_habilidade)}</span>`);
-                }
-                if (ctx && ctx.estado) {
-                    const estText = ctx.estado === 'dominada'
-                        ? '✅ Dominada'
-                        : (ctx.estado === 'bloqueada' ? '🔒 Bloqueada' : '⚡ Em Treinamento');
-                    chips.push(`<span class="skill-node-state-badge ${this.escapeHtml(ctx.estado)}">${estText}</span>`);
-                }
-                if (g.prerequisito_nome || (ctx && ctx.prerequisito_nome)) {
-                    chips.push(`<span class="curriculum-tag">Pré-requisito: ${this.escapeHtml(g.prerequisito_nome || ctx.prerequisito_nome)}</span>`);
-                }
-                if (ctx && ctx.motivo_bloqueio) {
-                    chips.push(`<span class="skill-node-lock-reason">${this.escapeHtml(ctx.motivo_bloqueio)}</span>`);
-                }
-                const safeVideo = this.sanitizeUrl(g.video_url);
-                if (safeVideo && /^https?:\/\//i.test(safeVideo)) {
-                    chips.push(`<a href="${safeVideo}" target="_blank" rel="noopener noreferrer" class="tecnica-video-btn">🎥 Assistir Vídeo Demonstrativo</a>`);
-                }
-                if (chips.length > 0) {
-                    skillMetaEl.innerHTML = chips.join('');
-                    skillMetaEl.style.display = 'flex';
-                } else {
-                    skillMetaEl.innerHTML = '';
-                    skillMetaEl.style.display = 'none';
-                }
             }
 
             this.renderPassoTecnica();
@@ -5856,356 +5690,6 @@ const PainelAlunoApp = {
                     <span>Tentar Novamente</span>
                 `;
             }
-        }
-    },
-
-    // =========================================================================
-    // MOTOR DE ENGAJAMENTO: ÁRVORE DE HABILIDADES & MURAL DE LÍDERES SAUDÁVEL
-    // =========================================================================
-
-    setWikiDisplayMode(mode) {
-        this.wikiDisplayMode = mode === 'catalogo' ? 'catalogo' : 'skill-tree';
-        document.querySelectorAll('#wiki-view-mode-switch [data-wiki-mode]').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.wikiMode === this.wikiDisplayMode);
-        });
-        const treeWrap = document.getElementById('wiki-spa-skill-tree-wrap');
-        const catWrap = document.getElementById('wiki-spa-catalogo-wrap');
-        if (treeWrap) treeWrap.style.display = this.wikiDisplayMode === 'skill-tree' ? 'block' : 'none';
-        if (catWrap) catWrap.style.display = this.wikiDisplayMode === 'catalogo' ? 'block' : 'none';
-
-        if (this.wikiDisplayMode === 'skill-tree') {
-            this.loadSkillTreeView();
-        } else {
-            this.renderWikiSpaBeltTabs();
-            this.renderWikiSpaGrid();
-        }
-    },
-
-    async loadSkillTreeView() {
-        const container = document.getElementById('skill-tree-nodes-container');
-        if (container && !this.skillTreeData) {
-            container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:28px;">Carregando árvore de habilidades...</div>';
-        }
-        try {
-            const res = await this.requestAlunoJson('/api/aluno/skill-tree');
-            this.skillTreeData = res;
-            this.renderSkillTreeView();
-        } catch (err) {
-            console.error('Erro ao carregar Árvore de Habilidades:', err);
-            if (container) {
-                container.innerHTML = `<div style="text-align:center; color:#fca5a5; padding:24px;">${this.escapeHtml(err.message)}</div>`;
-            }
-        }
-    },
-
-    selectSkillBranch(branchId) {
-        this.skillTreeBranchFiltro = branchId || 'todos';
-        this.renderSkillTreeView();
-    },
-
-    renderSkillTreeView() {
-        const tree = this.skillTreeData?.skill_tree;
-        if (!tree) return;
-
-        const resumo = tree.resumo || {};
-        const ramos = tree.ramos || [];
-        const filtro = this.skillTreeBranchFiltro || 'todos';
-
-        const totalBadge = document.getElementById('wiki-spa-total-badge');
-        if (totalBadge && this.wikiDisplayMode === 'skill-tree') {
-            totalBadge.textContent = `${resumo.dominadas || 0}/${resumo.total || 0} técnicas dominadas (${resumo.progresso_pct || 0}%)`;
-        }
-
-        const summaryEl = document.getElementById('skill-tree-summary-strip');
-        if (summaryEl) {
-            summaryEl.innerHTML = `
-                <div class="skill-tree-kpi">
-                    <span>Dominadas</span>
-                    <strong style="color: #34d399;">${Number(resumo.dominadas || 0)}</strong>
-                </div>
-                <div class="skill-tree-kpi">
-                    <span>Em Treinamento</span>
-                    <strong style="color: #fde047;">${Number(resumo.em_treinamento || 0)}</strong>
-                </div>
-                <div class="skill-tree-kpi">
-                    <span>Bloqueadas</span>
-                    <strong style="color: #94a3b8;">${Number(resumo.bloqueadas || 0)}</strong>
-                </div>
-                <div class="skill-tree-kpi">
-                    <span>Progresso Geral</span>
-                    <strong style="color: #38bdf8;">${Number(resumo.progresso_pct || 0)}%</strong>
-                </div>
-            `;
-        }
-
-        const tabsEl = document.getElementById('skill-tree-branches-tabs');
-        if (tabsEl) {
-            tabsEl.innerHTML = `
-                <button type="button" class="skill-branch-pill ${filtro === 'todos' ? 'active' : ''}" onclick="PainelAlunoApp.selectSkillBranch('todos')">
-                    <span>🌳 Todos (${Number(resumo.total || 0)})</span>
-                </button>
-                ${ramos.map(r => `
-                    <button type="button" class="skill-branch-pill ${filtro === r.id ? 'active' : ''}" onclick="PainelAlunoApp.selectSkillBranch('${this.escapeHtml(r.id)}')">
-                        <span>${this.escapeHtml(r.icone)} ${this.escapeHtml(r.nome_curto || r.nome)} (${Number(r.dominadas)}/${Number(r.total)})</span>
-                    </button>
-                `).join('')}
-            `;
-        }
-
-        const nodesContainer = document.getElementById('skill-tree-nodes-container');
-        if (!nodesContainer) return;
-
-        const visibleRamos = filtro === 'todos' ? ramos : ramos.filter(r => r.id === filtro);
-        if (visibleRamos.length === 0 || visibleRamos.every(r => !r.habilidades || r.habilidades.length === 0)) {
-            nodesContainer.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:28px;">Nenhuma técnica cadastrada neste ramo ainda.</div>';
-            return;
-        }
-
-        nodesContainer.innerHTML = visibleRamos.map(ramo => {
-            const habs = ramo.habilidades || [];
-            if (habs.length === 0) return '';
-            return `
-                <section class="skill-branch-section">
-                    <div class="skill-branch-header">
-                        <div class="skill-branch-title">
-                            <span>${this.escapeHtml(ramo.icone)}</span>
-                            <span>${this.escapeHtml(ramo.nome)}</span>
-                        </div>
-                        <span class="skill-branch-progress">${Number(ramo.dominadas)}/${Number(ramo.total)} dominadas (${Number(ramo.progresso_pct)}%)</span>
-                    </div>
-                    <div class="skill-nodes-flow">
-                        ${habs.map(node => {
-                            const stateClass = `state-${node.estado || 'em_treinamento'}`;
-                            const badgeLabel = node.estado === 'dominada'
-                                ? '✅ Dominada'
-                                : (node.estado === 'bloqueada' ? '🔒 Bloqueada' : '⚡ Em Treinamento');
-                            const gradeLabel = node.graduacao_nome || 'Geral';
-                            const lockReason = node.estado === 'bloqueada' && node.motivo_bloqueio
-                                ? `<div class="skill-node-lock-reason">${this.escapeHtml(node.motivo_bloqueio)}</div>`
-                                : '';
-                            const prereqLine = node.prerequisito_nome
-                                ? `<div>Pré-req: <strong>${this.escapeHtml(node.prerequisito_nome)}</strong></div>`
-                                : '';
-                            const safeNodeJson = this.escapeHtml(JSON.stringify({
-                                estado: node.estado,
-                                motivo_bloqueio: node.motivo_bloqueio || '',
-                                prerequisito_nome: node.prerequisito_nome || '',
-                                ramo_nome: ramo.nome,
-                                validado_em: node.validado_em || null
-                            }));
-
-                            return `
-                                <button type="button" class="skill-node-card ${stateClass}"
-                                    data-skill-context="${safeNodeJson}"
-                                    onclick="PainelAlunoApp.abrirNoSkillTree(${Number(node.id)}, this)">
-                                    <div class="skill-node-top">
-                                        <span class="skill-node-state-badge ${this.escapeHtml(node.estado)}">${badgeLabel}</span>
-                                        <span class="skill-node-grade">${this.escapeHtml(gradeLabel)}</span>
-                                    </div>
-                                    <h4 class="skill-node-name">${this.escapeHtml(node.nome)}</h4>
-                                    <div class="skill-node-meta">
-                                        ${prereqLine}
-                                        <span>${Number(node.total_passos || 0)} etapa(s)</span>
-                                        ${node.video_url ? ' • 🎥 Vídeo' : ''}
-                                    </div>
-                                    ${lockReason}
-                                </button>
-                            `;
-                        }).join('')}
-                    </div>
-                </section>
-            `;
-        }).join('');
-    },
-
-    abrirNoSkillTree(golpeId, btnEl) {
-        let context = null;
-        try {
-            if (btnEl?.dataset?.skillContext) {
-                context = JSON.parse(btnEl.dataset.skillContext);
-            }
-        } catch {
-            context = null;
-        }
-        this.currentSkillNodeContext = context;
-        this.abrirPassoAPassoTecnica(golpeId);
-    },
-
-    async loadRankingView() {
-        const podiumEl = document.getElementById('ranking-podium-container');
-        const listEl = document.getElementById('ranking-list-container');
-        const footerEl = document.getElementById('ranking-sticky-footer');
-        const filtersBar = document.getElementById('ranking-atributos-filters');
-
-        const aba = this.rankingAbaAtual || 'assiduidade';
-        if (filtersBar) {
-            filtersBar.style.display = aba === 'atributos' ? 'flex' : 'none';
-        }
-        if (listEl) {
-            listEl.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:28px;">Carregando Mural de Líderes...</div>';
-        }
-
-        try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const queryAlunoId = urlParams.get('aluno_id');
-            const params = new URLSearchParams({ tab: aba });
-            if (aba === 'atributos') {
-                if (this.rankingFiltroPrajied) params.set('graduacao_nivel_id', this.rankingFiltroPrajied);
-                if (this.rankingFiltroAtributo) params.set('atributo', this.rankingFiltroAtributo);
-            }
-            if (queryAlunoId) params.set('aluno_id', queryAlunoId);
-
-            const token = this.getAuthToken();
-            const headers = token && token !== 'null' && token !== 'undefined' ? { Authorization: `Bearer ${token}` } : {};
-            const res = await fetch(`/api/aluno/ranking?${params.toString()}`, { headers });
-            const json = await res.json();
-            if (!res.ok || !json.success) {
-                throw new Error(json.error || 'Erro ao carregar ranking.');
-            }
-
-            this.rankingData = json.data;
-            this.renderRankingView(json.data);
-        } catch (err) {
-            console.error('Erro ao carregar ranking:', err);
-            if (podiumEl) podiumEl.innerHTML = '';
-            if (listEl) listEl.innerHTML = `<div style="text-align:center; color:#fca5a5; padding:24px;">${this.escapeHtml(err.message)}</div>`;
-            if (footerEl) footerEl.style.display = 'none';
-        }
-    },
-
-    renderRankingView(data) {
-        const podiumEl = document.getElementById('ranking-podium-container');
-        const listEl = document.getElementById('ranking-list-container');
-        const footerEl = document.getElementById('ranking-sticky-footer');
-        const selPrajied = document.getElementById('ranking-filter-prajied');
-
-        const niveisDisp = data.niveis_disponiveis || [];
-        if (selPrajied && Array.isArray(niveisDisp) && niveisDisp.length > 0) {
-            const selectedVal = this.rankingFiltroPrajied === 'todas'
-                ? 'todas'
-                : (this.rankingFiltroPrajied || (data.graduacao_selecionada_id ? String(data.graduacao_selecionada_id) : 'todas'));
-            selPrajied.innerHTML = `<option value="todas" ${selectedVal === 'todas' ? 'selected' : ''}>Todas as Graduações (Prajieds)</option>` + niveisDisp.map(p =>
-                `<option value="${Number(p.id)}" ${String(p.id) === String(selectedVal) ? 'selected' : ''}>${this.escapeHtml(p.nome)}</option>`
-            ).join('');
-        }
-
-        const tabAtiva = data.tab_ativa || this.rankingAbaAtual || 'assiduidade';
-        const formatValor = (entry) => {
-            if (tabAtiva === 'assiduidade') {
-                return `${Number(entry.xp_30d || entry.valor || 0)} XP • ${Number(entry.checkins_30d || 0)} treinos`;
-            }
-            if (tabAtiva === 'evolucao') {
-                return `+${Number(entry.delta_pts || entry.valor || 0)} pts (${Number(entry.score_anterior || 0)} → ${Number(entry.score_atual || 0)})`;
-            }
-            return `${Number(entry.valor || 0)}/${Number(entry.atributo_max || 100)} pts`;
-        };
-
-        const top3 = data.top3 || [];
-        const ranking = data.lista || [];
-
-        if (podiumEl) {
-            if (top3.length === 0) {
-                podiumEl.innerHTML = '';
-            } else {
-                const medals = ['🥇', '🥈', '🥉'];
-                podiumEl.innerHTML = top3.map((item, idx) => {
-                    const nome = this.escapeHtml(item.nome_completo || 'Atleta');
-                    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.nome_completo || 'Atleta')}&background=0284c7&color=fff`;
-                    const avatar = this.sanitizeUrl(item.foto_perfil_url) || fallback;
-                    const streak = Number(item.streak_semanas || 0);
-                    return `
-                        <div class="ranking-podium-card pos-${idx + 1} ${item.is_current_student ? 'is-me' : ''}">
-                            <div class="ranking-medal-badge">${medals[idx] || `#${idx + 1}`}</div>
-                            <img class="ranking-podium-avatar" src="${avatar}" alt="${nome}" onerror="this.src='${fallback}'">
-                            <div class="ranking-podium-name">
-                                ${nome} ${item.is_current_student ? '<span style="color:#38bdf8;">(Você)</span>' : ''}
-                            </div>
-                            <div style="font-size: 11px; color: #94a3b8;">
-                                ${this.escapeHtml(item.nivel_nome || 'Iniciante')} • Nv. ${Number(item.xp_level?.nivel || 1)}
-                                ${streak >= 1 ? ` • 🔥 ${streak} sem` : ''}
-                            </div>
-                            <div class="ranking-podium-metric">${this.escapeHtml(formatValor(item))}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        if (listEl) {
-            if (ranking.length === 0) {
-                const emptyMsg = tabAtiva === 'evolucao'
-                    ? 'Ainda não há atletas com 2 ou mais avaliações RPG positivas para medir evolução.'
-                    : 'Nenhum atleta visível neste recorte do ranking.';
-                listEl.innerHTML = `<div style="text-align:center; color:#94a3b8; padding:28px;">${this.escapeHtml(emptyMsg)}</div>`;
-            } else {
-                listEl.innerHTML = ranking.map(item => {
-                    const nome = this.escapeHtml(item.nome_completo || 'Atleta');
-                    const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.nome_completo || 'Atleta')}&background=0284c7&color=fff`;
-                    const avatar = this.sanitizeUrl(item.foto_perfil_url) || fallback;
-                    const streak = Number(item.streak_semanas || 0);
-                    return `
-                        <div class="ranking-row-item ${item.is_current_student ? 'is-me' : ''}">
-                            <div class="ranking-row-left">
-                                <span class="ranking-pos-num">#${Number(item.posicao)}</span>
-                                <img class="ranking-row-avatar" src="${avatar}" alt="${nome}" onerror="this.src='${fallback}'">
-                                <div style="min-width: 0;">
-                                    <div class="ranking-row-name">
-                                        <span>${nome}</span>
-                                        ${item.is_current_student ? '<span style="color:#38bdf8; font-size:11px;">(Você)</span>' : ''}
-                                        ${streak >= 1 ? `<span class="streak-flame-name-pill" style="padding:1px 7px; font-size:10px;">🔥 ${streak} sem</span>` : ''}
-                                    </div>
-                                    <div class="ranking-row-sub">${this.escapeHtml(item.nivel_nome || 'Iniciante')} • Nível ${Number(item.xp_level?.nivel || 1)}</div>
-                                </div>
-                            </div>
-                            <div class="ranking-row-value">${this.escapeHtml(formatValor(item))}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        if (footerEl) {
-            const meuPerfil = data.meu_perfil;
-            if (meuPerfil && !meuPerfil.exibir_no_ranking) {
-                footerEl.style.display = 'flex';
-                footerEl.innerHTML = `
-                    <span>👁️ Você optou por ocultar seu perfil deste mural.</span>
-                    <button type="button" class="btn-header-ranking" onclick="PainelAlunoApp.toggleRankingPrivacy(true)">Reativar Visibilidade</button>
-                `;
-            } else if (data.minha_posicao && data.minha_posicao.texto) {
-                footerEl.style.display = 'flex';
-                footerEl.innerHTML = `
-                    <span>🏅 ${this.escapeHtml(data.minha_posicao.texto)}</span>
-                    <span style="color: #94a3b8; font-size: 12px;">Total exibido: ${ranking.length} atletas</span>
-                `;
-            } else {
-                footerEl.style.display = 'flex';
-                footerEl.innerHTML = `
-                    <span>💡 Participe dos treinos ou avaliações RPG para entrar nesta lista!</span>
-                    <span style="color: #94a3b8; font-size: 12px;">Total exibido: ${ranking.length} atletas</span>
-                `;
-            }
-        }
-    },
-
-    async toggleRankingPrivacy(exibir) {
-        try {
-            const res = await this.requestAlunoJson('/api/aluno/perfil/privacidade-ranking', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ exibir_no_ranking: Boolean(exibir) })
-            });
-            if (this.alunoData?.aluno) {
-                this.alunoData.aluno.exibir_no_ranking = res.exibir_no_ranking;
-            }
-            const toggle = document.getElementById('toggle-exibir-ranking');
-            if (toggle) toggle.checked = Boolean(res.exibir_no_ranking);
-            this.showToast(res.message || 'Preferência salva!', 'success');
-            if (this.currentView === 'ranking') {
-                this.loadRankingView();
-            }
-        } catch (err) {
-            this.showToast(err.message || 'Erro ao alterar privacidade.', 'error');
         }
     }
 };

@@ -12,19 +12,6 @@ const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile } = require('../services/uploadStorage');
-const gamificationService = require('../services/gamificationService');
-
-const VALID_SKILL_BRANCHES = new Set(gamificationService.SKILL_TREE_BRANCHES.map(b => b.id));
-
-function parseSafeVideoUrl(rawUrl) {
-    if (!rawUrl || typeof rawUrl !== 'string') return null;
-    const clean = rawUrl.trim().slice(0, 255);
-    if (!clean) return null;
-    if (/^(https?:\/\/|\/)/i.test(clean) && !clean.toLowerCase().includes('javascript:')) {
-        return clean;
-    }
-    return null;
-}
 
 // Diretório para fotos dos passos da Wiki
 const uploadWikiDir = path.join(__dirname, '../public/uploads/wiki');
@@ -129,10 +116,9 @@ router.get('/', authenticateToken, async (req, res) => {
         const { search, modalidade_id, categoria } = req.query;
 
         let query = `
-            SELECT wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.ramo_habilidade, wg.habilidade_prerequisito_id,
-                   wg.nivel_dificuldade, wg.descricao_geral, wg.imagem_capa, wg.video_url, wg.ativo, wg.created_at, wg.updated_at,
+            SELECT wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.nivel_dificuldade,
+                   wg.descricao_geral, wg.imagem_capa, wg.ativo, wg.created_at, wg.updated_at,
                    m.nome AS modalidade_nome,
-                   preq.nome AS prerequisito_nome,
                    COUNT(wgp.id) AS total_passos,
                    COALESCE(
                        NULLIF(wg.imagem_capa, ''),
@@ -146,7 +132,6 @@ router.get('/', authenticateToken, async (req, res) => {
                    ) AS imagem_capa_exibicao
             FROM wiki_golpes wg
             LEFT JOIN modalidades m ON m.id = wg.modalidade_id
-            LEFT JOIN wiki_golpes preq ON preq.id = wg.habilidade_prerequisito_id
             LEFT JOIN wiki_golpe_passos wgp ON wgp.golpe_id = wg.id
             WHERE wg.ativo = 1
         `;
@@ -191,13 +176,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
         }
 
         const [golpes] = await pool.query(`
-            SELECT wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.ramo_habilidade, wg.habilidade_prerequisito_id,
-                   wg.nivel_dificuldade, wg.descricao_geral, wg.imagem_capa, wg.video_url, wg.ativo, wg.created_at, wg.updated_at,
-                   m.nome AS modalidade_nome,
-                   preq.nome AS prerequisito_nome
+            SELECT wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.nivel_dificuldade,
+                   wg.descricao_geral, wg.imagem_capa, wg.ativo, wg.created_at, wg.updated_at,
+                   m.nome AS modalidade_nome
             FROM wiki_golpes wg
             LEFT JOIN modalidades m ON m.id = wg.modalidade_id
-            LEFT JOIN wiki_golpes preq ON preq.id = wg.habilidade_prerequisito_id
             WHERE wg.id = ? AND wg.ativo = 1
         `, [golpeId]);
 
@@ -233,18 +216,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
     const conn = await pool.getConnection();
     try {
-        const {
-            nome,
-            modalidade_id,
-            categoria,
-            ramo_habilidade,
-            habilidade_prerequisito_id,
-            nivel_dificuldade,
-            descricao_geral,
-            imagem_capa,
-            video_url,
-            passos
-        } = req.body;
+        const { nome, modalidade_id, categoria, nivel_dificuldade, descricao_geral, imagem_capa, passos } = req.body;
 
         if (!nome || typeof nome !== 'string' || !nome.trim()) {
             return res.status(400).json({ success: false, error: 'O nome do golpe ou movimento é obrigatório.' });
@@ -270,25 +242,18 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'professor'), async 
 
         const modId = modalidade_id ? parseInt(modalidade_id, 10) : null;
         const cat = categoria ? String(categoria).trim().substring(0, 80) : null;
-        const ramoRaw = ramo_habilidade ? String(ramo_habilidade).trim().toLowerCase() : '';
-        const ramo = VALID_SKILL_BRANCHES.has(ramoRaw) ? ramoRaw : null;
-        const rawPrereq = habilidade_prerequisito_id ? parseInt(habilidade_prerequisito_id, 10) : null;
-        const prereqId = (rawPrereq && !Number.isNaN(rawPrereq) && rawPrereq > 0) ? rawPrereq : null;
         const nivel = ['iniciante', 'intermediario', 'avancado'].includes(nivel_dificuldade)
             ? nivel_dificuldade
             : 'iniciante';
         const descGeral = descricao_geral ? String(descricao_geral).trim() : null;
         const imgCapa = imagem_capa ? String(imagem_capa).trim().substring(0, 255) : null;
-        const safeVideoUrl = parseSafeVideoUrl(video_url);
 
         await conn.beginTransaction();
 
         const [insertResult] = await conn.query(`
-            INSERT INTO wiki_golpes (
-                nome, modalidade_id, categoria, ramo_habilidade, habilidade_prerequisito_id,
-                nivel_dificuldade, descricao_geral, imagem_capa, video_url, ativo
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-        `, [nome.trim().substring(0, 150), modId, cat, ramo, prereqId, nivel, descGeral, imgCapa, safeVideoUrl]);
+            INSERT INTO wiki_golpes (nome, modalidade_id, categoria, nivel_dificuldade, descricao_geral, imagem_capa, ativo)
+            VALUES (?, ?, ?, ?, ?, ?, 1)
+        `, [nome.trim().substring(0, 150), modId, cat, nivel, descGeral, imgCapa]);
 
         const golpeId = insertResult.insertId;
 
@@ -334,18 +299,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'professor'), asyn
             return res.status(400).json({ success: false, error: 'ID do golpe inválido.' });
         }
 
-        const {
-            nome,
-            modalidade_id,
-            categoria,
-            ramo_habilidade,
-            habilidade_prerequisito_id,
-            nivel_dificuldade,
-            descricao_geral,
-            imagem_capa,
-            video_url,
-            passos
-        } = req.body;
+        const { nome, modalidade_id, categoria, nivel_dificuldade, descricao_geral, imagem_capa, passos } = req.body;
 
         if (!nome || typeof nome !== 'string' || !nome.trim()) {
             return res.status(400).json({ success: false, error: 'O nome do golpe ou movimento é obrigatório.' });
@@ -377,43 +331,26 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'professor'), asyn
 
         await conn.beginTransaction();
 
-        const [existRows] = await conn.query(
-            `SELECT imagem_capa, ramo_habilidade, habilidade_prerequisito_id, video_url
-             FROM wiki_golpes WHERE id = ? AND ativo = 1`,
-            [golpeId]
-        );
-        if (existRows.length === 0) {
-            await conn.rollback();
-            return res.status(404).json({ success: false, error: 'Golpe não encontrado para atualização.' });
+        let imgCapa;
+        if (imagem_capa === undefined) {
+            const [existRows] = await conn.query(
+                `SELECT imagem_capa FROM wiki_golpes WHERE id = ? AND ativo = 1`,
+                [golpeId]
+            );
+            if (existRows.length === 0) {
+                await conn.rollback();
+                return res.status(404).json({ success: false, error: 'Golpe não encontrado para atualização.' });
+            }
+            imgCapa = existRows[0].imagem_capa || null;
+        } else {
+            imgCapa = imagem_capa ? String(imagem_capa).trim().substring(0, 255) : null;
         }
-        const existing = existRows[0];
-
-        const imgCapa = imagem_capa === undefined
-            ? (existing.imagem_capa || null)
-            : (imagem_capa ? String(imagem_capa).trim().substring(0, 255) : null);
-
-        let ramo = existing.ramo_habilidade || null;
-        if (ramo_habilidade !== undefined) {
-            const ramoRaw = ramo_habilidade ? String(ramo_habilidade).trim().toLowerCase() : '';
-            ramo = VALID_SKILL_BRANCHES.has(ramoRaw) ? ramoRaw : null;
-        }
-
-        let prereqId = existing.habilidade_prerequisito_id || null;
-        if (habilidade_prerequisito_id !== undefined) {
-            const rawPrereq = habilidade_prerequisito_id ? parseInt(habilidade_prerequisito_id, 10) : null;
-            prereqId = (rawPrereq && !Number.isNaN(rawPrereq) && rawPrereq > 0 && rawPrereq !== golpeId) ? rawPrereq : null;
-        }
-
-        const safeVideoUrl = video_url === undefined
-            ? (existing.video_url || null)
-            : parseSafeVideoUrl(video_url);
 
         const [updateResult] = await conn.query(`
             UPDATE wiki_golpes
-            SET nome = ?, modalidade_id = ?, categoria = ?, ramo_habilidade = ?, habilidade_prerequisito_id = ?,
-                nivel_dificuldade = ?, descricao_geral = ?, imagem_capa = ?, video_url = ?
+            SET nome = ?, modalidade_id = ?, categoria = ?, nivel_dificuldade = ?, descricao_geral = ?, imagem_capa = ?
             WHERE id = ? AND ativo = 1
-        `, [nome.trim().substring(0, 150), modId, cat, ramo, prereqId, nivel, descGeral, imgCapa, safeVideoUrl, golpeId]);
+        `, [nome.trim().substring(0, 150), modId, cat, nivel, descGeral, imgCapa, golpeId]);
 
         if (updateResult.affectedRows === 0) {
             await conn.rollback();

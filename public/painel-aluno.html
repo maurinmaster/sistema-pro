@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.2">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.1">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -84,16 +84,6 @@
                             <circle cx="12" cy="12" r="2"/>
                         </svg>
                     </button>
-                    <button type="button" class="dock-btn" data-tab="ranking" title="Mural de Líderes">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
-                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
-                            <path d="M4 22h16"/>
-                            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
-                            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
-                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
-                        </svg>
-                    </button>
                 </nav>
             </div>
 
@@ -124,9 +114,6 @@
                     </div>
 
                     <div class="header-actions">
-                        <button type="button" class="btn-header-ranking" id="btn-open-ranking-header" title="Mural de Líderes Saudável">
-                            <span>🏆 Mural de Líderes</span>
-                        </button>
                         <button type="button" class="btn-header-install-app pwa-install-trigger" id="desktop-btn-install-app" title="Instalar aplicativo no dispositivo">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -325,26 +312,6 @@
                     </div>
                 </div>
 
-                <!-- Alternador Árvore de Habilidades vs Catálogo -->
-                <div class="wiki-mode-switcher" id="wiki-view-mode-switch">
-                    <button type="button" class="wiki-mode-btn active" data-wiki-mode="skill-tree">
-                        <span>🌳 Árvore de Habilidades</span>
-                    </button>
-                    <button type="button" class="wiki-mode-btn" data-wiki-mode="catalogo">
-                        <span>📚 Catálogo por Faixa</span>
-                    </button>
-                </div>
-
-                <!-- ÁRVORE DE HABILIDADES (5 RAMOS DE COMBATE) -->
-                <div id="wiki-spa-skill-tree-wrap">
-                    <div class="skill-tree-summary-strip" id="skill-tree-summary-strip"></div>
-                    <div class="skill-tree-branches-tabs" id="skill-tree-branches-tabs"></div>
-                    <div id="skill-tree-nodes-container">
-                        <div style="text-align: center; color: #94a3b8; padding: 28px;">Carregando árvore de habilidades...</div>
-                    </div>
-                </div>
-
-                <div id="wiki-spa-catalogo-wrap" style="display: none;">
                 <!-- Abas Deslizantes de Faixas (Carrossel Horizontal no mobile) -->
                 <div class="belts-tabs-container" id="wiki-spa-belts-tabs">
                     <!-- Preenchido dinamicamente pelo JS com carrossel moderno -->
@@ -431,7 +398,6 @@
                 <!-- Grade de Golpes e Técnicas da Wiki -->
                 <div class="curriculum-grid" id="wiki-spa-cards-grid">
                     <!-- Cards renderizados dinamicamente pelo JavaScript -->
-                </div>
                 </div>
             </div>
 
@@ -851,84 +817,6 @@
                     <div id="missoes-concluidas-container" class="missoes-cards-grid"></div>
                 </section>
             </div>
-
-            <!-- ========================================================= -->
-            <!-- SPA VIEW 7: MURAL DE LÍDERES SAUDÁVEL (SEGMENTADO)        -->
-            <!-- ========================================================= -->
-            <div class="spa-view" id="spa-view-ranking" style="display: none;">
-                <div class="wiki-header-nav-row">
-                    <button type="button" class="btn-voltar-painel" onclick="PainelAlunoApp.switchView('dashboard')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="19" y1="12" x2="5" y2="12"></line>
-                            <polyline points="12 19 5 12 12 5"></polyline>
-                        </svg>
-                        <span>Voltar à Visão Geral</span>
-                    </button>
-
-                    <div class="student-profile-pill">
-                        <img id="ranking-header-avatar-img"
-                            src="https://ui-avatars.com/api/?name=Atleta&background=f59e0b&color=fff" alt="Avatar">
-                        <span id="ranking-header-student-name">Atleta</span>
-                    </div>
-                </div>
-
-                <div class="faturas-overview-banner" style="margin-bottom: 16px;">
-                    <div class="faturas-overview-header" style="justify-content: space-between; width: 100%; flex-wrap: wrap; gap: 10px;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="faturas-icon-wrap" style="background: rgba(245, 158, 11, 0.16); color: #fbbf24;">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                                    <path d="M4 22h16" />
-                                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <h2 style="margin: 0; font-size: 19px; color: #f8fafc;">Mural de Líderes Saudável</h2>
-                                <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #94a3b8;">Consistência, evolução pessoal e destaques por graduação (Prajied)</p>
-                            </div>
-                        </div>
-                        <button type="button" class="btn-header-ranking" id="btn-ranking-privacy-shortcut" onclick="PainelAlunoApp.openAccountModal()">
-                            ⚙️ Privacidade no Ranking
-                        </button>
-                    </div>
-                </div>
-
-                <div class="ranking-tabs-nav" id="ranking-tabs-nav">
-                    <button type="button" class="ranking-tab-btn active" data-ranking-tab="assiduidade">
-                        <span>🔥 Assiduidade do Mês</span>
-                    </button>
-                    <button type="button" class="ranking-tab-btn" data-ranking-tab="evolucao">
-                        <span>📈 Maior Evolução</span>
-                    </button>
-                    <button type="button" class="ranking-tab-btn" data-ranking-tab="atributos">
-                        <span>🥋 Top Atributos (Prajied)</span>
-                    </button>
-                </div>
-
-                <div class="ranking-filters-bar" id="ranking-atributos-filters" style="display: none;">
-                    <select id="ranking-filter-prajied" class="ranking-select" aria-label="Filtrar por Prajied">
-                        <option value="">Minha Graduação / Todas</option>
-                    </select>
-                    <select id="ranking-filter-atributo" class="ranking-select" aria-label="Selecionar Atributo">
-                        <option value="score_total">Score Geral RPG (0–100)</option>
-                        <option value="inteligencia">Inteligência (0–20)</option>
-                        <option value="destreza">Destreza (0–20)</option>
-                        <option value="agilidade">Agilidade (0–20)</option>
-                        <option value="forca">Força (0–20)</option>
-                        <option value="vitalidade">Vitalidade (0–20)</option>
-                    </select>
-                </div>
-
-                <div id="ranking-podium-container" class="ranking-podium-grid"></div>
-                <div id="ranking-list-container" class="ranking-list-wrap">
-                    <div style="text-align: center; color: #94a3b8; padding: 28px;">Carregando mural de líderes...</div>
-                </div>
-                <div id="ranking-sticky-footer" class="ranking-sticky-footer" style="display: none;"></div>
-            </div>
         </main>
 
         <!-- ============================================================= -->
@@ -942,16 +830,6 @@
                     <img src="/assets/icons/logo.png?v=2" alt="PRO COMBATE" class="mobile-brand-logo">
                 </div>
                 <div class="mobile-header-actions">
-                    <button type="button" class="mobile-circle-btn" id="mobile-btn-ranking" title="Mural de Líderes">
-                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
-                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
-                            <path d="M4 22h16" />
-                            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
-                            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
-                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
-                        </svg>
-                    </button>
                     <button type="button" class="mobile-circle-btn mobile-install-pill pwa-install-trigger" id="mobile-btn-install-app"
                         title="Instalar App no Celular">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
@@ -1021,10 +899,7 @@
                                 <span class="degree-badge" id="card-athlete-degree-badge" style="display: none;">1º G</span>
                             </div>
                             <div class="athlete-top-info">
-                                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                                    <div class="athlete-top-name" id="card-top-athlete-name">Atleta</div>
-                                    <span class="streak-flame-name-pill" id="athlete-streak-flame-pill" style="display: none;" title="Ofensiva semanal ativa!">🔥 0 semanas</span>
-                                </div>
+                                <div class="athlete-top-name" id="card-top-athlete-name">Atleta</div>
                                 <span class="prajied-chip" id="card-prajied-chip">
                                     <span class="prajied-dot" id="card-prajied-dot"></span>
                                     <span id="card-prajied-name">Iniciante</span>
@@ -1046,24 +921,6 @@
                             <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
                         </svg>
                     </button>
-                </div>
-
-                <!-- Barra de Nível Contínuo & XP Automático -->
-                <div class="xp-level-bar-card" id="athlete-xp-level-card">
-                    <div class="xp-level-row-top">
-                        <div class="xp-level-badge-group">
-                            <span class="xp-level-pill" id="xp-level-badge">Nível 1</span>
-                            <span class="xp-multiplier-pill" id="xp-multiplier-badge" style="display: none;">⚡ 1.5x XP Ativo</span>
-                        </div>
-                        <span class="xp-total-counter" id="xp-total-counter">0 XP</span>
-                    </div>
-                    <div class="xp-progress-track">
-                        <div class="xp-progress-fill" id="xp-progress-fill" style="width: 0%;"></div>
-                    </div>
-                    <div class="xp-level-row-sub">
-                        <span id="xp-level-progress-text">0 / 100 XP neste nível</span>
-                        <span id="xp-level-next-text">Faltam 100 XP p/ Nível 2</span>
-                    </div>
                 </div>
 
                 <!-- Showcase Centralizado do Avatar + Resumo Biométrico Limpo -->
@@ -1252,10 +1109,6 @@
 
                     <div class="streak-progress-track" style="display: none;">
                         <div class="streak-progress-bar" id="streak-progress-bar" style="width: 0%;"></div>
-                    </div>
-
-                    <div class="streak-multiplier-banner" id="streak-multiplier-banner">
-                        Complete 3 treinos na semana para ativar 1.5x XP na próxima semana
                     </div>
                 </div>
             </section>
@@ -1595,13 +1448,6 @@
                         <span id="modal-conta-status"
                             style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; background: rgba(16, 185, 129, 0.15); color: #10b981;">Ativa</span>
                     </div>
-                    <label class="ranking-privacy-card" style="cursor: pointer;">
-                        <div>
-                            <div style="font-size: 12.5px; font-weight: 700; color: #f8fafc;">Aparecer no Mural de Líderes</div>
-                            <div style="font-size: 11px; color: #94a3b8;">Permite exibir seu nome e posição nos rankings da academia</div>
-                        </div>
-                        <input type="checkbox" id="toggle-exibir-ranking" checked style="width: 18px; height: 18px; accent-color: #f59e0b; cursor: pointer; flex-shrink: 0;">
-                    </label>
                 </div>
 
                 <!-- Botões de Ação da Conta -->
@@ -1658,7 +1504,6 @@
             </div>
 
             <div class="modal-body tecnica-viewer-body">
-                <div id="modal-tecnica-skill-meta" class="tecnica-skill-meta-bar" style="display: none;"></div>
                 <p id="modal-tecnica-desc"
                     style="font-size: 13.5px; color: #CBD5E1; margin-bottom: 16px; line-height: 1.55;">
                 </p>
@@ -2046,7 +1891,7 @@
 
     <!-- Script Principal do Painel -->
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
-    <script src="/js/painel-aluno.js?v=6.5"></script>
+    <script src="/js/painel-aluno.js?v=6.4"></script>
 </body>
 
 </html>
