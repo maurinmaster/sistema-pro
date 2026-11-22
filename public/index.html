@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=4.6">
+    <link rel="stylesheet" href="/css/style.css?v=4.7">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.3">
 </head>
@@ -108,6 +108,17 @@
                     </svg>
                     <span>Quadro de Missões</span>
                     <span class="nav-badge" id="total-missoes-pendentes-count" style="display: none; background: #f59e0b; color: #090d16;">0</span>
+                </a>
+                <a class="nav-item" data-view="ranking" id="nav-ranking">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                        <path d="M4 22h16" />
+                        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                    </svg>
+                    <span>Mural de Líderes</span>
                 </a>
                 <a class="nav-item" data-view="mensagens" id="nav-mensagens" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -421,7 +432,7 @@
                 <!-- ========================================== -->
                 <section class="view-section" id="view-checkins">
                     <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
                         <h3 style="font-family: var(--font-heading); font-size: 18px;">Histórico de Presenças Recentes
                         </h3>
                         <button class="btn btn-primary" onclick="CheckinsModule.openCheckinModal()">
@@ -432,6 +443,16 @@
                         </button>
                     </div>
 
+                    <div class="card" style="padding: 14px 18px; margin-bottom: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
+                            <strong style="font-size: 13px; color: #f8fafc;">⚡ Configuração de XP das Turmas (Toque para alternar Regular +10 XP / Especial +20 XP)</strong>
+                            <span style="font-size: 11.5px; color: var(--text-muted);">Treinos de Sparring, Clinch ou Aulão podem valer +20 XP base</span>
+                        </div>
+                        <div id="checkins-turmas-xp-config" class="turmas-xp-chip-row">
+                            <span style="font-size: 12px; color: var(--text-muted);">Carregando turmas...</span>
+                        </div>
+                    </div>
+
                     <div class="table-card">
                         <div class="table-responsive">
                             <table class="data-table">
@@ -440,6 +461,7 @@
                                         <th>Aluno</th>
                                         <th>Modalidade</th>
                                         <th>Turma</th>
+                                        <th>XP Ganho</th>
                                         <th>Data e Horário</th>
                                         <th>Status da Validação</th>
                                     </tr>
@@ -1321,6 +1343,40 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- VIEW 9: MURAL DE LÍDERES SAUDÁVEL (SEGMENTADO) -->
+                <section class="view-section" id="view-ranking">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 20px; color: #ffffff;">🏆 Mural de Líderes Saudável</h3>
+                            <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-muted);">Rankings segmentados por assiduidade (30 dias), maior evolução RPG e destaques por graduação (Prajied).</p>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;" id="admin-ranking-tabs">
+                        <button type="button" class="btn btn-primary btn-sm active" data-ranking-tab="assiduidade">🔥 Assiduidade do Mês (30d)</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-ranking-tab="evolucao">📈 Maior Evolução RPG</button>
+                        <button type="button" class="btn btn-secondary btn-sm" data-ranking-tab="atributos">🥋 Top Atributos por Prajied</button>
+                    </div>
+
+                    <div id="admin-ranking-atributos-filters" style="display: none; gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+                        <select id="admin-ranking-prajied" class="form-select" style="max-width: 280px;">
+                            <option value="">Todas as Graduações (Prajieds)</option>
+                        </select>
+                        <select id="admin-ranking-atributo" class="form-select" style="max-width: 240px;">
+                            <option value="score_total">Score Geral RPG (0–100)</option>
+                            <option value="inteligencia">Inteligência (0–20)</option>
+                            <option value="destreza">Destreza (0–20)</option>
+                            <option value="agilidade">Agilidade (0–20)</option>
+                            <option value="forca">Força (0–20)</option>
+                            <option value="vitalidade">Vitalidade (0–20)</option>
+                        </select>
+                    </div>
+
+                    <div id="admin-ranking-content">
+                        <!-- Renderizado via RankingModule -->
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -1369,6 +1425,10 @@
                             <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-secondary); cursor: pointer; font-weight: 500;">
                                 <input type="checkbox" id="aluno-receber-whatsapp" checked style="width: 15px; height: 15px; accent-color: #22c55e; cursor: pointer;">
                                 <span>Receber mensagens automáticas via WhatsApp</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; color: var(--text-secondary); cursor: pointer; font-weight: 500;">
+                                <input type="checkbox" id="aluno-exibir-ranking" checked style="width: 15px; height: 15px; accent-color: #f59e0b; cursor: pointer;">
+                                <span>Exibir no Mural de Líderes (Ranking Público)</span>
                             </label>
                         </div>
                         <div class="form-group">
@@ -2118,6 +2178,14 @@
                         <label>Turma / Horário</label>
                         <select id="checkin-turma-id" class="form-select">
                             <option value="">Treino Livre / Sem Turma Fixa</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Tipo de Aula &amp; Pontuação XP</label>
+                        <select id="checkin-tipo-aula" class="form-select">
+                            <option value="regular">Aula Regular (+10 XP base)</option>
+                            <option value="especial">Treino Especial / Sparring / Clinch / Aulão (+20 XP base)</option>
                         </select>
                     </div>
 
@@ -3075,6 +3143,30 @@
                         </div>
                     </div>
 
+                    <div class="form-grid" style="margin-top: 12px; margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label>Ramo na Árvore de Habilidades</label>
+                            <select id="golpe-ramo" class="form-select">
+                                <option value="">Automático pela Categoria</option>
+                                <option value="punhos">🥊 Punhos (หมัด)</option>
+                                <option value="chutes">🦵 Chutes (เตะ)</option>
+                                <option value="joelhos">⚡ Joelhos (เข่า)</option>
+                                <option value="cotovelos">💥 Cotovelos (ศอก)</option>
+                                <option value="clinch_defesas">🛡️ Clinch e Defesas</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Pré-requisito na Árvore (Opcional)</label>
+                            <select id="golpe-prerequisito" class="form-select">
+                                <option value="">Nenhum (Desbloqueado no Prajied)</option>
+                            </select>
+                        </div>
+                        <div class="form-group form-col-full">
+                            <label>Link de Vídeo Demonstrativo (Opcional)</label>
+                            <input type="url" id="golpe-video-url" class="form-input" placeholder="https://www.youtube.com/watch?v=... ou link MP4">
+                        </div>
+                    </div>
+
                     <!-- Upload de Capa: Imagem ou GIF Animado -->
                     <div class="form-group" style="background: rgba(15, 23, 42, 0.4); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
                         <label style="font-weight: 700; font-size: 13px; color: var(--text-primary); margin-bottom: 4px; display: block;">
@@ -3382,17 +3474,18 @@
     <script src="/js/ui.js"></script>
     <script src="/js/auth.js?v=1.2"></script>
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
-    <script src="/js/aluno-detalhes.js?v=1.5"></script>
-    <script src="/js/alunos.js?v=5.4"></script>
+    <script src="/js/aluno-detalhes.js?v=1.6"></script>
+    <script src="/js/alunos.js?v=5.5"></script>
     <script src="/js/dashboard.js?v=1.2"></script>
-    <script src="/js/checkins.js"></script>
+    <script src="/js/checkins.js?v=1.1"></script>
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
-    <script src="/js/wiki.js?v=4.5"></script>
+    <script src="/js/wiki.js?v=4.6"></script>
     <script src="/js/missoes.js?v=1.0"></script>
+    <script src="/js/ranking.js?v=1.0"></script>
     <script src="/js/exames.js?v=3.9"></script>
     <script src="/js/mensagens-config.js?v=1.1"></script>
-    <script src="/js/app.js?v=4.1"></script>
+    <script src="/js/app.js?v=4.2"></script>
 </body>
 
 </html>

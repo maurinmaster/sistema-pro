@@ -2413,6 +2413,131 @@ test('Quadro de Missões e Missões Automáticas: Validação, Geração Automá
     assert.equal(missoes.canStudentAcceptMission({ missao: activeMissao, activeCount: 1, currentEnrollment: { status: 'cancelada' }, totalAceites: 1 }).allowed, true);
 });
 
+test('Engajamento RPG: XP Automático, Ofensiva Semanal (1.5x), Skill Tree e Mural de Líderes', () => {
+    const gamif = require('../services/gamificationService');
+
+    // 1. Nível contínuo = floor(XP / 100) + 1
+    assert.deepEqual(gamif.computeLevelFromXp(0), {
+        nivel: 1,
+        xp_total: 0,
+        xp_no_nivel: 0,
+        xp_meta_nivel: 100,
+        xp_para_proximo: 100,
+        progresso_pct: 0
+    });
+    assert.equal(gamif.computeLevelFromXp(99).nivel, 1);
+    assert.equal(gamif.computeLevelFromXp(99).xp_para_proximo, 1);
+    assert.equal(gamif.computeLevelFromXp(100).nivel, 2);
+    assert.equal(gamif.computeLevelFromXp(245).nivel, 3);
+    assert.equal(gamif.computeLevelFromXp(245).xp_no_nivel, 45);
+    assert.equal(gamif.computeLevelFromXp(245).xp_para_proximo, 55);
+
+    // 2. XP por check-in (Regular +10, Especial +20) & multiplicador 1.5x
+    assert.equal(gamif.calculateCheckinXp({ tipoAula: 'regular', multiplicador: 1.0 }).xp_final, 10);
+    assert.equal(gamif.calculateCheckinXp({ tipoAula: 'especial', multiplicador: 1.0 }).xp_final, 20);
+    assert.equal(gamif.calculateCheckinXp({ tipoAula: 'regular', multiplicador: 1.5 }).xp_final, 15);
+    assert.equal(gamif.calculateCheckinXp({ tipoAula: 'especial', multiplicador: 1.5 }).xp_final, 30);
+
+    // 3. Ofensiva semanal (Seg-Dom ISO YEARWEEK, incl. virada de ano) & reset
+    assert.equal(gamif.prevIsoYearWeek(202601), 202552);
+
+    const noStreak = gamif.computeWeeklyStreak({
+        weeklyCounts: [{ yw: 202552, total: 2 }, { yw: 202601, total: 1 }],
+        currentYearWeek: 202601,
+        metaSemanal: 3
+    });
+    assert.equal(noStreak.ofensiva_ativa, false);
+    assert.equal(noStreak.multiplicador_ativo, 1.0);
+    assert.equal(noStreak.streak_semanas, 0);
+    assert.equal(noStreak.falta_para_meta, 2);
+
+    const activePrevWeek = gamif.computeWeeklyStreak({
+        weeklyCounts: [{ yw: 202552, total: 3 }, { yw: 202601, total: 1 }],
+        currentYearWeek: 202601,
+        metaSemanal: 3
+    });
+    assert.equal(activePrevWeek.ofensiva_ativa, true);
+    assert.equal(activePrevWeek.multiplicador_ativo, 1.5);
+    assert.equal(activePrevWeek.streak_semanas, 1);
+
+    const stackedStreak = gamif.computeWeeklyStreak({
+        weeklyCounts: [{ yw: 202551, total: 4 }, { yw: 202552, total: 3 }, { yw: 202601, total: 3 }],
+        currentYearWeek: 202601,
+        metaSemanal: 3
+    });
+    assert.equal(stackedStreak.ofensiva_ativa, true);
+    assert.equal(stackedStreak.multiplicador_ativo, 1.5);
+    assert.equal(stackedStreak.streak_semanas, 3);
+    assert.equal(stackedStreak.meta_semana_atual_atingida, true);
+
+    const resetStreak = gamif.computeWeeklyStreak({
+        weeklyCounts: [{ yw: 202551, total: 5 }, { yw: 202552, total: 1 }, { yw: 202601, total: 2 }],
+        currentYearWeek: 202601,
+        metaSemanal: 3
+    });
+    assert.equal(resetStreak.ofensiva_ativa, false);
+    assert.equal(resetStreak.multiplicador_ativo, 1.0);
+    assert.equal(resetStreak.streak_semanas, 0);
+
+    // 4. Árvore de Habilidades: 5 ramos, bloqueio por graduação & pré-requisito
+    const golpes = [
+        { id: 1, nome: 'Jab Básico', categoria: 'Soco', graduacao_ordem: 1, graduacao_nome: 'Branco' },
+        { id: 2, nome: 'Direto Cruzado', categoria: 'Soco', ramo_habilidade: 'punhos', habilidade_prerequisito_id: 1, graduacao_ordem: 2, graduacao_nome: 'Vermelho' },
+        { id: 3, nome: 'Super Chute Circular', categoria: 'Chute', graduacao_ordem: 2, graduacao_nome: 'Vermelho', habilidade_prerequisito_id: 2 },
+        { id: 4, nome: 'Joelhada Voadora', categoria: 'Joelhada', graduacao_ordem: 3, graduacao_nome: 'Azul' },
+        { id: 5, nome: 'Cotovelada Giratória', categoria: 'Cotovelada', graduacao_ordem: 2, graduacao_nome: 'Vermelho' },
+        { id: 6, nome: 'Bloqueio e Clinch', categoria: 'Esgrima / Clinch', graduacao_ordem: 2, graduacao_nome: 'Vermelho' }
+    ];
+
+    const treeBefore = gamif.buildSkillTree({ golpes, studentCurrentOrder: 2, masteredIds: [] });
+    assert.equal(treeBefore.ramos.length, 5);
+    const byIdBefore = new Map(treeBefore.ramos.flatMap(r => r.habilidades).map(h => [h.id, h]));
+    assert.equal(byIdBefore.get(1).estado, 'dominada'); // graduacao_ordem 1 < 2 -> auto-dominada
+    assert.equal(byIdBefore.get(2).estado, 'em_treinamento'); // prereq 1 dominado
+    assert.equal(byIdBefore.get(3).estado, 'bloqueada'); // falta prereq 2
+    assert.match(byIdBefore.get(3).motivo_bloqueio, /Direto Cruzado/);
+    assert.equal(byIdBefore.get(4).estado, 'bloqueada'); // graduacao_ordem 3 > 2
+    assert.equal(byIdBefore.get(5).estado, 'em_treinamento');
+    assert.equal(byIdBefore.get(6).estado, 'em_treinamento');
+
+    const treeAfter = gamif.buildSkillTree({ golpes, studentCurrentOrder: 2, masteredIds: [2] });
+    const byIdAfter = new Map(treeAfter.ramos.flatMap(r => r.habilidades).map(h => [h.id, h]));
+    assert.equal(byIdAfter.get(2).estado, 'dominada');
+    assert.equal(byIdAfter.get(3).estado, 'em_treinamento');
+
+    // 5. Mural de Líderes Segmentado, Privacidade (opt-out) & Resumo Sticky do Rodapé
+    const att = gamif.rankMonthlyAttendance([
+        { aluno_id: 1, nome_completo: 'Alice', xp_30d: 120, checkins_30d: 10, xp_total: 400, exibir_no_ranking: 1 },
+        { aluno_id: 2, nome_completo: 'Bruno', xp_30d: 140, checkins_30d: 11, xp_total: 520, exibir_no_ranking: 1 },
+        { aluno_id: 3, nome_completo: 'Carlos', xp_30d: 100, checkins_30d: 8, xp_total: 250, exibir_no_ranking: 1 },
+        { aluno_id: 4, nome_completo: 'Oculto', xp_30d: 300, checkins_30d: 25, xp_total: 900, exibir_no_ranking: 0 }
+    ], 3);
+    assert.equal(att.lista.length, 3);
+    assert.equal(att.lista[0].nome_completo, 'Bruno');
+    assert.equal(att.lista[0].posicao, 1);
+    assert.equal(att.lista[2].is_current_student, true);
+    assert.equal(att.minha_posicao.posicao, 3);
+    assert.equal(att.minha_posicao.faltam_para_proximo, 20);
+    assert.match(att.minha_posicao.texto, /#3.*faltam 20 XP para alcançar o #2/);
+
+    const evo = gamif.rankMostImproved([
+        { aluno_id: 1, nome_completo: 'Alice', xp_total: 310, avaliacoes: [{ score_total: 88 }, { score_total: 72 }] },
+        { aluno_id: 2, nome_completo: 'Bruno', xp_total: 200, avaliacoes: [{ score_total: 65 }] }, // apenas 1 eval -> excluído
+        { aluno_id: 3, nome_completo: 'Carlos', xp_total: 180, avaliacoes: [{ score_total: 70 }, { score_total: 75 }] } // delta negativo -> excluído
+    ], 1);
+    assert.equal(evo.lista.length, 1);
+    assert.equal(evo.lista[0].delta_pts, 16);
+    assert.equal(evo.lista[0].xp_level.nivel, 4);
+
+    const attr = gamif.rankTopAttributesByGrade([
+        { aluno_id: 1, nome_completo: 'Alice', score_total: 88, score_forca: 16, xp_total: 200 },
+        { aluno_id: 2, nome_completo: 'Bruno', score_total: 82, score_forca: 19, xp_total: 250 }
+    ], 'forca', 1);
+    assert.equal(attr.lista[0].nome_completo, 'Bruno');
+    assert.equal(attr.lista[0].valor, 19);
+    assert.equal(attr.lista[0].atributo_max, 20);
+});
+
 test.after(async () => {
     try {
         await pool.end();

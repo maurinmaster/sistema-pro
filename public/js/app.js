@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.PlanosModule) await PlanosModule.init();
     if (window.WikiModule) WikiModule.init();
     if (window.MissoesModule) await MissoesModule.init();
+    if (window.RankingModule) await RankingModule.init();
     if (window.ExamesModule) await ExamesModule.init();
     if (window.MensagensConfigModule) MensagensConfigModule.init();
 
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'financeiro': { title: 'Planos & Gestão Financeira', shortTitle: 'Financeiro', desc: 'Gestão comercial de planos de treino, mensalidades e faturamento' },
                 'wiki': { title: 'Biblioteca de Golpes & Movimentos (Wiki)', shortTitle: 'Wiki', desc: 'Caderno técnico com passo a passo ilustrado, fotos e descrições de execução' },
                 'missoes': { title: 'Quadro de Missões & Desafios', shortTitle: 'Missões', desc: 'Crie desafios para os atletas escolherem e valide entregas concluídas no tatame' },
+                'ranking': { title: 'Mural de Líderes Saudável', shortTitle: 'Mural de Líderes', desc: 'Ranking segmentado por assiduidade 30d, maior evolução RPG e atributos por Prajied' },
                 'mensagens': { title: 'Configurações de Mensagens & Notificações', shortTitle: 'Mensagens', desc: 'Gerencie serviços automáticos, textos predefinidos, alertas para admin e envio do link do sistema' }
             };
 
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (targetSection === 'graduacoes' && window.GraduacoesModule) GraduacoesModule.loadCatalogo();
             if (targetSection === 'wiki' && window.WikiModule) WikiModule.loadGolpes();
             if (targetSection === 'missoes' && window.MissoesModule) MissoesModule.loadAll();
+            if (targetSection === 'ranking' && window.RankingModule) RankingModule.loadRanking();
             if (targetSection === 'exames' && window.ExamesModule) ExamesModule.loadAll();
             if (targetSection === 'mensagens' && window.MensagensConfigModule) MensagensConfigModule.loadAll();
 

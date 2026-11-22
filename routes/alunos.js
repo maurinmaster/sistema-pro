@@ -13,6 +13,7 @@ const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
 const notificationConfigService = require('../services/notificationConfigService');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
+const gamificationService = require('../services/gamificationService');
 
 // Configuração do Multer para armazenamento de fotos de perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -109,6 +110,9 @@ router.get('/', authenticateToken, async (req, res) => {
                 a.tipo_sanguineo,
                 a.foto_perfil_url,
                 a.status,
+                COALESCE(a.xp_total, 0) AS xp_total,
+                COALESCE(a.streak_semanas, 0) AS streak_semanas,
+                COALESCE(a.exibir_no_ranking, 1) AS exibir_no_ranking,
                 a.created_at,
                 -- Graduação atual principal
                 MAX(gn.nome) AS graduacao_nome,
@@ -243,6 +247,9 @@ router.get('/lixeira', authenticateToken, authorizeRoles('admin'), async (req, r
                 a.telefone_whatsapp,
                 a.foto_perfil_url,
                 a.status,
+                COALESCE(a.xp_total, 0) AS xp_total,
+                COALESCE(a.streak_semanas, 0) AS streak_semanas,
+                COALESCE(a.exibir_no_ranking, 1) AS exibir_no_ranking,
                 a.created_at,
                 a.deleted_at,
                 TIMESTAMPDIFF(DAY, a.deleted_at, NOW()) AS dias_na_lixeira
@@ -506,10 +513,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
             targetAval ? targetAval.proxima_graduacao : null
         );
 
+        const gamificacao = await gamificationService.recalculateStudentStreakAndXp(pool, id);
+        if (gamificacao) {
+            aluno.xp_total = gamificacao.xp_level.xp_total;
+            aluno.xp_level = gamificacao.xp_level;
+            aluno.streak_semanas = gamificacao.ofensiva.streak_semanas;
+            aluno.exibir_no_ranking = gamificacao.exibir_no_ranking;
+        }
+
         res.json({
             success: true,
             data: {
                 aluno,
+                gamificacao,
                 graduacoes,
                 avaliacoes,
                 avaliacoes_desempenho: avaliacoesDesempenho,
@@ -615,16 +631,18 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
 
         const passwordHash = await bcrypt.hash(rawSenha, 10);
         const receberWhatsappFlag = (receber_whatsapp === false || receber_whatsapp === 0 || receber_whatsapp === '0') ? 0 : 1;
+        const { exibir_no_ranking } = req.body;
+        const exibirRankingFlag = (exibir_no_ranking === false || exibir_no_ranking === 0 || exibir_no_ranking === '0') ? 0 : 1;
         await whatsappService.ensureWhatsAppColumn();
 
         // Insere aluno
         const [result] = await conn.query(`
             INSERT INTO alunos (
-                nome_completo, cpf, data_nascimento, genero, email, senha_app_hash, telefone_whatsapp, receber_whatsapp,
+                nome_completo, cpf, data_nascimento, genero, email, senha_app_hash, telefone_whatsapp, receber_whatsapp, exibir_no_ranking,
                 responsavel_nome, responsavel_cpf, responsavel_telefone,
                 contato_emergencia_nome, contato_emergencia_fone, tipo_sanguineo, observacoes_medicas,
                 foto_perfil_url, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             nome_completo.trim(),
             cpf ? cpf.trim() : null,
@@ -634,6 +652,7 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
             passwordHash,
             telefone_whatsapp.trim(),
             receberWhatsappFlag,
+            exibirRankingFlag,
             responsavel_nome ? responsavel_nome.trim() : null,
             responsavel_cpf ? responsavel_cpf.trim() : null,
             responsavel_telefone ? responsavel_telefone.trim() : null,
@@ -766,6 +785,8 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
         }
 
         const receberWhatsappFlag = (receber_whatsapp === false || receber_whatsapp === 0 || receber_whatsapp === '0') ? 0 : 1;
+        const { exibir_no_ranking } = req.body;
+        const exibirRankingFlag = (exibir_no_ranking === false || exibir_no_ranking === 0 || exibir_no_ranking === '0') ? 0 : 1;
         await whatsappService.ensureWhatsAppColumn();
 
         const [result] = await pool.query(`
@@ -777,6 +798,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
                 email = ?,
                 telefone_whatsapp = ?,
                 receber_whatsapp = ?,
+                exibir_no_ranking = ?,
                 responsavel_nome = ?,
                 responsavel_cpf = ?,
                 responsavel_telefone = ?,
@@ -795,6 +817,7 @@ router.put('/:id', authenticateToken, authorizeRoles('admin', 'recepcao'), async
             normalizedEmail,
             telefone_whatsapp.trim(),
             receberWhatsappFlag,
+            exibirRankingFlag,
             responsavel_nome ? responsavel_nome.trim() : null,
             responsavel_cpf ? responsavel_cpf.trim() : null,
             responsavel_telefone ? responsavel_telefone.trim() : null,
@@ -893,7 +916,7 @@ router.post('/:id/graduacoes', authenticateToken, authorizeRoles('admin', 'profe
         ]);
 
         // Inicializa as especificações da nova graduação em aluno_avaliacoes_graduacao
-        const [nivelRows] = await conn.query('SELECT nome, requisitos_lista_json, total_itens, porcentagem_minima FROM graduacoes_niveis WHERE id = ?', [graduacao_nivel_id]);
+        const [nivelRows] = await conn.query('SELECT nome, ordem_hierarquica, requisitos_lista_json, total_itens, porcentagem_minima FROM graduacoes_niveis WHERE id = ?', [graduacao_nivel_id]);
         if (nivelRows.length > 0) {
             let reqs = [];
             try {
@@ -925,6 +948,13 @@ router.post('/:id/graduacoes', authenticateToken, authorizeRoles('admin', 'profe
                     apto = 0,
                     data_avaliacao = NOW()
             `, [aluno_id, modalidade_id, graduacao_nivel_id, professor_avaliador_id || null, JSON.stringify(novosItens), totalPossivel]);
+
+            await gamificationService.autoMasterCompletedGradeSkills(conn, {
+                alunoId: aluno_id,
+                modalidadeId: modalidade_id,
+                newOrder: Number(nivelRows[0].ordem_hierarquica || 1),
+                professorId: professor_avaliador_id || req.user?.id || null
+            });
         }
 
         await conn.commit();
@@ -1132,6 +1162,15 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             ]
         });
 
+        const xpAward = await gamificationService.awardXp(pool, {
+            alunoId,
+            origem: 'avaliacao_rpg',
+            referenciaId: result.insertId,
+            xpBase: gamificationService.XP_AVALIACAO_RPG,
+            multiplicador: 1.0,
+            descricao: `Avaliação Técnica RPG (${parsed.rank_combate} • ${parsed.score_total}/100)`
+        });
+
         const normalizedSaved = rpgEvaluationService.normalizeRpgRow({
             id: result.insertId,
             aluno_id: alunoId,
@@ -1143,9 +1182,11 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
         res.status(201).json({
             success: true,
             message: parsed.trava_sparring_aplicada
-                ? `Avaliação RPG salva (Rank ${parsed.rank_combate} • ${parsed.score_total}/100). Critérios de sparring ajustados ao teto 3.`
-                : `Avaliação Técnica RPG registrada com sucesso (Rank ${parsed.rank_combate} • ${parsed.score_total}/100)!`,
-            data: normalizedSaved
+                ? `Avaliação RPG salva (Rank ${parsed.rank_combate} • ${parsed.score_total}/100). Critérios de sparring ajustados ao teto 3. (+${gamificationService.XP_AVALIACAO_RPG} XP)`
+                : `Avaliação Técnica RPG registrada com sucesso (Rank ${parsed.rank_combate} • ${parsed.score_total}/100)! (+${gamificationService.XP_AVALIACAO_RPG} XP)`,
+            data: normalizedSaved,
+            xp_bonus: gamificationService.XP_AVALIACAO_RPG,
+            xp_level: xpAward ? xpAward.xp_level : null
         });
     } catch (err) {
         console.error('Erro ao salvar avaliação técnica RPG:', err);
@@ -1291,6 +1332,13 @@ router.post('/:id/aprovar-promocao', authenticateToken, authorizeRoles('admin', 
                 percentual_obtido = 0.00,
                 apto = 0
         `, [aluno_id, modalidade_id, proxNivel.id, JSON.stringify(novosItens), totalPossivel]);
+
+        await gamificationService.autoMasterCompletedGradeSkills(conn, {
+            alunoId: aluno_id,
+            modalidadeId: modalidade_id,
+            newOrder: Number(proxNivel.ordem_hierarquica || 1),
+            professorId
+        });
 
         await conn.commit();
 
@@ -1601,6 +1649,160 @@ router.post('/avisos/enviar', authenticateToken, authorizeRoles('admin', 'recepc
     } catch (err) {
         console.error('Erro ao enviar aviso avulso por e-mail:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao enviar aviso por e-mail.' });
+    }
+});
+
+/**
+ * Carrega e monta a Árvore de Habilidades (5 ramos de combate) para o dossiê de um aluno.
+ */
+async function loadStudentSkillTreeData(dbPool, alunoId, modalidadeFilter = null) {
+    const [gradRows] = await dbPool.query(`
+        SELECT ag.modalidade_id, ag.graduacao_nivel_id, gn.nome AS nivel_nome,
+               gn.ordem_hierarquica, gn.cor_hex_primaria, gn.cor_hex_secundaria,
+               m.nome AS modalidade_nome
+        FROM aluno_graduacoes ag
+        JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
+        JOIN modalidades m ON m.id = ag.modalidade_id
+        WHERE ag.aluno_id = ? AND ag.atual = 1
+        ORDER BY (LOWER(m.nome) LIKE '%muay%') DESC, ag.id DESC
+        LIMIT 1
+    `, [alunoId]);
+
+    const gradAtual = gradRows[0] || null;
+    const modId = (modalidadeFilter && !Number.isNaN(modalidadeFilter))
+        ? modalidadeFilter
+        : (gradAtual ? gradAtual.modalidade_id : null);
+    const studentCurrentOrder = gradAtual ? Number(gradAtual.ordem_hierarquica || 1) : 1;
+
+    let modWhere = '';
+    const params = [];
+    if (modId) {
+        modWhere = ' AND (wg.modalidade_id IS NULL OR wg.modalidade_id = ? OR gn.modalidade_id = ?)';
+        params.push(modId, modId);
+    }
+
+    const [golpesRows] = await dbPool.query(`
+        SELECT wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.ramo_habilidade,
+               wg.habilidade_prerequisito_id, wg.nivel_dificuldade, wg.descricao_geral,
+               wg.imagem_capa, wg.video_url,
+               pre.nome AS prerequisito_nome,
+               m.nome AS modalidade_nome,
+               COALESCE(MIN(gn.ordem_hierarquica), 1) AS graduacao_ordem,
+               SUBSTRING_INDEX(GROUP_CONCAT(gn.nome ORDER BY gn.ordem_hierarquica ASC SEPARATOR '||'), '||', 1) AS graduacao_nome,
+               MIN(gn.id) AS graduacao_nivel_id,
+               SUBSTRING_INDEX(GROUP_CONCAT(gn.cor_hex_primaria ORDER BY gn.ordem_hierarquica ASC SEPARATOR '||'), '||', 1) AS graduacao_cor
+        FROM wiki_golpes wg
+        LEFT JOIN graduacao_nivel_golpes gng ON gng.golpe_id = wg.id
+        LEFT JOIN graduacoes_niveis gn ON gn.id = gng.graduacao_nivel_id
+        LEFT JOIN wiki_golpes pre ON pre.id = wg.habilidade_prerequisito_id
+        LEFT JOIN modalidades m ON m.id = wg.modalidade_id
+        WHERE wg.ativo = 1 ${modWhere}
+        GROUP BY wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.ramo_habilidade,
+                 wg.habilidade_prerequisito_id, wg.nivel_dificuldade, wg.descricao_geral,
+                 wg.imagem_capa, wg.video_url, pre.nome, m.nome
+    `, params);
+
+    const [masteredRows] = await dbPool.query(
+        `SELECT agp.golpe_id, agp.validado_em, ue.nome AS validado_por_nome
+         FROM aluno_golpes_progresso agp
+         LEFT JOIN usuarios_equipe ue ON ue.id = agp.validado_por
+         WHERE agp.aluno_id = ? AND agp.status = 'dominado'`,
+        [alunoId]
+    );
+
+    const masteredIds = masteredRows.map(r => Number(r.golpe_id));
+    const valMap = new Map(masteredRows.map(r => [Number(r.golpe_id), r]));
+    const enriched = golpesRows.map(g => {
+        const info = valMap.get(Number(g.id));
+        return {
+            ...g,
+            validado_em: info ? info.validado_em : null,
+            validado_por_nome: info ? info.validado_por_nome : null
+        };
+    });
+
+    const skillTree = gamificationService.buildSkillTree({
+        golpes: enriched,
+        studentCurrentOrder,
+        masteredIds
+    });
+
+    return { graduacao_atual: gradAtual, skill_tree: skillTree };
+}
+
+// GET /api/alunos/:id/skill-tree - Checklist rápido da Árvore de Habilidades para o Instrutor
+router.get('/:id/skill-tree', authenticateToken, authorizeRoles('admin', 'professor', 'recepcao'), async (req, res) => {
+    try {
+        const alunoId = parseInt(req.params.id, 10);
+        if (!alunoId || Number.isNaN(alunoId)) {
+            return res.status(400).json({ success: false, error: 'ID do aluno inválido.' });
+        }
+
+        const modFilter = req.query.modalidade_id ? parseInt(req.query.modalidade_id, 10) : null;
+        const data = await loadStudentSkillTreeData(pool, alunoId, modFilter);
+        res.json({ success: true, ...data });
+    } catch (err) {
+        console.error('Erro ao carregar skill tree do aluno:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao consultar árvore de habilidades.' });
+    }
+});
+
+// POST /api/alunos/:id/skill-tree/:golpeId/validar - Instrutor marca/desmarca técnica como Dominada
+router.post('/:id/skill-tree/:golpeId/validar', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const alunoId = parseInt(req.params.id, 10);
+        const golpeId = parseInt(req.params.golpeId, 10);
+        if (!alunoId || Number.isNaN(alunoId) || !golpeId || Number.isNaN(golpeId)) {
+            return res.status(400).json({ success: false, error: 'Parâmetros inválidos.' });
+        }
+
+        const [alunoRows] = await pool.query('SELECT id FROM alunos WHERE id = ? AND deleted_at IS NULL', [alunoId]);
+        if (alunoRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        const [golpeRows] = await pool.query('SELECT id, nome FROM wiki_golpes WHERE id = ? AND ativo = 1', [golpeId]);
+        if (golpeRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Técnica não encontrada.' });
+        }
+
+        const wantMaster = req.body?.status
+            ? String(req.body.status).toLowerCase().trim() === 'dominado'
+            : Boolean(req.body?.validado);
+
+        if (wantMaster) {
+            await pool.query(`
+                INSERT INTO aluno_golpes_progresso (aluno_id, golpe_id, status, validado_por, validado_em)
+                VALUES (?, ?, 'dominado', ?, NOW())
+                ON DUPLICATE KEY UPDATE
+                    status = 'dominado',
+                    validado_por = VALUES(validado_por),
+                    validado_em = NOW(),
+                    updated_at = NOW()
+            `, [alunoId, golpeId, req.user?.id || null]);
+        } else {
+            await pool.query(`
+                INSERT INTO aluno_golpes_progresso (aluno_id, golpe_id, status, validado_por, validado_em)
+                VALUES (?, ?, 'em_treino', NULL, NULL)
+                ON DUPLICATE KEY UPDATE
+                    status = 'em_treino',
+                    validado_por = NULL,
+                    validado_em = NULL,
+                    updated_at = NOW()
+            `, [alunoId, golpeId]);
+        }
+
+        const data = await loadStudentSkillTreeData(pool, alunoId);
+        res.json({
+            success: true,
+            message: wantMaster
+                ? `Técnica "${golpeRows[0].nome}" validada como Dominada!`
+                : `Técnica "${golpeRows[0].nome}" retornada para Em Treinamento.`,
+            ...data
+        });
+    } catch (err) {
+        console.error('Erro ao validar técnica na skill tree:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao atualizar técnica do aluno.' });
     }
 });
 

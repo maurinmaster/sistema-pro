@@ -23,6 +23,27 @@ const CheckinsModule = {
                 this.openCheckinModal();
             });
         }
+
+        const selectTurma = document.getElementById('checkin-turma-id');
+        if (selectTurma) {
+            selectTurma.addEventListener('change', () => {
+                this.syncTipoAulaWithSelectedTurma();
+            });
+        }
+    },
+
+    syncTipoAulaWithSelectedTurma() {
+        const selectTurma = document.getElementById('checkin-turma-id');
+        const selectTipo = document.getElementById('checkin-tipo-aula');
+        if (!selectTurma || !selectTipo) return;
+
+        const selectedOpt = selectTurma.options[selectTurma.selectedIndex];
+        const turmaTipo = selectedOpt ? (selectedOpt.dataset.tipoAula || '') : '';
+        if (turmaTipo === 'especial' || turmaTipo === 'regular') {
+            selectTipo.value = turmaTipo;
+        } else {
+            selectTipo.value = 'regular';
+        }
     },
 
     async loadTurmas() {
@@ -32,13 +53,54 @@ const CheckinsModule = {
 
             const selectTurma = document.getElementById('checkin-turma-id');
             if (selectTurma) {
-                selectTurma.innerHTML = '<option value="">Treino Livre / Sem Turma Fixa</option>';
+                selectTurma.innerHTML = '<option value="" data-tipo-aula="regular">Treino Livre / Sem Turma Fixa (+10 XP)</option>';
                 this.turmas.forEach(t => {
-                    selectTurma.innerHTML += `<option value="${Number(t.id)}" data-mod="${Number(t.modalidade_id)}">${UI.escapeHtml(t.nome)} (${UI.escapeHtml(t.dias_semana)} ${UI.escapeHtml((t.horario_inicio || '').slice(0, 5))})</option>`;
+                    const isEspecial = String(t.tipo_aula || 'regular').toLowerCase() === 'especial';
+                    const xpTag = isEspecial ? '+20 XP Especial' : '+10 XP';
+                    selectTurma.innerHTML += `<option value="${Number(t.id)}" data-mod="${Number(t.modalidade_id)}" data-tipo-aula="${isEspecial ? 'especial' : 'regular'}">${UI.escapeHtml(t.nome)} (${UI.escapeHtml(t.dias_semana)} ${UI.escapeHtml((t.horario_inicio || '').slice(0, 5))}) • ${xpTag}</option>`;
                 });
             }
+
+            this.renderTurmasXpConfig();
         } catch (err) {
             console.error('Erro ao listar turmas:', err);
+        }
+    },
+
+    renderTurmasXpConfig() {
+        const container = document.getElementById('checkins-turmas-xp-config');
+        if (!container) return;
+
+        if (!this.turmas || this.turmas.length === 0) {
+            container.innerHTML = '<span style="font-size: 12px; color: var(--text-muted);">Nenhuma turma cadastrada para configurar bônus de XP.</span>';
+            return;
+        }
+
+        container.innerHTML = this.turmas.map(t => {
+            const isEsp = String(t.tipo_aula || 'regular').toLowerCase() === 'especial';
+            const safeId = Number(t.id);
+            const nextTipo = isEsp ? 'regular' : 'especial';
+            return `
+                <button type="button" class="turma-xp-chip ${isEsp ? 'is-especial' : ''}"
+                    onclick="CheckinsModule.toggleTurmaTipoAula(${safeId}, '${nextTipo}')"
+                    title="Clique para alternar entre Aula Regular (+10 XP) e Treino Especial/Sparring/Aulão (+20 XP)">
+                    <span class="turma-xp-name">${UI.escapeHtml(t.nome)}</span>
+                    <span class="turma-xp-badge">${isEsp ? '🔥 Especial +20 XP' : 'Regular +10 XP'}</span>
+                </button>
+            `;
+        }).join('');
+    },
+
+    async toggleTurmaTipoAula(turmaId, nextTipo) {
+        try {
+            const res = await API.patch(`/checkins/turmas/${Number(turmaId)}/tipo-aula`, {
+                tipo_aula: nextTipo,
+                xp_base: nextTipo === 'especial' ? 20 : 10
+            });
+            UI.showToast(res.message || 'Configuração de XP da turma atualizada!', 'success');
+            await this.loadTurmas();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao atualizar tipo de aula da turma.', 'error');
         }
     },
 
@@ -51,7 +113,7 @@ const CheckinsModule = {
             const list = res.data || [];
 
             if (list.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 30px; color: var(--text-muted);">Nenhum check-in registrado hoje.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">Nenhum check-in registrado hoje.</td></tr>`;
                 return;
             }
 
@@ -59,6 +121,12 @@ const CheckinsModule = {
                 const statusColor = c.status === 'aprovado' ? '#10b981' : '#ef4444';
                 const fallbackAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(c.aluno_nome || 'Aluno');
                 const safeAvatar = UI.sanitizeUrl(c.foto_perfil_url, fallbackAvatar);
+                const xpGanho = Number(c.xp_ganho || 0);
+                const mult = Number(c.multiplicador_xp || 1);
+                const isEsp = String(c.tipo_aula || 'regular') === 'especial';
+                const xpBadge = c.status === 'aprovado'
+                    ? `<span class="checkin-xp-pill ${isEsp ? 'especial' : ''}">+${xpGanho || (isEsp ? 20 : 10)} XP${mult >= 1.5 ? ' (1.5x)' : ''}</span>`
+                    : `<span style="font-size: 11px; color: var(--text-muted);">—</span>`;
                 return `
                     <tr>
                         <td>
@@ -71,6 +139,7 @@ const CheckinsModule = {
                         </td>
                         <td><strong style="color: var(--primary-light);">${UI.escapeHtml(c.modalidade_nome)}</strong></td>
                         <td>${UI.escapeHtml(c.turma_nome || 'Treino Livre')}</td>
+                        <td>${xpBadge}</td>
                         <td style="font-family: var(--font-mono); font-size: 12px;">${UI.formatDateTime(c.data_hora_checkin)}</td>
                         <td>
                             <span style="color: ${statusColor}; font-weight: 700; text-transform: uppercase; font-size: 11px;">
@@ -106,6 +175,10 @@ const CheckinsModule = {
             });
         }
 
+        const selectTipo = document.getElementById('checkin-tipo-aula');
+        if (selectTipo) selectTipo.value = 'regular';
+        this.syncTipoAulaWithSelectedTurma();
+
         UI.openModal('modal-checkin');
     },
 
@@ -119,6 +192,7 @@ const CheckinsModule = {
         const modalidade_id = document.getElementById('checkin-modalidade-id').value;
         const turma_id = document.getElementById('checkin-turma-id').value || null;
         const metodo = document.getElementById('checkin-metodo').value || 'manual_professor';
+        const tipo_aula = document.getElementById('checkin-tipo-aula')?.value || 'regular';
 
         if (!aluno_id || !modalidade_id) {
             UI.showToast('Selecione o aluno e a modalidade', 'warning');
@@ -130,7 +204,8 @@ const CheckinsModule = {
                 aluno_id,
                 modalidade_id,
                 turma_id,
-                metodo
+                metodo,
+                tipo_aula
             });
 
             if (res.status === 'aprovado') {

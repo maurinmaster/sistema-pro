@@ -7,6 +7,7 @@ const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
 const missoesService = require('../services/missoesService');
+const gamificationService = require('../services/gamificationService');
 
 const adminRouter = express.Router();
 const alunoRouter = express.Router();
@@ -277,10 +278,17 @@ adminRouter.patch('/inscricoes/:inscricaoId/validar', authenticateToken, authori
         const feedback = rawFeedback ? rawFeedback.slice(0, 300) : null;
         const validadorId = req.user?.id ? Number(req.user.id) : null;
 
-        const [rows] = await pool.query('SELECT id, status FROM aluno_missoes WHERE id = ?', [inscricaoId]);
+        const [rows] = await pool.query(`
+            SELECT am.id, am.aluno_id, am.status, mq.titulo, mq.recompensa_xp
+            FROM aluno_missoes am
+            JOIN missoes_quadro mq ON mq.id = am.missao_id
+            WHERE am.id = ?
+        `, [inscricaoId]);
         if (rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Inscrição de missão não encontrada.' });
         }
+
+        const insc = rows[0];
 
         if (acao === 'aprovar') {
             await pool.query(`
@@ -292,7 +300,25 @@ adminRouter.patch('/inscricoes/:inscricaoId/validar', authenticateToken, authori
                 WHERE id = ?
             `, [validadorId, feedback, inscricaoId]);
 
-            return res.json({ success: true, message: 'Missão aprovada e XP liberado para o aluno!' });
+            let xpAward = null;
+            if (insc.status !== 'concluida' && Number(insc.recompensa_xp || 0) > 0) {
+                xpAward = await gamificationService.awardXp(pool, {
+                    alunoId: insc.aluno_id,
+                    origem: 'missao_concluida',
+                    referenciaId: insc.id,
+                    xpBase: Number(insc.recompensa_xp),
+                    multiplicador: 1.0,
+                    descricao: `Missão concluída: ${insc.titulo}`
+                });
+            }
+
+            return res.json({
+                success: true,
+                xp_ganho: xpAward ? xpAward.xp_final : 0,
+                message: xpAward && xpAward.xp_final > 0
+                    ? `Missão aprovada e +${xpAward.xp_final} XP liberado para o aluno!`
+                    : 'Missão aprovada com sucesso!'
+            });
         }
 
         await pool.query(`

@@ -184,9 +184,13 @@ const AlunoDetalhesModule = {
             const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedNome || 'Aluno')}&background=0284c7&color=fff`;
             avatarEl.src = UI.sanitizeUrl(aluno.foto_perfil_url, fallbackAvatar);
         }
+        const xpLevel = data.gamificacao?.xp_level || aluno.xp_level || null;
+        const streakSem = Number(aluno.streak_semanas ?? data.gamificacao?.ofensiva?.streak_semanas ?? 0);
         document.getElementById('dossie-nome').textContent = formattedNome;
         document.getElementById('dossie-meta').innerHTML = `
             ${UI.renderStatusBadge(aluno.status)}
+            ${xpLevel ? `<span class="badge-status ativo" style="background: rgba(56, 189, 248, 0.16); color: #7dd3fc;">Nível ${Number(xpLevel.nivel)} • ${Number(xpLevel.xp_total)} XP</span>` : ''}
+            ${streakSem >= 1 ? `<span class="streak-flame-inline">🔥 ${streakSem} ${streakSem === 1 ? 'semana' : 'semanas'}</span>` : ''}
             <span style="white-space: nowrap;">CPF: ${UI.escapeHtml(aluno.cpf || 'Não informado')}</span>
             <span style="white-space: nowrap;">${aluno.idade !== null ? Number(aluno.idade) + ' anos' : 'Idade não inf.'}</span>
             ${isMenor ? '<span class="minor-tag">MENOR</span>' : ''}
@@ -392,7 +396,9 @@ const AlunoDetalhesModule = {
             </div>
         `;
 
-        document.getElementById('dossier-tab-graduacoes').innerHTML = avaliacoesHtml + gradTimeline;
+        const skillTreePlaceholderHtml = `<div id="dossier-skill-tree-checklist-container"></div>`;
+        document.getElementById('dossier-tab-graduacoes').innerHTML = avaliacoesHtml + skillTreePlaceholderHtml + gradTimeline;
+        this.loadSkillTreeChecklist(safeAlunoId);
 
         // TAB 3: MATRÍCULA & HISTÓRICO FINANCEIRO
         let contractActionsHtml = '';
@@ -1685,6 +1691,99 @@ const AlunoDetalhesModule = {
             if (window.AlunosModule) AlunosModule.loadAlunos();
         } catch (err) {
             UI.showToast('Erro ao excluir avaliação: ' + err.message, 'error');
+        }
+    },
+
+    async loadSkillTreeChecklist(alunoId) {
+        const container = document.getElementById('dossier-skill-tree-checklist-container');
+        if (!container) return;
+
+        container.innerHTML = `<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12.5px;"><div class="spinner"></div> Carregando Árvore de Habilidades...</div>`;
+        try {
+            const res = await API.get(`/alunos/${Number(alunoId)}/skill-tree`);
+            if (!res || !res.success || !res.skill_tree) {
+                throw new Error(res?.error || 'Árvore de habilidades indisponível.');
+            }
+            this.renderSkillTreeChecklist(Number(alunoId), res);
+        } catch (err) {
+            container.innerHTML = `<div class="skill-checklist-card" style="color: #fca5a5; font-size: 12.5px;">${UI.escapeHtml(err.message)}</div>`;
+        }
+    },
+
+    renderSkillTreeChecklist(alunoId, data) {
+        const container = document.getElementById('dossier-skill-tree-checklist-container');
+        if (!container) return;
+
+        const tree = data.skill_tree || {};
+        const resumo = tree.resumo || {};
+        const ramos = (tree.ramos || []).filter(r => r.habilidades && r.habilidades.length > 0);
+        const canValidate = !window.AuthModule || AuthModule.can('manage_alunos');
+
+        if (ramos.length === 0) {
+            container.innerHTML = `
+                <div class="skill-checklist-card">
+                    <div style="font-weight: 700; font-size: 14px; color: #ffffff;">🌳 Árvore de Habilidades (Checklist do Instrutor)</div>
+                    <p style="font-size: 12px; color: var(--text-muted); margin: 6px 0 0 0;">Nenhuma técnica cadastrada na Wiki para a modalidade atual deste aluno.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="skill-checklist-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div>
+                        <div style="font-weight: 800; font-size: 14.5px; color: #ffffff;">🌳 Árvore de Habilidades • Checklist do Instrutor</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Valide golpes como Dominados no tatame para desbloquear técnicas dependentes.</div>
+                    </div>
+                    <span class="badge-status ativo" style="font-size: 11.5px;">
+                        ${Number(resumo.dominadas || 0)}/${Number(resumo.total || 0)} Dominadas (${Number(resumo.progresso_pct || 0)}%)
+                    </span>
+                </div>
+                ${ramos.map(ramo => `
+                    <div class="skill-checklist-branch">
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; color: #e2e8f0;">
+                            <span>${UI.escapeHtml(ramo.icone)} ${UI.escapeHtml(ramo.nome)}</span>
+                            <span style="color: #38bdf8; font-size: 11.5px;">${Number(ramo.dominadas)}/${Number(ramo.total)}</span>
+                        </div>
+                        <div class="skill-checklist-items">
+                            ${ramo.habilidades.map(h => {
+                                const isDom = h.estado === 'dominada';
+                                const isLock = h.estado === 'bloqueada';
+                                const safeGolpeId = Number(h.id);
+                                return `
+                                    <label class="skill-check-item ${isDom ? 'is-dominada' : (isLock ? 'is-bloqueada' : '')}" title="${UI.escapeHtml(h.motivo_bloqueio || h.graduacao_nome || '')}">
+                                        <div style="min-width: 0;">
+                                            <div style="font-weight: 700; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${UI.escapeHtml(h.nome)}</div>
+                                            <div style="font-size: 11px; color: var(--text-muted);">
+                                                ${isLock ? '🔒 Bloqueada' : (isDom ? '✅ Dominada' : '⚡ Em Treino')}
+                                                ${h.graduacao_nome ? ` • ${UI.escapeHtml(h.graduacao_nome)}` : ''}
+                                            </div>
+                                        </div>
+                                        <input type="checkbox" ${isDom ? 'checked' : ''} ${(!canValidate || isLock) ? 'disabled' : ''}
+                                            style="width: 17px; height: 17px; accent-color: #10b981; cursor: ${(!canValidate || isLock) ? 'not-allowed' : 'pointer'}; flex-shrink: 0;"
+                                            onchange="AlunoDetalhesModule.toggleSkillTreeNode(${Number(alunoId)}, ${safeGolpeId}, this.checked)">
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    },
+
+    async toggleSkillTreeNode(alunoId, golpeId, validado) {
+        try {
+            const res = await API.post(`/alunos/${Number(alunoId)}/skill-tree/${Number(golpeId)}/validar`, {
+                validado: Boolean(validado),
+                status: validado ? 'dominado' : 'em_treino'
+            });
+            UI.showToast(res.message || 'Status da técnica atualizado!', 'success');
+            this.renderSkillTreeChecklist(Number(alunoId), res);
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao validar técnica.', 'error');
+            this.loadSkillTreeChecklist(alunoId);
         }
     }
 };

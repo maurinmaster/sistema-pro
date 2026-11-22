@@ -14,6 +14,7 @@ const asaasService = require('../services/asaasService');
 const notificationConfigService = require('../services/notificationConfigService');
 const paymentReconciliationService = require('../services/paymentReconciliationService');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
+const gamificationService = require('../services/gamificationService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
@@ -396,56 +397,37 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             }
         }
 
-        // Streak de Semanas Consecutivas
-        const [semanasCheckins] = await pool.query(`
-            SELECT DISTINCT YEARWEEK(data_hora_checkin, 1) AS yw
-            FROM checkins
-            WHERE aluno_id = ? AND status = 'aprovado'
-            ORDER BY yw DESC
-        `, [alunoId]);
+        // Ofensiva Semanal (Streak 1.5x XP) e Nível Contínuo via gamificationService
+        const gamificationStats = await gamificationService.recalculateStudentStreakAndXp(pool, alunoId) || {
+            ofensiva: {
+                streak_semanas: 0,
+                ofensiva_ativa: false,
+                multiplicador_ativo: 1.0,
+                treinos_semana_atual: totalTreinosSemana,
+                treinos_semana_anterior: 0,
+                meta_semanal: (plano && plano.limite_checkins_semana) ? Number(plano.limite_checkins_semana) : 3,
+                meta_semana_atual_atingida: false,
+                falta_para_meta: 3
+            },
+            xp_level: gamificationService.computeLevelFromXp(0),
+            exibir_no_ranking: true
+        };
 
-        const [semanaAtualRow] = await pool.query('SELECT YEARWEEK(CURDATE(), 1) as cur_yw');
-        const curYw = Number(semanaAtualRow[0]?.cur_yw);
-        const setSemanas = new Set(semanasCheckins.map(s => Number(s.yw)));
-        let streakSemanas = 0;
-
-        let checkYw = curYw;
-        if (!setSemanas.has(checkYw)) {
-            const [prevWeekRow] = await pool.query('SELECT YEARWEEK(DATE_SUB(CURDATE(), INTERVAL 1 WEEK), 1) as prev_yw');
-            checkYw = Number(prevWeekRow[0]?.prev_yw);
-        }
-
-        if (setSemanas.has(checkYw)) {
-            const [allConsecutive] = await pool.query(`
-                SELECT DISTINCT YEARWEEK(data_hora_checkin, 1) AS yw
-                FROM checkins
-                WHERE aluno_id = ? AND status = 'aprovado' AND YEARWEEK(data_hora_checkin, 1) <= ?
-                ORDER BY yw DESC
-                LIMIT 52
-            `, [alunoId, checkYw]);
-
-            for (let i = 0; i < allConsecutive.length; i++) {
-                streakSemanas++;
-                if (i < allConsecutive.length - 1) {
-                    const thisYw = Number(allConsecutive[i].yw);
-                    const nextYw = Number(allConsecutive[i + 1].yw);
-                    if (thisYw - nextYw !== 1 && !(thisYw % 100 === 1 && nextYw % 100 >= 52)) {
-                        break;
-                    }
-                }
-            }
-        }
-        if (streakSemanas === 0 && totalTreinosSemana > 0) {
-            streakSemanas = 1;
-        }
-
-        const metaSemana = (plano && plano.limite_checkins_semana) ? Number(plano.limite_checkins_semana) : 3;
+        const ofensiva = gamificationStats.ofensiva;
+        const metaSemana = ofensiva.meta_semanal || ((plano && plano.limite_checkins_semana) ? Number(plano.limite_checkins_semana) : 3);
+        const treinosContabilizadosSemana = Math.max(totalTreinosSemana, Number(ofensiva.treinos_semana_atual || 0));
         const streakObj = {
-            semanas_consecutivas: streakSemanas,
-            total_semana: totalTreinosSemana,
+            semanas_consecutivas: ofensiva.streak_semanas,
+            streak_semanas: ofensiva.streak_semanas,
+            ofensiva_ativa: ofensiva.ofensiva_ativa,
+            multiplicador_xp: ofensiva.multiplicador_ativo,
+            multiplicador_label: ofensiva.multiplicador_ativo >= 1.5 ? '1.5x XP Ativo' : '1.0x XP',
+            total_semana: treinosContabilizadosSemana,
             meta_semana: metaSemana,
-            percentual_semana: Math.min(100, Math.round((totalTreinosSemana / metaSemana) * 100)),
-            meta_atingida: totalTreinosSemana >= metaSemana,
+            meta_semanal: metaSemana,
+            percentual_semana: Math.min(100, Math.round((treinosContabilizadosSemana / metaSemana) * 100)),
+            meta_atingida: ofensiva.meta_semana_atual_atingida,
+            falta_para_meta: ofensiva.falta_para_meta,
             dias_semana: diasSemana
         };
 
@@ -920,6 +902,10 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                 foto_perfil_url: aluno.foto_perfil_url,
                 skin_fighter: aluno.skin_fighter || 'mt-skin-1.jpg',
                 status: aluno.status,
+                xp_total: gamificationStats.xp_level.xp_total,
+                xp_level: gamificationStats.xp_level,
+                streak_semanas: gamificationStats.ofensiva.streak_semanas,
+                exibir_no_ranking: gamificationStats.exibir_no_ranking,
                 medidas: {
                     peso_kg: peso,
                     altura_cm: alturaCm,
@@ -996,6 +982,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             },
             prontidao_exame: prontidaoExame,
             recompensas: recompensas,
+            gamificacao: gamificationStats,
             graduacao: {
                 atual: graduacaoAtual ? {
                     nivel_id: graduacaoAtual.nivel_id,
@@ -1272,10 +1259,13 @@ router.get('/golpe/:id', optionalAuth, async (req, res) => {
         }
 
         const [golpes] = await pool.query(`
-            SELECT wg.id, wg.nome, wg.categoria, wg.nivel_dificuldade, wg.descricao_geral, wg.imagem_capa,
+            SELECT wg.id, wg.nome, wg.categoria, wg.ramo_habilidade, wg.habilidade_prerequisito_id,
+                   wg.nivel_dificuldade, wg.descricao_geral, wg.imagem_capa, wg.video_url,
+                   pre.nome AS prerequisito_nome,
                    m.id AS modalidade_id, m.nome AS modalidade_nome
             FROM wiki_golpes wg
             LEFT JOIN modalidades m ON m.id = wg.modalidade_id
+            LEFT JOIN wiki_golpes pre ON pre.id = wg.habilidade_prerequisito_id
             WHERE wg.id = ?
         `, [golpeId]);
 
@@ -2294,6 +2284,150 @@ router.put('/perfil/telefone', optionalAuth, async (req, res) => {
     } catch (err) {
         console.error('Erro ao atualizar telefone do aluno:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao atualizar telefone.' });
+    }
+});
+
+/**
+ * GET /api/aluno/skill-tree
+ * Retorna a Árvore de Habilidades interativa do atleta agrupada nos 5 ramos de combate.
+ */
+router.get('/skill-tree', optionalAuth, async (req, res) => {
+    try {
+        let alunoId = null;
+        if (req.user) {
+            if (req.user.aluno_id || req.user.cargo === 'aluno') {
+                alunoId = req.user.aluno_id || req.user.id;
+            } else if (req.query.aluno_id) {
+                alunoId = parseInt(req.query.aluno_id, 10);
+            }
+        } else if (process.env.NODE_ENV !== 'production') {
+            alunoId = parseInt(req.query.aluno_id || '1', 10);
+        }
+
+        if (!alunoId || Number.isNaN(alunoId)) {
+            return res.status(401).json({ success: false, error: 'Sessão de aluno não identificada.' });
+        }
+
+        const modFilterParam = req.query.modalidade_id ? parseInt(req.query.modalidade_id, 10) : null;
+        const [gradRows] = await pool.query(`
+            SELECT ag.modalidade_id, ag.graduacao_nivel_id, gn.nome AS nivel_nome,
+                   gn.ordem_hierarquica, gn.cor_hex_primaria, gn.cor_hex_secundaria,
+                   m.nome AS modalidade_nome
+            FROM aluno_graduacoes ag
+            JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
+            JOIN modalidades m ON m.id = ag.modalidade_id
+            WHERE ag.aluno_id = ? AND ag.atual = 1
+            ORDER BY (LOWER(m.nome) LIKE '%muay%') DESC, ag.id DESC
+            LIMIT 1
+        `, [alunoId]);
+
+        const gradAtual = gradRows[0] || null;
+        const targetModId = (modFilterParam && !Number.isNaN(modFilterParam))
+            ? modFilterParam
+            : (gradAtual ? gradAtual.modalidade_id : null);
+        const studentCurrentOrder = gradAtual ? Number(gradAtual.ordem_hierarquica || 1) : 1;
+
+        let modWhere = '';
+        const params = [];
+        if (targetModId) {
+            modWhere = ' AND (wg.modalidade_id IS NULL OR wg.modalidade_id = ? OR gn.modalidade_id = ?)';
+            params.push(targetModId, targetModId);
+        }
+
+        const [golpesRows] = await pool.query(`
+            SELECT wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.ramo_habilidade,
+                   wg.habilidade_prerequisito_id, wg.nivel_dificuldade, wg.descricao_geral,
+                   wg.imagem_capa, wg.video_url,
+                   pre.nome AS prerequisito_nome,
+                   m.nome AS modalidade_nome,
+                   COALESCE(MIN(gn.ordem_hierarquica), 1) AS graduacao_ordem,
+                   SUBSTRING_INDEX(GROUP_CONCAT(gn.nome ORDER BY gn.ordem_hierarquica ASC SEPARATOR '||'), '||', 1) AS graduacao_nome,
+                   MIN(gn.id) AS graduacao_nivel_id,
+                   SUBSTRING_INDEX(GROUP_CONCAT(gn.cor_hex_primaria ORDER BY gn.ordem_hierarquica ASC SEPARATOR '||'), '||', 1) AS graduacao_cor,
+                   (SELECT COUNT(*) FROM wiki_golpe_passos wgp WHERE wgp.golpe_id = wg.id) AS total_passos
+            FROM wiki_golpes wg
+            LEFT JOIN graduacao_nivel_golpes gng ON gng.golpe_id = wg.id
+            LEFT JOIN graduacoes_niveis gn ON gn.id = gng.graduacao_nivel_id
+            LEFT JOIN wiki_golpes pre ON pre.id = wg.habilidade_prerequisito_id
+            LEFT JOIN modalidades m ON m.id = wg.modalidade_id
+            WHERE wg.ativo = 1 ${modWhere}
+            GROUP BY wg.id, wg.nome, wg.modalidade_id, wg.categoria, wg.ramo_habilidade,
+                     wg.habilidade_prerequisito_id, wg.nivel_dificuldade, wg.descricao_geral,
+                     wg.imagem_capa, wg.video_url, pre.nome, m.nome
+        `, params);
+
+        const [masteredRows] = await pool.query(
+            `SELECT golpe_id, validado_em FROM aluno_golpes_progresso WHERE aluno_id = ? AND status = 'dominado'`,
+            [alunoId]
+        );
+        const masteredIds = masteredRows.map(r => Number(r.golpe_id));
+        const validadoMap = new Map(masteredRows.map(r => [Number(r.golpe_id), r.validado_em || null]));
+
+        const enrichedGolpes = golpesRows.map(g => ({
+            ...g,
+            validado_em: validadoMap.get(Number(g.id)) || null
+        }));
+
+        const skillTree = gamificationService.buildSkillTree({
+            golpes: enrichedGolpes,
+            studentCurrentOrder,
+            masteredIds
+        });
+
+        res.json({
+            success: true,
+            graduacao_atual: gradAtual,
+            skill_tree: skillTree
+        });
+    } catch (err) {
+        console.error('Erro ao carregar Árvore de Habilidades do aluno:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao carregar árvore de habilidades.' });
+    }
+});
+
+/**
+ * PUT /api/aluno/perfil/privacidade-ranking
+ * Permite que o atleta opte por aparecer ou se ocultar dos rankings públicos.
+ */
+router.put('/perfil/privacidade-ranking', optionalAuth, async (req, res) => {
+    try {
+        let alunoId = null;
+        if (req.user) {
+            if (req.user.aluno_id || req.user.cargo === 'aluno') {
+                alunoId = req.user.aluno_id || req.user.id;
+            } else if (req.body?.aluno_id) {
+                alunoId = parseInt(req.body.aluno_id, 10);
+            }
+        } else if (process.env.NODE_ENV !== 'production' && req.body?.aluno_id) {
+            alunoId = parseInt(req.body.aluno_id, 10);
+        }
+
+        if (!alunoId || Number.isNaN(alunoId)) {
+            return res.status(401).json({ success: false, error: 'Sessão de aluno não identificada.' });
+        }
+
+        const raw = req.body?.exibir_no_ranking;
+        const exibir = (raw === false || raw === 0 || raw === '0' || raw === 'false') ? 0 : 1;
+
+        const [result] = await pool.query(
+            'UPDATE alunos SET exibir_no_ranking = ? WHERE id = ? AND deleted_at IS NULL',
+            [exibir, alunoId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        res.json({
+            success: true,
+            exibir_no_ranking: exibir === 1,
+            message: exibir === 1
+                ? 'Você voltou a aparecer no Mural de Líderes!'
+                : 'Sua participação foi ocultada do Mural de Líderes.'
+        });
+    } catch (err) {
+        console.error('Erro ao atualizar privacidade no ranking:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao salvar preferência de privacidade.' });
     }
 });
 
