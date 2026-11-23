@@ -312,11 +312,11 @@ async function dispatchVerificationSafe(email, nome, codigo) {
     }
 }
 
-// GET /api/mensagens-config/logs - Lista histórico de envios (E-mail e WhatsApp)
+// GET /api/mensagens-config/logs - Lista histórico de envios (E-mail e WhatsApp) com paginação
 router.get('/logs', async (req, res) => {
     try {
-        const { canal = '', status = '', busca = '', limit = 100 } = req.query;
-        const data = await messageLogService.listLogs({ canal, status, busca, limit });
+        const { canal = '', status = '', busca = '', page = 1, limit = 15 } = req.query;
+        const data = await messageLogService.listLogs({ canal, status, busca, page, limit });
         res.json({ success: true, data });
     } catch (err) {
         console.error('[MensagensConfig] Erro ao listar logs:', err);

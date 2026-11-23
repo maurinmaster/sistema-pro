@@ -560,6 +560,47 @@ test('Log de Mensagens: Sanitização e Registro Não-Bloqueante', async () => {
         assunto: 'Teste não bloqueante',
         status: 'enviado'
     });
+
+    // Metadados de paginação do histórico de envios
+    const pag1 = messageLogService.buildPaginationMeta({ page: 1, limit: 15, total: 42 });
+    assert.deepEqual(pag1, {
+        page: 1,
+        limit: 15,
+        total: 42,
+        total_pages: 3,
+        offset: 0,
+        has_prev: false,
+        has_next: true,
+        from: 1,
+        to: 15
+    });
+
+    const pag2 = messageLogService.buildPaginationMeta({ page: 2, limit: 15, total: 42 });
+    assert.equal(pag2.offset, 15);
+    assert.equal(pag2.from, 16);
+    assert.equal(pag2.to, 30);
+    assert.equal(pag2.has_prev, true);
+    assert.equal(pag2.has_next, true);
+
+    const pagClamp = messageLogService.buildPaginationMeta({ page: 99, limit: 500, total: 42 });
+    assert.equal(pagClamp.limit, 100);
+    assert.equal(pagClamp.page, 1);
+    assert.equal(pagClamp.total_pages, 1);
+    assert.equal(pagClamp.from, 1);
+    assert.equal(pagClamp.to, 42);
+
+    const pagLowLimit = messageLogService.buildPaginationMeta({ page: -3, limit: 1, total: 0 });
+    assert.deepEqual(pagLowLimit, {
+        page: 1,
+        limit: 5,
+        total: 0,
+        total_pages: 1,
+        offset: 0,
+        has_prev: false,
+        has_next: false,
+        from: 0,
+        to: 0
+    });
 });
 
 test('Painel do Aluno: Consulta Consolidada, Histórico de Medidas e Comparativo de Evolução', async () => {

@@ -86,10 +86,34 @@ class MessageLogService {
         }
     }
 
-    async listLogs({ canal = '', status = '', busca = '', limit = 100 } = {}) {
+    buildPaginationMeta({ page = 1, limit = 15, total = 0 } = {}) {
+        const parsedLimit = parseInt(String(limit), 10);
+        const cleanLimit = Math.min(Math.max(Number.isNaN(parsedLimit) ? 15 : parsedLimit, 5), 100);
+        const parsedTotal = parseInt(String(total), 10);
+        const cleanTotal = Math.max(0, Number.isNaN(parsedTotal) ? 0 : parsedTotal);
+        const totalPages = Math.max(1, Math.ceil(cleanTotal / cleanLimit));
+        const parsedPage = parseInt(String(page), 10);
+        const cleanPage = Math.min(Math.max(Number.isNaN(parsedPage) ? 1 : parsedPage, 1), totalPages);
+        const offset = (cleanPage - 1) * cleanLimit;
+        const from = cleanTotal === 0 ? 0 : offset + 1;
+        const to = Math.min(cleanTotal, offset + cleanLimit);
+
+        return {
+            page: cleanPage,
+            limit: cleanLimit,
+            total: cleanTotal,
+            total_pages: totalPages,
+            offset,
+            has_prev: cleanPage > 1,
+            has_next: cleanPage < totalPages,
+            from,
+            to
+        };
+    }
+
+    async listLogs({ canal = '', status = '', busca = '', page = 1, limit = 15 } = {}) {
         await this.ensureTable();
 
-        const cleanLimit = Math.min(Math.max(parseInt(String(limit), 10) || 100, 1), 200);
         const conditions = [];
         const params = [];
 
@@ -110,13 +134,23 @@ class MessageLogService {
         }
 
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+        const [countRows] = await pool.query(
+            `SELECT COUNT(*) AS total FROM mensagens_envios_logs ${whereClause}`,
+            params
+        );
+        const pagination = this.buildPaginationMeta({
+            page,
+            limit,
+            total: Number(countRows[0]?.total || 0)
+        });
+
         const [logs] = await pool.query(
             `SELECT id, canal, tipo, destinatario, assunto, status, erro_detalhe, message_id, created_at
              FROM mensagens_envios_logs
              ${whereClause}
              ORDER BY id DESC
-             LIMIT ?`,
-            [...params, cleanLimit]
+             LIMIT ? OFFSET ?`,
+            [...params, pagination.limit, pagination.offset]
         );
 
         const [statRows] = await pool.query(`
@@ -133,6 +167,7 @@ class MessageLogService {
         const s = statRows[0] || {};
         return {
             logs,
+            pagination,
             stats: {
                 total: Number(s.total || 0),
                 enviados: Number(s.enviados || 0),

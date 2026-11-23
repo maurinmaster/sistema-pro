@@ -5,6 +5,9 @@ const MensagensConfigModule = {
     manualPresets: [],
     filterPublico: 'todos',
     filterBusca: '',
+    logsPage: 1,
+    logsLimit: 15,
+    logsPagination: { page: 1, limit: 15, total: 0, total_pages: 1, has_prev: false, has_next: false, from: 0, to: 0 },
     initialized: false,
 
     init() {
@@ -129,13 +132,50 @@ const MensagensConfigModule = {
 
         // Eventos da aba de Log de Envios e Cadastros Pendentes
         document.getElementById('btn-msg-recarregar-logs')?.addEventListener('click', () => this.loadLogsAndPendentes());
-        document.getElementById('msg-logs-canal')?.addEventListener('change', () => this.loadLogs());
-        document.getElementById('msg-logs-status')?.addEventListener('change', () => this.loadLogs());
+        document.getElementById('msg-logs-canal')?.addEventListener('change', () => {
+            this.logsPage = 1;
+            this.loadLogs();
+        });
+        document.getElementById('msg-logs-status')?.addEventListener('change', () => {
+            this.logsPage = 1;
+            this.loadLogs();
+        });
 
         let logSearchTimer = null;
         document.getElementById('msg-logs-busca')?.addEventListener('input', () => {
             clearTimeout(logSearchTimer);
-            logSearchTimer = setTimeout(() => this.loadLogs(), 250);
+            logSearchTimer = setTimeout(() => {
+                this.logsPage = 1;
+                this.loadLogs();
+            }, 250);
+        });
+
+        document.getElementById('msg-logs-per-page')?.addEventListener('change', (e) => {
+            this.logsLimit = Number(e.target.value) || 15;
+            this.logsPage = 1;
+            this.loadLogs();
+        });
+        document.getElementById('btn-msg-logs-prev')?.addEventListener('click', () => {
+            if (this.logsPage > 1) {
+                this.logsPage--;
+                this.loadLogs();
+            }
+        });
+        document.getElementById('btn-msg-logs-next')?.addEventListener('click', () => {
+            const maxPages = Number(this.logsPagination?.total_pages || 1);
+            if (this.logsPage < maxPages) {
+                this.logsPage++;
+                this.loadLogs();
+            }
+        });
+        document.getElementById('msg-logs-page-numbers')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-logs-page]');
+            if (!btn) return;
+            const targetPage = Number(btn.getAttribute('data-logs-page'));
+            if (targetPage >= 1 && targetPage !== this.logsPage) {
+                this.logsPage = targetPage;
+                this.loadLogs();
+            }
         });
 
         let pendSearchTimer = null;
@@ -796,23 +836,39 @@ const MensagensConfigModule = {
         const canal = document.getElementById('msg-logs-canal')?.value || '';
         const status = document.getElementById('msg-logs-status')?.value || '';
         const busca = document.getElementById('msg-logs-busca')?.value?.trim() || '';
+        const page = Math.max(1, Number(this.logsPage) || 1);
+        const limit = Math.max(5, Number(this.logsLimit) || 15);
 
         const params = new URLSearchParams();
         if (canal) params.set('canal', canal);
         if (status) params.set('status', status);
         if (busca) params.set('busca', busca);
-        params.set('limit', '100');
+        params.set('page', String(page));
+        params.set('limit', String(limit));
 
         try {
             const res = await API.get(`/mensagens-config/logs?${params.toString()}`);
             if (!res?.success || !res.data) throw new Error(res?.error || 'Falha ao carregar logs.');
-            this.renderLogs(res.data.logs || [], res.data.stats || {});
+            const pag = res.data.pagination || {
+                page,
+                limit,
+                total: (res.data.logs || []).length,
+                total_pages: 1,
+                has_prev: false,
+                has_next: false,
+                from: (res.data.logs || []).length > 0 ? 1 : 0,
+                to: (res.data.logs || []).length
+            };
+            this.logsPagination = pag;
+            this.logsPage = Number(pag.page) || 1;
+            this.renderLogs(res.data.logs || [], res.data.stats || {}, pag);
         } catch (err) {
             tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #fca5a5;">${UI.escapeHtml(err.message || 'Erro ao carregar histórico.')}</td></tr>`;
+            this.renderLogsPagination({ page: 1, limit, total: 0, total_pages: 1, has_prev: false, has_next: false, from: 0, to: 0 });
         }
     },
 
-    renderLogs(logs, stats) {
+    renderLogs(logs, stats, pagination) {
         const tbody = document.getElementById('tabela-logs-envios-corpo');
         if (!tbody) return;
 
@@ -822,6 +878,8 @@ const MensagensConfigModule = {
         if (envEl) envEl.textContent = `Enviados (30d): ${Number(stats.enviados || 0)}`;
         if (errEl) errEl.textContent = `Erros (30d): ${Number(stats.erros || 0)}`;
         if (ignEl) ignEl.textContent = `Ignorados (30d): ${Number(stats.ignorados || 0)}`;
+
+        this.renderLogsPagination(pagination || this.logsPagination);
 
         if (!Array.isArray(logs) || logs.length === 0) {
             tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhum registro de envio encontrado.</td></tr>`;
@@ -864,6 +922,60 @@ const MensagensConfigModule = {
                 </tr>
             `;
         }).join('');
+    },
+
+    renderLogsPagination(pagination) {
+        const p = pagination || {};
+        const total = Number(p.total || 0);
+        const page = Number(p.page || 1);
+        const totalPages = Math.max(1, Number(p.total_pages || 1));
+        const from = Number(p.from || 0);
+        const to = Number(p.to || 0);
+
+        const infoEl = document.getElementById('msg-logs-pagination-info');
+        if (infoEl) {
+            infoEl.textContent = total === 0
+                ? 'Nenhum registro encontrado'
+                : `Mostrando ${from}–${to} de ${total} registro${total === 1 ? '' : 's'} (Página ${page} de ${totalPages})`;
+        }
+
+        const prevBtn = document.getElementById('btn-msg-logs-prev');
+        const nextBtn = document.getElementById('btn-msg-logs-next');
+        if (prevBtn) prevBtn.disabled = !p.has_prev;
+        if (nextBtn) nextBtn.disabled = !p.has_next;
+
+        const numbersEl = document.getElementById('msg-logs-page-numbers');
+        if (!numbersEl) return;
+
+        if (total === 0) {
+            numbersEl.innerHTML = '';
+            return;
+        }
+
+        const maxButtons = 5;
+        let start = Math.max(1, page - Math.floor(maxButtons / 2));
+        let end = Math.min(totalPages, start + maxButtons - 1);
+        if (end - start + 1 < maxButtons) {
+            start = Math.max(1, end - maxButtons + 1);
+        }
+
+        const parts = [];
+        if (start > 1) {
+            parts.push(`<button type="button" class="btn btn-secondary btn-sm" data-logs-page="1">1</button>`);
+            if (start > 2) parts.push(`<span class="msg-logs-page-ellipsis">...</span>`);
+        }
+
+        for (let i = start; i <= end; i++) {
+            const cls = i === page ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm';
+            parts.push(`<button type="button" class="${cls}" data-logs-page="${Number(i)}">${Number(i)}</button>`);
+        }
+
+        if (end < totalPages) {
+            if (end < totalPages - 1) parts.push(`<span class="msg-logs-page-ellipsis">...</span>`);
+            parts.push(`<button type="button" class="btn btn-secondary btn-sm" data-logs-page="${Number(totalPages)}">${Number(totalPages)}</button>`);
+        }
+
+        numbersEl.innerHTML = parts.join('');
     }
 };
 
