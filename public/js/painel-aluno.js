@@ -24,6 +24,8 @@ const PainelAlunoApp = {
     meusExames: [],
     modalExameAtivoId: null,
     portalRpgCompareId: null,
+    rpgAccordionOpen: false,
+    evolucaoSubtab: 'fisico',
     missoesData: null,
     missoesBoardFiltro: 'todas',
 
@@ -406,9 +408,6 @@ const PainelAlunoApp = {
         document.getElementById('mob-nav-evolucao')?.addEventListener('click', () => {
             this.switchView('evolucao');
         });
-        document.getElementById('mob-nav-faturas')?.addEventListener('click', () => {
-            this.switchView('faturas');
-        });
         document.getElementById('mob-nav-graduacoes')?.addEventListener('click', () => {
             this.switchView('graduacoes');
         });
@@ -419,18 +418,14 @@ const PainelAlunoApp = {
             this.openSkinsModal();
         });
 
-        // Abertura da Área de Pagamento da Mensalidade (Asaas) e Faturas
-        document.getElementById('btn-toggle-eval-details')?.addEventListener('click', () => {
-            const drawer = document.getElementById('athlete-eval-drawer');
-            const btn = document.getElementById('btn-toggle-eval-details');
-            if (!drawer || !btn) return;
-            const isHidden = drawer.style.display === 'none' || !drawer.style.display;
-            drawer.style.display = isHidden ? 'block' : 'none';
-            btn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-            const span = btn.querySelector('span');
-            if (span) span.textContent = isHidden ? 'Ocultar Ficha RPG ↑' : 'Ficha RPG ↓';
+        // Sub-abas dentro de Histórico & Evolução (Físico vs Técnica RPG)
+        document.querySelectorAll('.evolucao-subtab[data-subtab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.switchEvolucaoSubtab(btn.dataset.subtab || 'fisico');
+            });
         });
 
+        // Abertura da Área de Pagamento da Mensalidade (Asaas) e Faturas
         document.getElementById('btn-open-plan-payment')?.addEventListener('click', () => {
             this.openModalPagamentoMensalidade();
         });
@@ -758,7 +753,14 @@ const PainelAlunoApp = {
 
         const gradMt = (graduacao && (graduacao.muay_thai || graduacao.atual)) || null;
         const cardModalityEl = document.getElementById('card-athlete-modality');
-        const modalidadeLabel = gradMt?.modalidade_nome || plano?.nome || 'Muay Thai';
+        const modalidadeBase = gradMt?.modalidade_nome || 'Muay Thai';
+        const freqLabel = plano?.limite_semana ? String(plano.limite_semana).trim() : '';
+        let modalidadeLabel = modalidadeBase;
+        if (freqLabel && !/x\/sem|livre/i.test(modalidadeBase)) {
+            modalidadeLabel = /livre/i.test(freqLabel)
+                ? `${modalidadeBase} • ${freqLabel}`
+                : `${modalidadeBase} ${freqLabel}`;
+        }
         if (cardModalityEl) {
             cardModalityEl.textContent = modalidadeLabel;
         }
@@ -814,8 +816,10 @@ const PainelAlunoApp = {
 
         const bioValuesEl = document.getElementById('bio-summary-values');
         const bioEmptyCta = document.getElementById('bio-empty-cta');
+        const bioActionsBar = document.getElementById('athlete-bio-actions-bar');
         if (bioValuesEl) bioValuesEl.style.display = hasMeasures ? 'grid' : 'none';
         if (bioEmptyCta) bioEmptyCta.style.display = hasMeasures ? 'none' : 'flex';
+        if (bioActionsBar) bioActionsBar.style.display = hasMeasures ? 'flex' : 'none';
 
         if (heightVal) heightVal.textContent = (alturaVal !== null && alturaVal !== undefined) ? alturaVal : '--';
         if (weightVal) weightVal.textContent = (pesoVal !== null && pesoVal !== undefined) ? pesoVal : '--';
@@ -1056,13 +1060,13 @@ const PainelAlunoApp = {
             const dObj = new Date(exame.data_evento);
             const dStr = !isNaN(dObj.getTime()) ? dObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : exame.data_evento;
             const hStr = exame.horario_inicio ? exame.horario_inicio.substring(0, 5) : '10:00';
-            nextExamDate.innerHTML = `Exame: <strong>${dStr} às ${hStr}</strong>`;
-            if (nextExamVenue) nextExamVenue.textContent = exame.local_evento || 'Dojo Central - CT';
+            nextExamDate.innerHTML = `Exame: <strong>${this.escapeHtml(dStr)} às ${this.escapeHtml(hStr)}</strong>`;
+            if (nextExamVenue) nextExamVenue.textContent = `• ${exame.local_evento || 'Pro Combate'}`;
         } else {
             if (nextExamDate) {
                 nextExamDate.innerHTML = isApto ? `Exame: <strong>Elegível p/ convocação</strong>` : `Exame: <strong>Aguardando elegibilidade</strong>`;
             }
-            if (nextExamVenue) nextExamVenue.textContent = isApto ? 'Apto p/ próximo exame' : 'Em evolução técnica';
+            if (nextExamVenue) nextExamVenue.textContent = isApto ? '• Apto p/ próximo exame' : '• Em evolução técnica';
         }
 
         // 5.2. Botão de Inscrição no Exame & Pop-up Obrigatório de Convocação (quando Elegível + Exame Aberto)
@@ -1075,11 +1079,13 @@ const PainelAlunoApp = {
         if (graduacao.historico && timelineContainer) {
             timelineContainer.innerHTML = graduacao.historico.map(h => {
                 const dateStr = h.data_graduacao ? new Date(h.data_graduacao).toLocaleDateString('pt-BR') : 'Atual';
+                const cor1 = this.sanitizeColor(h.cor_primaria, '#38bdf8');
+                const cor2 = this.sanitizeColor(h.cor_secundaria, '#ffffff');
                 return `
                     <div class="timeline-entry">
-                        <div class="timeline-dot" style="background-color: ${h.cor_primaria || '#38bdf8'}; border: 1px solid ${h.cor_secundaria || '#ffffff'};"></div>
+                        <div class="timeline-dot" style="background-color: ${cor1}; border: 1px solid ${cor2};"></div>
                         <span class="timeline-name">${this.escapeHtml(h.nivel_nome || '')}</span>
-                        <span class="timeline-date">${dateStr}</span>
+                        <span class="timeline-date">${this.escapeHtml(dateStr)}</span>
                     </div>
                 `;
             }).join('');
@@ -1089,6 +1095,28 @@ const PainelAlunoApp = {
     onChangePortalRpgCompare(compareIdStr) {
         this.portalRpgCompareId = compareIdStr === 'none' ? 'none' : (Number(compareIdStr) || null);
         this.renderPortalRpgCard();
+    },
+
+    setRpgAccordionOpen(isOpen, { scrollToCard = false } = {}) {
+        const nextOpen = Boolean(isOpen);
+        this.rpgAccordionOpen = nextOpen;
+        const card = document.getElementById('card-rpg-accordion');
+        const toggleBtn = document.getElementById('btn-rpg-accordion-toggle');
+        const body = document.getElementById('rpg-accordion-body');
+        const label = document.getElementById('rpg-accordion-trigger-label');
+        const chevron = toggleBtn ? toggleBtn.querySelector('.rpg-accordion-chevron') : null;
+
+        if (card) card.setAttribute('data-open', nextOpen ? 'true' : 'false');
+        if (toggleBtn) toggleBtn.setAttribute('aria-expanded', nextOpen ? 'true' : 'false');
+        if (body) body.style.display = nextOpen ? 'flex' : 'none';
+        if (label) label.textContent = nextOpen ? 'Recolher atributos e insígnias' : 'Ver atributos e insígnias';
+        if (chevron) chevron.textContent = nextOpen ? '▲' : '▼';
+
+        if (scrollToCard && card) {
+            window.requestAnimationFrame(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: nextOpen ? 'start' : 'nearest' });
+            });
+        }
     },
 
     openPortalRpgStatusCard() {
@@ -1128,6 +1156,7 @@ const PainelAlunoApp = {
 
     renderPortalRpgCard(rpgPayload = null) {
         const container = document.getElementById('athlete-rpg-container');
+        const accordionCard = document.getElementById('card-rpg-accordion');
         if (!container) return;
 
         const rpg = (rpgPayload && rpgPayload.avaliacao_rpg)
@@ -1139,11 +1168,12 @@ const PainelAlunoApp = {
         const requisitosExame = rpg?.requisitos_exame || null;
 
         if (!atual || typeof ui === 'undefined') {
+            if (accordionCard) accordionCard.setAttribute('data-open', 'false');
             container.innerHTML = `
-                <div class="portal-rpg-card">
-                    <div style="font-size: 12.5px; color: #94a3b8; text-align: center; padding: 10px 6px;">
-                        <strong style="display:block; color:#e2e8f0; margin-bottom:4px;">Avaliação Técnica RPG (Muay Thai)</strong>
-                        Nenhuma avaliação RPG lançada pelo instrutor ainda. Quando você for avaliado nos 20 critérios técnicos, seu Rank de Combate (D a S) e gráfico Radar aparecerão aqui.
+                <div class="portal-rpg-card portal-rpg-empty-state">
+                    <div class="rpg-accordion-empty">
+                        <strong>Avaliação Técnica RPG (Muay Thai)</strong>
+                        <p>Nenhuma avaliação RPG lançada pelo instrutor ainda. Quando você for avaliado nos 20 critérios técnicos, seu Rank de Combate (D a S) e gráfico Radar aparecerão aqui.</p>
                     </div>
                     ${(typeof ui !== 'undefined' && requisitosExame) ? ui.renderExamProgressionCardHtml(requisitosExame) : ''}
                 </div>
@@ -1176,10 +1206,12 @@ const PainelAlunoApp = {
         const avaliadorStr = this.escapeHtml(atual.avaliador_nome || 'Instrutor');
 
         const arquetipoObj = atual.arquetipo || ui.computeArchetype(atual.pilares, scoreTotal);
-        const focoObj = atual.foco_evolucao || ui.computeTrainingFocus(atual.criterios, atual.pilares);
         const badgesArr = (Array.isArray(atual.badges) && atual.badges.length > 0)
             ? atual.badges
             : ui.computeBadges(atual.criterios, aptoSparring);
+
+        const isOpen = Boolean(this.rpgAccordionOpen);
+        if (accordionCard) accordionCard.setAttribute('data-open', isOpen ? 'true' : 'false');
 
         const compareHtml = candidates.length > 0 ? `
             <div class="portal-rpg-compare">
@@ -1204,27 +1236,28 @@ const PainelAlunoApp = {
         ` : '';
 
         const legacyHtml = atual.is_legacy ? `
-            <div style="font-size: 11px; color: #94a3b8; padding: 6px 10px; border-radius: 8px; background: rgba(148, 163, 184, 0.08);">
+            <div style="font-size: 14px; color: #cbd5e1; padding: 8px 12px; border-radius: 10px; background: rgba(148, 163, 184, 0.1);">
                 Avaliação convertida do histórico anterior (escala 0–10). Novas avaliações exibirão os 20 critérios completos.
             </div>
         ` : '';
 
         const criteriaDetailsHtml = (!atual.is_legacy && atual.criterios && Object.keys(atual.criterios).length > 0) ? `
-            <details style="margin-top: 2px;">
-                <summary style="cursor: pointer; font-size: 11.5px; color: #7dd3fc; font-weight: 600; user-select: none;">Ver notas dos 20 critérios</summary>
-                <div style="margin-top: 8px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px;">
+            <details class="rpg-criteria-details" style="margin-top: 2px;">
+                <summary class="rpg-criteria-summary">Ver notas dos 20 critérios</summary>
+                <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
                     ${ui.PILLARS.map((pillar) => {
                         const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
+                        const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
                         return `
-                            <div style="background: rgba(15,23,42,0.75); border: 1px solid rgba(148,163,184,0.14); border-top: 2px solid ${pillar.cor}; border-radius: 10px; padding: 8px 10px;">
-                                <div style="font-size: 11px; font-weight: 800; color: ${pillar.cor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
+                            <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.18); border-top: 2px solid ${pillarColor}; border-radius: 12px; padding: 10px 12px;">
+                                <div style="font-size: 12.5px; font-weight: 800; color: ${pillarColor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
                                 ${items.map((c) => {
                                     const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
                                     const lockTxt = !aptoSparring && c.isSparring ? ' (teto 3)' : '';
                                     return `
-                                        <div style="display:flex; justify-content:space-between; gap:6px; font-size:11px; color:#cbd5e1; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
-                                            <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:9px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
-                                            <strong style="color:#fff; white-space:nowrap;">${val}/5${this.escapeHtml(lockTxt)}</strong>
+                                        <div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; color:#cbd5e1; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                            <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:12px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
+                                            <strong style="color:#f8fafc; white-space:nowrap;">${val}/5${this.escapeHtml(lockTxt)}</strong>
                                         </div>
                                     `;
                                 }).join('')}
@@ -1236,23 +1269,34 @@ const PainelAlunoApp = {
         ` : '';
 
         container.innerHTML = `
-            <div class="portal-rpg-card">
-                <div class="portal-rpg-header">
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <button type="button"
+                    class="rpg-accordion-header"
+                    id="btn-rpg-accordion-toggle"
+                    aria-expanded="${isOpen ? 'true' : 'false'}"
+                    aria-controls="rpg-accordion-body">
+                <div class="rpg-accordion-head-top">
+                    <div class="rpg-accordion-rank-group">
                         ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
                         <div class="portal-rpg-score">
                             <strong>${scoreTotal}<span>/100</span></strong>
                             ${ui.renderDeltaBadgeHtml(deltas ? deltas.score_total : null, ' pts')}
                         </div>
                     </div>
-                    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                    <div class="rpg-accordion-meta-right">
                         ${ui.renderSparringBadgeHtml(aptoSparring)}
-                        <span style="font-size:10.5px; color:#94a3b8;">${this.escapeHtml(dataStr)} • ${avaliadorStr}</span>
+                        <span class="rpg-accordion-date">${this.escapeHtml(dataStr)} • ${avaliadorStr}</span>
                     </div>
                 </div>
 
                 ${ui.renderArchetypePillHtml(arquetipoObj)}
 
+                <span class="rpg-accordion-trigger-row">
+                    <span id="rpg-accordion-trigger-label">${isOpen ? 'Recolher atributos e insígnias' : 'Ver atributos e insígnias'}</span>
+                    <span class="rpg-accordion-chevron" aria-hidden="true">${isOpen ? '▲' : '▼'}</span>
+                </span>
+            </button>
+
+            <div class="rpg-accordion-body" id="rpg-accordion-body" style="display: ${isOpen ? 'flex' : 'none'};">
                 <div class="portal-rpg-grid">
                     <div class="portal-rpg-radar-wrap">
                         ${ui.renderRadarSvg(atual.pilares || {}, anterior ? anterior.pilares : null, deltas)}
@@ -1260,9 +1304,6 @@ const PainelAlunoApp = {
                             <span class="rpg-legend-item"><span class="rpg-legend-swatch atual"></span> Atual (${this.escapeHtml(dataStr)})</span>
                             ${anterior ? `<span class="rpg-legend-item"><span class="rpg-legend-swatch anterior"></span> Anterior (${this.escapeHtml(anterior.data_avaliacao ? new Date(anterior.data_avaliacao).toLocaleDateString('pt-BR') : '')})</span>` : ''}
                         </div>
-                        <button type="button" id="btn-portal-gerar-card-rpg" class="portal-rpg-story-btn">
-                            <span>📸 Gerar Card de Status (Stories 9:16)</span>
-                        </button>
                     </div>
                     <div class="rpg-pillar-bars-list">
                         ${ui.renderPillarBarsHtml(atual.pilares || {}, deltas)}
@@ -1270,18 +1311,44 @@ const PainelAlunoApp = {
                 </div>
 
                 ${compareHtml}
-                <button type="button" id="btn-portal-ir-missoes" class="portal-rpg-missoes-cta">
-                    <span>🎯 Foco de Treino &amp; Quadro de Missões</span>
-                    <span>Abrir Missões →</span>
+
+                <button type="button" id="btn-portal-gerar-card-rpg" class="portal-rpg-story-btn">
+                    <span>📸 Gerar Card de Status (Stories 9:16)</span>
                 </button>
+
                 ${ui.renderBadgesGridHtml(badgesArr)}
                 ${ui.renderExamProgressionCardHtml(requisitosExame)}
                 ${legacyHtml}
                 ${noteHtml}
+
+                <button type="button" id="btn-portal-ir-missoes" class="portal-rpg-missoes-cta">
+                    <span>🎯 Foco de Treino &amp; Quadro de Missões</span>
+                    <span>Abrir Missões →</span>
+                </button>
+
                 ${criteriaDetailsHtml}
+
+                <div class="rpg-accordion-footer">
+                    <button type="button" class="btn-rpg-collapse-footer" id="btn-rpg-accordion-collapse">
+                        <span>Recolher ficha ▲</span>
+                    </button>
+                </div>
             </div>
         `;
 
+        const toggleBtn = document.getElementById('btn-rpg-accordion-toggle');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', () => {
+                const opening = !this.rpgAccordionOpen;
+                this.setRpgAccordionOpen(opening, { scrollToCard: opening });
+            });
+        }
+        const collapseBtn = document.getElementById('btn-rpg-accordion-collapse');
+        if (collapseBtn) {
+            collapseBtn.addEventListener('click', () => {
+                this.setRpgAccordionOpen(false, { scrollToCard: true });
+            });
+        }
         const compareSelect = document.getElementById('portal-rpg-compare-select');
         if (compareSelect) {
             compareSelect.addEventListener('change', (e) => {
@@ -3107,6 +3174,7 @@ const PainelAlunoApp = {
                 b.classList.toggle('active', b.dataset.tab === 'evolucao');
             });
 
+            this.switchEvolucaoSubtab(this.evolucaoSubtab || 'fisico');
             this.openEvolutionModal();
         } else if (this.currentView === 'faturas') {
             if (dashboardView) dashboardView.style.display = 'none';
@@ -3195,6 +3263,84 @@ const PainelAlunoApp = {
         }
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+
+    switchEvolucaoSubtab(subtab = 'fisico') {
+        const nextTab = subtab === 'rpg' ? 'rpg' : 'fisico';
+        this.evolucaoSubtab = nextTab;
+
+        const panelFisico = document.getElementById('evolucao-panel-fisico');
+        const panelRpg = document.getElementById('evolucao-panel-rpg');
+        if (panelFisico) panelFisico.style.display = nextTab === 'fisico' ? 'block' : 'none';
+        if (panelRpg) panelRpg.style.display = nextTab === 'rpg' ? 'block' : 'none';
+
+        document.querySelectorAll('.evolucao-subtab[data-subtab]').forEach(btn => {
+            const active = btn.dataset.subtab === nextTab;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+
+        if (nextTab === 'rpg') {
+            this.renderEvolucaoRpgHistory();
+        }
+    },
+
+    renderEvolucaoRpgHistory() {
+        const container = document.getElementById('evolucao-rpg-history-container');
+        if (!container) return;
+
+        const rpg = this.alunoData?.avaliacao_rpg || null;
+        const historico = Array.isArray(rpg?.historico) ? rpg.historico : [];
+        const ui = window.RpgAvaliacaoUI;
+
+        if (historico.length === 0 || typeof ui === 'undefined') {
+            container.innerHTML = `
+                <div class="evolucao-rpg-empty">
+                    <strong>Histórico Técnico RPG</strong>
+                    <p>Nenhuma avaliação técnica RPG registrada ainda. Assim que o instrutor lançar sua ficha dos 20 critérios, seu histórico completo aparecerá aqui.</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="evolucao-rpg-list">
+                ${historico.map((item, idx) => {
+                    const prev = historico[idx + 1] || null;
+                    const deltas = prev ? ui.computeDeltas(item, prev) : null;
+                    const score = Math.round(Number(item.score_total || 0));
+                    const apto = item.apto_sparring !== false && item.apto_sparring !== 0;
+                    const arquetipo = item.arquetipo || ui.computeArchetype(item.pilares, score);
+                    const dataStr = item.data_avaliacao ? new Date(item.data_avaliacao).toLocaleDateString('pt-BR') : 'Recente';
+                    const avaliador = this.escapeHtml(item.avaliador_nome || 'Instrutor');
+                    const obsHtml = item.observacoes_instrutor
+                        ? `<div class="portal-rpg-note"><strong style="color:#7dd3fc;">Feedback:</strong> ${this.escapeHtml(item.observacoes_instrutor)}</div>`
+                        : '';
+                    return `
+                        <article class="evolucao-rpg-history-card">
+                            <div class="rpg-accordion-head-top">
+                                <div class="rpg-accordion-rank-group">
+                                    ${ui.renderRankBadgeHtml(item.rank_combate, item.rank_titulo, 'md')}
+                                    <div class="portal-rpg-score">
+                                        <strong>${score}<span>/100</span></strong>
+                                        ${ui.renderDeltaBadgeHtml(deltas ? deltas.score_total : null, ' pts')}
+                                    </div>
+                                </div>
+                                <div class="rpg-accordion-meta-right">
+                                    ${ui.renderSparringBadgeHtml(apto)}
+                                    <span class="rpg-accordion-date">${this.escapeHtml(dataStr)} • ${avaliador}</span>
+                                </div>
+                            </div>
+                            ${ui.renderArchetypePillHtml(arquetipo)}
+                            <div class="rpg-pillar-bars-list">
+                                ${ui.renderPillarBarsHtml(item.pilares || {}, deltas)}
+                            </div>
+                            ${obsHtml}
+                        </article>
+                    `;
+                }).join('')}
+            </div>
+        `;
     },
 
     getAlunoQuerySuffix() {

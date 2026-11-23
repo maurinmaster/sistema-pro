@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.1">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.2">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -580,12 +580,19 @@
                             </svg>
                         </div>
                         <div>
-                            <h2 style="margin: 0; font-size: 19px; color: #f8fafc;">Histórico & Evolução</h2>
-                            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #94a3b8;">Acompanhamento de medidas e composição corporal</p>
+                            <h2 style="margin: 0; font-size: 19px; color: #f8fafc;">Histórico &amp; Evolução</h2>
+                            <p style="margin: 2px 0 0 0; font-size: 14px; color: #cbd5e1;">Acompanhamento físico e evolução técnica RPG</p>
                         </div>
                     </div>
                 </div>
 
+                <!-- Sub-abas de Evolução: Físico & Medidas vs Técnica (RPG) -->
+                <div class="evolucao-subtabs" id="evolucao-subtabs" role="tablist" aria-label="Seções de Evolução">
+                    <button type="button" class="evolucao-subtab active" role="tab" aria-selected="true" data-subtab="fisico" id="btn-evolucao-tab-fisico">Físico &amp; Medidas</button>
+                    <button type="button" class="evolucao-subtab" role="tab" aria-selected="false" data-subtab="rpg" id="btn-evolucao-tab-rpg">Técnica (RPG)</button>
+                </div>
+
+                <div id="evolucao-panel-fisico" class="evolucao-subtab-panel">
                 <!-- 1. GRÁFICO INTERATIVO DE EVOLUÇÃO DAS MEDIDAS -->
                 <div class="evolution-chart-box" id="evolution-chart-box">
                     <div class="evolution-chart-header">
@@ -611,7 +618,7 @@
                     </div>
 
                     <div class="evolution-chart-canvas-wrap" id="evolution-chart-canvas-wrap">
-                        <div style="text-align: center; color: #94a3b8; font-size: 13px; padding: 24px;">Carregando gráfico de evolução...</div>
+                        <div style="text-align: center; color: #cbd5e1; font-size: 14px; padding: 24px;">Carregando gráfico de evolução...</div>
                     </div>
                 </div>
 
@@ -620,17 +627,17 @@
 
                 <!-- 3. Medidas Corporais Atuais: Tórax, Cintura e Quadril -->
                 <div class="modal-circumferences-panel" style="margin-top: 14px; background: rgba(14, 19, 31, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 14px; padding: 14px 16px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/></svg>
-                            Medidas Corporais & Circunferências
+                            Medidas Corporais &amp; Circunferências
                         </span>
-                        <span style="font-size: 11px; color: #64748b;" id="modal-circumferences-date">Última checagem registrada</span>
+                        <span style="font-size: 12px; color: #cbd5e1;" id="modal-circumferences-date">Última checagem registrada</span>
                     </div>
                     <div class="modal-circumferences-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
                         <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                                <span class="bio-stat-label" style="font-size: 12px; color: #cbd5e1; display: flex; align-items: center; gap: 5px;">
                                     <span>Tórax</span>
                                 </span>
                                 <span class="meas-delta-inline" id="delta-torax-tag" style="display: none;">
@@ -638,14 +645,14 @@
                                 </span>
                             </div>
                             <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
-                                <span class="stat-num" id="meas-torax-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
-                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
+                                <span class="stat-num" id="meas-torax-val" style="font-size: 18px; font-weight: 800; color: #f8fafc;">--</span>
+                                <span class="stat-unit" style="font-size: 12px; color: #94a3b8;">cm</span>
                             </div>
                         </div>
 
                         <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                                <span class="bio-stat-label" style="font-size: 12px; color: #cbd5e1; display: flex; align-items: center; gap: 5px;">
                                     <span>Cintura</span>
                                 </span>
                                 <span class="meas-delta-inline" id="delta-cintura-tag" style="display: none;">
@@ -653,14 +660,14 @@
                                 </span>
                             </div>
                             <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
-                                <span class="stat-num" id="meas-cintura-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
-                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
+                                <span class="stat-num" id="meas-cintura-val" style="font-size: 18px; font-weight: 800; color: #f8fafc;">--</span>
+                                <span class="stat-unit" style="font-size: 12px; color: #94a3b8;">cm</span>
                             </div>
                         </div>
 
                         <div class="bio-stat-card" style="background: rgba(18, 24, 38, 0.9); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 10px 12px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="bio-stat-label" style="font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 5px;">
+                                <span class="bio-stat-label" style="font-size: 12px; color: #cbd5e1; display: flex; align-items: center; gap: 5px;">
                                     <span>Quadril</span>
                                 </span>
                                 <span class="meas-delta-inline" id="delta-quadril-tag" style="display: none;">
@@ -668,8 +675,8 @@
                                 </span>
                             </div>
                             <div class="bio-stat-val" style="display: flex; align-items: baseline; gap: 3px;">
-                                <span class="stat-num" id="meas-quadril-val" style="font-size: 18px; font-weight: 800; color: #fff;">--</span>
-                                <span class="stat-unit" style="font-size: 11px; color: #64748b;">cm</span>
+                                <span class="stat-num" id="meas-quadril-val" style="font-size: 18px; font-weight: 800; color: #f8fafc;">--</span>
+                                <span class="stat-unit" style="font-size: 12px; color: #94a3b8;">cm</span>
                             </div>
                         </div>
                     </div>
@@ -677,7 +684,7 @@
 
                 <!-- Barra de Ações: Nova Aferição -->
                 <div class="evolution-actions-bar" style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 10px 0;">
-                    <h4 style="color: #ffffff; font-size: 13.5px; margin: 0; font-family: var(--font-heading);">
+                    <h4 style="color: #f8fafc; font-size: 14px; margin: 0; font-family: var(--font-heading);">
                         Histórico Cronológico (<span id="total-evaluations-count">0</span>)
                     </h4>
                     <button type="button" class="btn-new-eval" id="btn-add-eval-from-modal">
@@ -704,6 +711,11 @@
                         </thead>
                         <tbody id="evolution-table-body"></tbody>
                     </table>
+                </div>
+                </div>
+
+                <div id="evolucao-panel-rpg" class="evolucao-subtab-panel" style="display: none;">
+                    <div id="evolucao-rpg-history-container"></div>
                 </div>
             </div>
 
@@ -982,24 +994,69 @@
                     </div>
                 </div>
 
-                <!-- Barra Inferior de Ações Rápidas com peso visual equilibrado -->
-                <div class="athlete-bio-actions-bar">
+                <!-- Barra Inferior de Ações Rápidas (apenas + Medir quando já possui histórico) -->
+                <div class="athlete-bio-actions-bar" id="athlete-bio-actions-bar" style="display: none;">
                     <div class="meas-quick-actions">
-                        <button type="button" class="btn-meas-action" id="btn-toggle-eval-details" aria-expanded="false" title="Ver Ficha Técnica RPG (Muay Thai)">
-                            <span>Ficha RPG ↓</span>
-                        </button>
                         <button type="button" class="btn-meas-action btn-meas-accent" id="btn-modal-medidas" title="Lançar Nova Medição">
                             <span>+ Medir</span>
                         </button>
                     </div>
                 </div>
+            </section>
 
-                <!-- Painel Recolhível da Avaliação Técnica Gamificada (RPG Muay Thai) -->
-                <div class="athlete-eval-drawer athlete-rpg-drawer" id="athlete-eval-drawer" style="display: none;">
-                    <div id="athlete-rpg-container" class="portal-rpg-card">
-                        <div style="text-align: center; padding: 18px; color: #94a3b8; font-size: 12.5px;">
-                            Nenhuma avaliação técnica RPG registrada ainda.
+            <!-- ========================================================= -->
+            <!-- CARD ACORDEÃO: FICHA TÉCNICA RPG (RECOLHIDO POR PADRÃO)   -->
+            <!-- ========================================================= -->
+            <section class="rpg-accordion-card standalone-panel-card" id="card-rpg-accordion" data-open="false">
+                <div id="athlete-rpg-container" class="rpg-accordion-root">
+                    <div class="rpg-accordion-empty">
+                        <strong>Avaliação Técnica RPG (Muay Thai)</strong>
+                        <p>Nenhuma avaliação técnica RPG registrada ainda.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ========================================================= -->
+            <!-- CARD SEMANA ATUAL (Frequência & Régua dos 5 Dias)           -->
+            <!-- ========================================================= -->
+            <section class="semana-atual-card streak-hero-card" id="semana-atual-section">
+                <div class="semana-atual-head">
+                    <div class="semana-head-left">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                        </svg>
+                        <span class="semana-head-title">SEMANA ATUAL</span>
+                    </div>
+                    <span class="semana-head-meta" id="streak-meta-text">Meta: 3 treinos</span>
+                </div>
+
+                <div class="semana-fogo-box">
+                    <div class="fogo-info-row">
+                        <div class="fogo-icon-badge streak-flame-badge">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
+                            </svg>
+                            <span class="streak-flame-count" id="streak-flame-count" style="display: none;">0</span>
                         </div>
+                        <div class="fogo-text-group">
+                            <h4 class="fogo-title">Frequência</h4>
+                            <p class="fogo-subtitle" id="streak-summary-subtitle">0 de 3 concluídos nesta semana</p>
+                        </div>
+                        <span class="fogo-percent-badge streak-percent-pill" id="streak-percent-text">0%</span>
+                    </div>
+
+                    <div class="streak-progress-track">
+                        <div class="streak-progress-bar" id="streak-progress-bar" style="width: 0%;"></div>
+                    </div>
+
+                    <!-- Régua dos Dias da Semana -->
+                    <div class="weekly-streak-ruler weekly-streak-pills-row" id="weekly-streak-ruler">
+                        <!-- Preenchido dinamicamente pelo JS -->
                     </div>
                 </div>
             </section>
@@ -1036,16 +1093,16 @@
                     <!-- Detalhe do Exame de Graduação -->
                     <div class="next-rank-footer">
                         <div class="exam-date-info">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f97316"
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f97316"
                                 stroke-width="2">
                                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                                 <line x1="16" y1="2" x2="16" y2="6" />
                                 <line x1="8" y1="2" x2="8" y2="6" />
                                 <line x1="3" y1="10" x2="21" y2="10" />
                             </svg>
-                            <span id="card-next-exam-date">Exame: <strong>20/12 às 10:00</strong></span>
+                            <span id="card-next-exam-date">Exame: <strong>--</strong></span>
                         </div>
-                        <span class="exam-venue-info" id="card-next-exam-venue">Dojo Central - Pro Combate</span>
+                        <span class="exam-venue-info" id="card-next-exam-venue">Pro Combate</span>
                     </div>
 
                     <!-- Botão de Ação: Inscrição no Exame de Graduação (visível quando apto e com exame disponível) -->
@@ -1067,51 +1124,6 @@
                         </div>
                     </div>
                 </section>
-
-            <!-- ========================================================= -->
-            <!-- CARD SEMANA ATUAL (Frequência & Régua dos 5 Dias)           -->
-            <!-- ========================================================= -->
-            <section class="semana-atual-card streak-hero-card" id="semana-atual-section">
-                <div class="semana-atual-head">
-                    <div class="semana-head-left">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2.2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
-                        </svg>
-                        <span class="semana-head-title">SEMANA ATUAL</span>
-                    </div>
-                    <span class="semana-head-meta" id="streak-meta-text">Meta: 3 treinos</span>
-                </div>
-
-                <div class="semana-fogo-box">
-                    <div class="fogo-info-row">
-                        <div class="fogo-icon-badge streak-flame-badge">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path
-                                    d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
-                            </svg>
-                            <span class="streak-flame-count" id="streak-flame-count" style="display: none;">0</span>
-                        </div>
-                        <div class="fogo-text-group">
-                            <h4 class="fogo-title">Frequência</h4>
-                            <p class="fogo-subtitle" id="streak-summary-subtitle">0 de 3 concluídos nesta semana</p>
-                        </div>
-                        <span class="fogo-percent-badge streak-percent-pill" id="streak-percent-text">0%</span>
-                    </div>
-
-                    <!-- Régua dos 7 Dias da Semana -->
-                    <div class="weekly-streak-ruler weekly-streak-pills-row" id="weekly-streak-ruler">
-                        <!-- Preenchido dinamicamente pelo JS -->
-                    </div>
-
-                    <div class="streak-progress-track" style="display: none;">
-                        <div class="streak-progress-bar" id="streak-progress-bar" style="width: 0%;"></div>
-                    </div>
-                </div>
-            </section>
         </aside>
     </div>
 
@@ -1452,6 +1464,11 @@
 
                 <!-- Botões de Ação da Conta -->
                 <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="button" id="modal-conta-btn-pagar" class="btn-modal-save"
+                        style="background: rgba(56, 189, 248, 0.14); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.4); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="1" y="4" width="22" height="16" rx="3" ry="3"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                        <span>Minhas Faturas &amp; Pagamentos</span>
+                    </button>
                     <button type="button" id="btn-conta-install-app" class="btn-modal-save pwa-install-trigger"
                         style="background: rgba(220, 38, 38, 0.14); color: #f87171; border: 1px solid rgba(220, 38, 38, 0.45); width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
@@ -1856,27 +1873,19 @@
             </svg>
             <span>Treinos</span>
         </button>
-        <button type="button" class="mobile-nav-item" data-tab="faturas" id="mob-nav-faturas">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="1" y="4" width="22" height="16" rx="3" ry="3"/>
-                <line x1="1" y1="10" x2="23" y2="10"/>
-                <line x1="5" y1="15" x2="9" y2="15"/>
-            </svg>
-            <span>Faturas</span>
-        </button>
-        <button type="button" class="mobile-nav-item" data-tab="graduacoes" id="mob-nav-graduacoes">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="8" r="6"/>
-                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
-            </svg>
-            <span>Graduações</span>
-        </button>
         <button type="button" class="mobile-nav-item" data-tab="evolucao" id="mob-nav-evolucao">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
                 <polyline points="17 6 23 6 23 12" />
             </svg>
             <span>Evolução</span>
+        </button>
+        <button type="button" class="mobile-nav-item" data-tab="graduacoes" id="mob-nav-graduacoes">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="6"/>
+                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+            </svg>
+            <span>Graduação</span>
         </button>
         <button type="button" class="mobile-nav-item" data-tab="missoes" id="mob-nav-missoes">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1890,8 +1899,8 @@
     </nav>
 
     <!-- Script Principal do Painel -->
-    <script src="/js/rpg-avaliacao.js?v=2.0"></script>
-    <script src="/js/painel-aluno.js?v=6.4"></script>
+    <script src="/js/rpg-avaliacao.js?v=2.1"></script>
+    <script src="/js/painel-aluno.js?v=6.5"></script>
 </body>
 
 </html>

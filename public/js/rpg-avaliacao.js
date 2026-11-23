@@ -444,7 +444,7 @@
                                 <div class="rpg-badge-body">
                                     <div class="rpg-badge-top">
                                         <strong>${escapeHtml(b.nome)}</strong>
-                                        <span class="rpg-badge-state ${unlocked ? 'on' : 'off'}">${unlocked ? '✓ Conquistada' : '🔒 Bloqueada'}</span>
+                                        <span class="rpg-badge-state ${unlocked ? 'on' : 'off'}">${unlocked ? '✓ Conquistado' : '🔒 Bloqueada'}</span>
                                     </div>
                                     <p class="rpg-badge-req">${escapeHtml(b.requisito || '')}</p>
                                 </div>
@@ -511,8 +511,8 @@
     }
 
     function renderRadarSvg(atualPilares = {}, anteriorPilares = null, deltas = null) {
-        const cx = 205;
-        const cy = 165;
+        const cx = 220;
+        const cy = 175;
         const maxR = 96;
         const levels = [5, 10, 15, 20];
         const count = PILLARS.length;
@@ -536,7 +536,7 @@
             const labelPos = pointAt(0, ratio);
             return `
                 <polygon points="${pts}" fill="none" stroke="rgba(148, 163, 184, ${lvl === 20 ? '0.32' : '0.16'})" stroke-width="${lvl === 20 ? '1.3' : '1'}" />
-                <text x="${(labelPos.x + 5).toFixed(1)}" y="${(labelPos.y + 3).toFixed(1)}" font-size="9" fill="#64748b" font-weight="600">${lvl}</text>
+                <text x="${(labelPos.x + 6).toFixed(1)}" y="${(labelPos.y + 4).toFixed(1)}" font-size="12" fill="#CBD5E1" font-weight="600">${lvl}</text>
             `;
         }).join('');
 
@@ -579,7 +579,7 @@
             if (cosVal > 0.25) anchor = 'start';
             else if (cosVal < -0.25) anchor = 'end';
 
-            const yOffset = idx === 0 ? -6 : (Math.sin(pos.angle) > 0.4 ? 10 : 4);
+            const yOffset = idx === 0 ? -8 : (Math.sin(pos.angle) > 0.4 ? 10 : 4);
             let deltaSpan = '';
             if (deltas && deltas.pilares && deltas.pilares[pillar.id] !== undefined && deltas.pilares[pillar.id] !== null) {
                 const dVal = Number(deltas.pilares[pillar.id]);
@@ -589,10 +589,10 @@
             }
 
             return `
-                <text x="${pos.x.toFixed(1)}" y="${(pos.y + yOffset).toFixed(1)}" text-anchor="${anchor}" font-size="11.5" font-weight="700" fill="#f8fafc">
+                <text x="${pos.x.toFixed(1)}" y="${(pos.y + yOffset).toFixed(1)}" text-anchor="${anchor}" font-size="13" font-weight="700" fill="#F8FAFC">
                     ${escapeHtml(pillar.nome)}
                 </text>
-                <text x="${pos.x.toFixed(1)}" y="${(pos.y + yOffset + 13).toFixed(1)}" text-anchor="${anchor}" font-size="10.5" font-weight="800" fill="${pillar.cor}">
+                <text x="${pos.x.toFixed(1)}" y="${(pos.y + yOffset + 15).toFixed(1)}" text-anchor="${anchor}" font-size="12" font-weight="800" fill="${pillar.cor}">
                     ${val}/20${deltaSpan}
                 </text>
             `;
@@ -600,7 +600,7 @@
 
         const gradId = 'rpgRadarFillGrad';
         return `
-            <svg viewBox="0 0 410 330" class="rpg-radar-svg" role="img" aria-label="Gráfico de Radar dos 5 Atributos RPG">
+            <svg viewBox="0 0 440 350" class="rpg-radar-svg" role="img" aria-label="Gráfico de Radar dos 5 Atributos RPG">
                 <defs>
                     <radialGradient id="${gradId}" cx="50%" cy="50%" r="55%">
                         <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.45" />
