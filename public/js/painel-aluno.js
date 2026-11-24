@@ -26,6 +26,7 @@ const PainelAlunoApp = {
     portalRpgCompareId: null,
     rpgAccordionOpen: false,
     evolucaoSubtab: 'fisico',
+    graduacaoSummary: null,
     missoesData: null,
     missoesBoardFiltro: 'todas',
 
@@ -1028,29 +1029,27 @@ const PainelAlunoApp = {
             temAvaliacao = true;
         }
 
+        const eligText = (temAvaliacao && scoreElegibilidade !== null)
+            ? `${scoreElegibilidade}% Elegível`
+            : 'Aguardando Avaliação';
+        const eligClass = (temAvaliacao && scoreElegibilidade !== null)
+            ? (isApto ? 'eligibility-pill pill-eligible' : 'eligibility-pill pill-progress')
+            : 'eligibility-pill pill-pending';
+        const barWidth = (temAvaliacao && scoreElegibilidade !== null)
+            ? `${Math.min(100, Math.max(5, scoreElegibilidade))}%`
+            : '0%';
+        const barClass = (temAvaliacao && scoreElegibilidade !== null)
+            ? `next-rank-bar ${isApto ? 'bar-eligible' : 'bar-progress'}`
+            : 'next-rank-bar';
+
         if (eligibilityBadge) {
-            if (temAvaliacao && scoreElegibilidade !== null) {
-                if (isApto) {
-                    eligibilityBadge.textContent = `${scoreElegibilidade}% Elegível`;
-                    eligibilityBadge.className = 'eligibility-pill pill-eligible';
-                } else {
-                    eligibilityBadge.textContent = `${scoreElegibilidade}% Elegível`;
-                    eligibilityBadge.className = 'eligibility-pill pill-progress';
-                }
-            } else {
-                eligibilityBadge.textContent = 'Aguardando Avaliação';
-                eligibilityBadge.className = 'eligibility-pill pill-pending';
-            }
+            eligibilityBadge.textContent = eligText;
+            eligibilityBadge.className = eligClass;
         }
 
         if (nextRankBar) {
-            if (temAvaliacao && scoreElegibilidade !== null) {
-                nextRankBar.style.width = `${Math.min(100, Math.max(5, scoreElegibilidade))}%`;
-                nextRankBar.className = `next-rank-bar ${isApto ? 'bar-eligible' : 'bar-progress'}`;
-            } else {
-                nextRankBar.style.width = '0%';
-                nextRankBar.className = 'next-rank-bar';
-            }
+            nextRankBar.style.width = barWidth;
+            nextRankBar.className = barClass;
         }
 
         if (nextRankIcon && proximaGrad && proximaGrad.prajied_icone_url) {
@@ -1058,6 +1057,20 @@ const PainelAlunoApp = {
         }
 
         const exame = data.exame_proximo;
+        this.graduacaoSummary = {
+            isApto,
+            temAvaliacao,
+            scoreElegibilidade,
+            eligText,
+            eligClass,
+            barWidth,
+            barClass,
+            exame,
+            elegivelComExame: false,
+            btnExamLabel: 'Inscrever-se no Exame de Graduação',
+            btnExamClass: 'btn-inscrever-exame'
+        };
+
         if (exame && nextExamDate) {
             const dObj = new Date(exame.data_evento);
             const dStr = !isNaN(dObj.getTime()) ? dObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : exame.data_evento;
@@ -1420,7 +1433,7 @@ const PainelAlunoApp = {
         const rpgAtual = rpg.atual || rpgHist[0] || null;
         const ui = window.RpgAvaliacaoUI;
 
-        // 1. Ficha RPG / Medidas
+        // 1. Medidas (apenas medições físicas)
         const fichaMedidasTokens = [];
         if (histMedidas.length > 0) {
             histMedidas.forEach((m, idx) => {
@@ -1431,9 +1444,6 @@ const PainelAlunoApp = {
         } else {
             fichaMedidasTokens.push('med:pending_first');
         }
-        rpgHist.forEach((h, idx) => {
-            fichaMedidasTokens.push(`rpg:${h.id || idx}:${Math.round(Number(h.score_total || 0))}`);
-        });
 
         // 2. Meus Atributos
         const atributosTokens = rpgHist.map((h, idx) => (
@@ -1544,53 +1554,10 @@ const PainelAlunoApp = {
         const hasMeasures = (medidas.peso_kg !== null && medidas.peso_kg !== undefined)
             || (medidas.altura_cm !== null && medidas.altura_cm !== undefined);
 
-        const rpg = data.avaliacao_rpg || {};
-        const historico = Array.isArray(rpg.historico) ? rpg.historico : [];
-        const atual = rpg.atual || historico[0] || null;
-        const ui = window.RpgAvaliacaoUI;
-
-        let rpgSummaryHtml = `
-            <div class="qa-modal-section">
-                <h4 class="qa-modal-section-title">Ficha Técnica RPG</h4>
-                <p class="qa-modal-empty-msg">Nenhuma avaliação técnica RPG registrada pelo instrutor ainda.</p>
-            </div>
-        `;
-
-        if (atual && typeof ui !== 'undefined') {
-            const scoreTotal = Math.round(Number(atual.score_total || 0));
-            const aptoSparring = atual.apto_sparring !== false && atual.apto_sparring !== 0;
-            const arquetipoObj = atual.arquetipo || ui.computeArchetype(atual.pilares, scoreTotal);
-            const dataStr = atual.data_avaliacao
-                ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR')
-                : 'Recente';
-            const avaliadorStr = this.escapeHtml(atual.avaliador_nome || 'Instrutor');
-
-            rpgSummaryHtml = `
-                <div class="qa-modal-section">
-                    <h4 class="qa-modal-section-title">Resumo da Ficha RPG</h4>
-                    <div class="rpg-accordion-head-top">
-                        <div class="rpg-accordion-rank-group">
-                            ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
-                            <div class="portal-rpg-score">
-                                <strong>${scoreTotal}<span>/100</span></strong>
-                            </div>
-                        </div>
-                        <div class="rpg-accordion-meta-right">
-                            ${ui.renderSparringBadgeHtml(aptoSparring)}
-                            <span class="qa-modal-subtitle-date">${this.escapeHtml(dataStr)} • ${avaliadorStr}</span>
-                        </div>
-                    </div>
-                    ${ui.renderArchetypePillHtml(arquetipoObj)}
-                    <button type="button" class="portal-rpg-story-btn" id="btn-qa-story-card">
-                        <span>📸 Gerar Card de Status (Stories 9:16)</span>
-                    </button>
-                </div>
-            `;
-        }
-
         const pesoFmt = (medidas.peso_kg !== null && medidas.peso_kg !== undefined) ? `${this.escapeHtml(medidas.peso_kg)} kg` : '--';
         const alturaFmt = (medidas.altura_cm !== null && medidas.altura_cm !== undefined) ? `${this.escapeHtml(medidas.altura_cm)} cm` : '--';
         const imcFmt = (medidas.imc !== null && medidas.imc !== undefined) ? this.escapeHtml(medidas.imc) : '--';
+        const imcClass = medidas.imc_classificacao ? this.escapeHtml(medidas.imc_classificacao) : '';
         const toraxFmt = (medidas.torax_cm !== null && medidas.torax_cm !== undefined) ? `${this.escapeHtml(medidas.torax_cm)} cm` : '--';
         const cinturaFmt = (medidas.cintura_cm !== null && medidas.cintura_cm !== undefined) ? `${this.escapeHtml(medidas.cintura_cm)} cm` : '--';
         const quadrilFmt = (medidas.quadril_cm !== null && medidas.quadril_cm !== undefined) ? `${this.escapeHtml(medidas.quadril_cm)} cm` : '--';
@@ -1612,6 +1579,7 @@ const PainelAlunoApp = {
                     <div class="qa-measure-box"><span>Cintura</span><strong>${cinturaFmt}</strong></div>
                     <div class="qa-measure-box"><span>Quadril</span><strong>${quadrilFmt}</strong></div>
                 </div>
+                ${imcClass ? `<div class="qa-modal-subtitle-date">Classificação IMC: <strong style="color:#f8fafc;">${imcClass}</strong></div>` : ''}
             </div>
         ` : `
             <div class="qa-modal-section">
@@ -1622,7 +1590,6 @@ const PainelAlunoApp = {
 
         body.innerHTML = `
             <div class="qa-modal-stack">
-                ${rpgSummaryHtml}
                 ${measuresHtml}
                 <div class="qa-modal-actions">
                     <button type="button" class="qa-modal-btn-primary" id="btn-qa-registrar-medidas">
@@ -1635,9 +1602,6 @@ const PainelAlunoApp = {
             </div>
         `;
 
-        document.getElementById('btn-qa-story-card')?.addEventListener('click', () => {
-            this.openPortalRpgStatusCard();
-        });
         document.getElementById('btn-qa-registrar-medidas')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-qa-ficha-medidas');
             if (modal) modal.style.display = 'none';
@@ -1662,7 +1626,7 @@ const PainelAlunoApp = {
         if (!atual || typeof ui === 'undefined') {
             body.innerHTML = `
                 <div class="qa-modal-section">
-                    <p class="qa-modal-empty-msg">Nenhuma avaliação técnica RPG lançada pelo instrutor ainda. Assim que você for avaliado nos 20 critérios, seu gráfico de radar e os 5 atributos aparecerão aqui.</p>
+                    <p class="qa-modal-empty-msg">Nenhuma avaliação técnica RPG lançada pelo instrutor ainda. Assim que você for avaliado nos 20 critérios, seu ranking, pontuação, gráfico de radar e os 5 atributos aparecerão aqui.</p>
                 </div>
             `;
             return;
@@ -1688,7 +1652,27 @@ const PainelAlunoApp = {
         const scoreTotal = Math.round(Number(atual.score_total || 0));
         const aptoSparring = atual.apto_sparring !== false && atual.apto_sparring !== 0;
         const dataStr = atual.data_avaliacao ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR') : 'Recente';
+        const avaliadorStr = this.escapeHtml(atual.avaliador_nome || 'Instrutor');
         const arquetipoObj = atual.arquetipo || ui.computeArchetype(atual.pilares, scoreTotal);
+
+        const rankHeaderHtml = `
+            <div class="qa-modal-section">
+                <h4 class="qa-modal-section-title">Ranking &amp; Pontuação Geral</h4>
+                <div class="rpg-accordion-head-top">
+                    <div class="rpg-accordion-rank-group">
+                        ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
+                        <div class="portal-rpg-score">
+                            <strong>${scoreTotal}<span>/100</span></strong>
+                            ${ui.renderDeltaBadgeHtml(deltas ? deltas.score_total : null, ' pts')}
+                        </div>
+                    </div>
+                    <div class="rpg-accordion-meta-right">
+                        ${ui.renderSparringBadgeHtml(aptoSparring)}
+                        <span class="qa-modal-subtitle-date">${this.escapeHtml(dataStr)} • ${avaliadorStr}</span>
+                    </div>
+                </div>
+            </div>
+        `;
 
         const compareHtml = candidates.length > 0 ? `
             <div class="portal-rpg-compare">
@@ -1712,10 +1696,10 @@ const PainelAlunoApp = {
             </div>
         ` : '';
 
-        const criteriaDetailsHtml = (!atual.is_legacy && atual.criterios && Object.keys(atual.criterios).length > 0) ? `
-            <details class="rpg-criteria-details">
-                <summary class="rpg-criteria-summary">Ver notas dos 20 critérios</summary>
-                <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+        const criteriaOpenHtml = (!atual.is_legacy && atual.criterios && Object.keys(atual.criterios).length > 0) ? `
+            <div class="qa-modal-section">
+                <h4 class="qa-modal-section-title">Notas dos 20 Critérios</h4>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
                     ${ui.PILLARS.map((pillar) => {
                         const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
                         const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
@@ -1736,11 +1720,12 @@ const PainelAlunoApp = {
                         `;
                     }).join('')}
                 </div>
-            </details>
+            </div>
         ` : '';
 
         body.innerHTML = `
             <div class="qa-modal-stack">
+                ${rankHeaderHtml}
                 ${ui.renderArchetypePillHtml(arquetipoObj)}
                 <div class="portal-rpg-grid">
                     <div class="portal-rpg-radar-wrap">
@@ -1756,7 +1741,7 @@ const PainelAlunoApp = {
                 </div>
                 ${compareHtml}
                 ${noteHtml}
-                ${criteriaDetailsHtml}
+                ${criteriaOpenHtml}
                 <button type="button" class="portal-rpg-story-btn" id="btn-qa-attr-story">
                     <span>📸 Gerar Card de Status (Stories 9:16)</span>
                 </button>
@@ -1831,10 +1816,12 @@ const PainelAlunoApp = {
         const c2 = this.sanitizeColor(gradAtual?.cor_secundaria, c1);
         const proxNome = this.escapeHtml(proxGrad?.nivel_nome || 'Próximo Grau');
 
-        // Reaproveita o cálculo de elegibilidade exibido no card
-        const eligText = document.getElementById('card-eligibility-badge')?.textContent || 'Aguardando Avaliação';
-        const rawBarWidth = document.getElementById('card-next-rank-progress-bar')?.style.width || '0%';
+        const gradSummary = this.graduacaoSummary || {};
+        const eligText = gradSummary.eligText || 'Aguardando Avaliação';
+        const eligClass = gradSummary.eligClass || 'eligibility-pill pill-pending';
+        const rawBarWidth = gradSummary.barWidth || '0%';
         const barWidth = /^\d{1,3}%$/.test(rawBarWidth) ? rawBarWidth : '0%';
+        const barClass = gradSummary.barClass || 'next-rank-bar';
 
         let examLine = 'Aguardando definição de data';
         if (exame && exame.data_evento) {
@@ -1858,8 +1845,9 @@ const PainelAlunoApp = {
             `;
         }).join('') : '<p class="qa-modal-empty-msg">Sem histórico anterior de graduações registrado.</p>';
 
-        const btnExamWrapVisible = document.getElementById('card-next-rank-action-wrap')?.style.display !== 'none';
-        const btnExamLabel = document.getElementById('btn-inscrever-exame-text')?.textContent || 'Inscrever-se no Exame de Graduação';
+        const btnExamWrapVisible = Boolean(gradSummary.elegivelComExame);
+        const btnExamLabel = gradSummary.btnExamLabel || 'Inscrever-se no Exame de Graduação';
+        const btnExamClass = gradSummary.btnExamClass || 'btn-inscrever-exame';
 
         body.innerHTML = `
             <div class="qa-modal-stack">
@@ -1870,15 +1858,15 @@ const PainelAlunoApp = {
                             <span class="prajied-dot" style="background: linear-gradient(135deg, ${c1}, ${c2});"></span>
                             <span>${atualNome}</span>
                         </span>
-                        <span class="eligibility-pill">${this.escapeHtml(eligText)}</span>
+                        <span class="${this.escapeHtml(eligClass)}">${this.escapeHtml(eligText)}</span>
                     </div>
                     <div style="font-size:14px; font-weight:700; color:#f8fafc;">Rumo ao ${proxNome}</div>
                     <div class="next-rank-track" style="margin-bottom:4px;">
-                        <div class="next-rank-bar" style="width: ${this.escapeHtml(barWidth)};"></div>
+                        <div class="${this.escapeHtml(barClass)}" style="width: ${barWidth};"></div>
                     </div>
                     <div class="qa-modal-subtitle-date">Exame: <strong style="color:#f8fafc;">${examLine}</strong></div>
                     ${btnExamWrapVisible ? `
-                        <button type="button" class="btn-inscrever-exame" id="btn-qa-inscrever-exame" style="margin-top:6px;">
+                        <button type="button" class="${this.escapeHtml(btnExamClass)}" id="btn-qa-inscrever-exame" style="margin-top:6px;">
                             <span>${this.escapeHtml(btnExamLabel)}</span>
                         </button>
                     ` : ''}
@@ -1904,7 +1892,7 @@ const PainelAlunoApp = {
         document.getElementById('btn-qa-inscrever-exame')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-qa-graduacao');
             if (modal) modal.style.display = 'none';
-            document.getElementById('btn-inscrever-exame')?.click();
+            this.abrirFluxoInscricaoExame();
         });
         document.getElementById('btn-qa-ir-graduacoes')?.addEventListener('click', () => {
             const modal = document.getElementById('modal-qa-graduacao');
@@ -5272,32 +5260,39 @@ const PainelAlunoApp = {
         const btnInscrever = document.getElementById('btn-inscrever-exame');
         const btnText = document.getElementById('btn-inscrever-exame-text');
 
-        if (!actionWrap || !btnInscrever) return;
-
         // Condição: Aluno elegível e existe exame de graduação aberto
         const elegivelComExame = Boolean(isApto && exame && exame.id);
+        if (this.graduacaoSummary) {
+            this.graduacaoSummary.elegivelComExame = elegivelComExame;
+        }
 
         if (!elegivelComExame) {
-            actionWrap.style.display = 'none';
+            if (actionWrap) actionWrap.style.display = 'none';
             return;
         }
 
-        actionWrap.style.display = 'block';
+        if (actionWrap) actionWrap.style.display = 'block';
 
         const conviteStatus = exame.convite_status;
+        let btnClass = 'btn-inscrever-exame';
+        let btnLabel = 'Inscrever-se no Exame de Graduação';
         if (conviteStatus === 'pago') {
-            btnInscrever.className = 'btn-inscrever-exame btn-exame-pago';
-            if (btnText) btnText.textContent = '✓ Inscrição Confirmada & Paga';
+            btnClass = 'btn-inscrever-exame btn-exame-pago';
+            btnLabel = '✓ Inscrição Confirmada & Paga';
         } else if (conviteStatus === 'aceito') {
-            btnInscrever.className = 'btn-inscrever-exame btn-exame-pendente';
-            if (btnText) btnText.textContent = 'Concluir Pagamento PIX';
+            btnClass = 'btn-inscrever-exame btn-exame-pendente';
+            btnLabel = 'Concluir Pagamento PIX';
         } else if (conviteStatus === 'recusado') {
-            btnInscrever.className = 'btn-inscrever-exame btn-exame-recusado';
-            if (btnText) btnText.textContent = 'Desistência Registrada • Mudar de Ideia?';
-        } else {
-            btnInscrever.className = 'btn-inscrever-exame';
-            if (btnText) btnText.textContent = 'Inscrever-se no Exame de Graduação';
+            btnClass = 'btn-inscrever-exame btn-exame-recusado';
+            btnLabel = 'Desistência Registrada • Mudar de Ideia?';
         }
+
+        if (this.graduacaoSummary) {
+            this.graduacaoSummary.btnExamClass = btnClass;
+            this.graduacaoSummary.btnExamLabel = btnLabel;
+        }
+        if (btnInscrever) btnInscrever.className = btnClass;
+        if (btnText) btnText.textContent = btnLabel;
 
         // Verifica se o atleta marcou para não mostrar mais ou registrou desistência deste exame
         const alunoId = aluno?.id || 1;
