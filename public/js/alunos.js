@@ -642,12 +642,28 @@ const AlunosModule = {
                 const tooltipParts = [];
                 if (a.ultima_avaliacao_graduacao) tooltipParts.push(`Graduação: ${UI.formatDate(a.ultima_avaliacao_graduacao)}`);
                 if (a.ultima_avaliacao_desempenho) tooltipParts.push(`Desempenho: ${UI.formatDate(a.ultima_avaliacao_desempenho)}`);
+                if (a.aptidao_exame && a.aptidao_exame.motivo) {
+                    tooltipParts.push(`Exame: ${a.aptidao_exame.motivo}`);
+                }
                 const evalTooltip = tooltipParts.length > 0
                     ? tooltipParts.join(' • ')
                     : 'Nenhuma avaliação registrada para este aluno';
+
+                let aptidaoPillHtml = '';
+                if (a.aptidao_exame) {
+                    if (a.aptidao_exame.apto) {
+                        const proxTxt = a.aptidao_exame.proxima_graduacao_nome
+                            ? `Apto para ${a.aptidao_exame.proxima_graduacao_nome}`
+                            : 'Apto para próximo exame';
+                        aptidaoPillHtml = `<span class="aluno-aptidao-pill apto" title="${UI.escapeHtml(proxTxt + ' • ' + (a.aptidao_exame.motivo || ''))}">✓ Apto p/ exame</span>`;
+                    } else if (dtUltimaAval) {
+                        aptidaoPillHtml = `<span class="aluno-aptidao-pill evolucao" title="${UI.escapeHtml(a.aptidao_exame.motivo || 'Em evolução técnica')}">Em evolução</span>`;
+                    }
+                }
+
                 const ultimaAvalHtml = dtUltimaAval
-                    ? `<div class="aluno-eval-meta avaliado" title="${UI.escapeHtml(evalTooltip)}">Últ. avaliação: <strong>${UI.escapeHtml(UI.formatDate(dtUltimaAval))}</strong></div>`
-                    : `<div class="aluno-eval-meta pendente" title="${UI.escapeHtml(evalTooltip)}">Sem avaliação</div>`;
+                    ? `<div class="aluno-eval-meta avaliado" title="${UI.escapeHtml(evalTooltip)}">Últ. avaliação: <strong>${UI.escapeHtml(UI.formatDate(dtUltimaAval))}</strong> ${aptidaoPillHtml}</div>`
+                    : `<div class="aluno-eval-meta pendente" title="${UI.escapeHtml(evalTooltip)}">Sem avaliação ${aptidaoPillHtml}</div>`;
 
                 return `
                     <tr id="aluno-row-${safeId}" class="aluno-row-clickable" data-aluno-id="${safeId}">

@@ -2561,6 +2561,143 @@ test('WhatsApp Persistência MySQL: Criptografia AES-256-GCM, Auth State e Backo
     assert.equal(whatsappService.computeReconnectDelayMs(5, { isConflict: true }), 60000);
 });
 
+test('Regras de Domínio: Elegibilidade Unificada e Consistência de Exames de Graduação', () => {
+    const examEligibilityService = require('../services/examEligibilityService');
+
+    const niveis = [
+        { id: 1, nome: 'Prajied Branco', ordem_hierarquica: 1, cor_hex_primaria: '#ffffff', cor_hex_secundaria: null, porcentagem_minima: 70 },
+        { id: 2, nome: 'Prajied Amarelo', ordem_hierarquica: 3, cor_hex_primaria: '#eab308', cor_hex_secundaria: null, porcentagem_minima: 70 },
+        { id: 3, nome: 'Prajied Amarelo e Branco', ordem_hierarquica: 5, cor_hex_primaria: '#eab308', cor_hex_secundaria: '#ffffff', porcentagem_minima: 70 },
+        {
+            id: 4,
+            nome: 'Prajied Verde',
+            ordem_hierarquica: 7,
+            cor_hex_primaria: '#16a34a',
+            cor_hex_secundaria: null,
+            porcentagem_minima: 70,
+            rpg_rank_minimo: 'A',
+            rpg_pontuacao_minima_atributo: 12,
+            rpg_exige_apto_sparring: 1
+        }
+    ];
+
+    // 1. findNextLevel respeitando lacunas na ordem_hierarquica e retorno null no topo
+    assert.equal(examEligibilityService.findNextLevel(niveis, 1)?.id, 2);
+    assert.equal(examEligibilityService.findNextLevel(niveis, 3)?.id, 3);
+    assert.equal(examEligibilityService.findNextLevel(niveis, 7), null);
+
+    // 2. detectInviteBeltConflict identificando regressão, faixa já conquistada e alteração
+    const conflitoRegressao = examEligibilityService.detectInviteBeltConflict({
+        inviteAtualId: 2,
+        invitePretendidaId: 2,
+        invitePretendidaOrdem: 3,
+        currentRealBelt: { nivel_id: 4, nome: 'Prajied Verde', ordem_hierarquica: 7 }
+    });
+    assert.equal(conflitoRegressao.divergente, true);
+    assert.equal(conflitoRegressao.tipo, 'regressao');
+
+    const conflitoConquistada = examEligibilityService.detectInviteBeltConflict({
+        inviteAtualId: 2,
+        invitePretendidaId: 3,
+        invitePretendidaOrdem: 5,
+        currentRealBelt: { nivel_id: 3, nome: 'Prajied Amarelo e Branco', ordem_hierarquica: 5 }
+    });
+    assert.equal(conflitoConquistada.divergente, true);
+    assert.equal(conflitoConquistada.tipo, 'ja_conquistada');
+
+    const conflitoAlterada = examEligibilityService.detectInviteBeltConflict({
+        inviteAtualId: 1,
+        invitePretendidaId: 3,
+        invitePretendidaOrdem: 5,
+        currentRealBelt: { nivel_id: 2, nome: 'Prajied Amarelo', ordem_hierarquica: 3 }
+    });
+    assert.equal(conflitoAlterada.divergente, true);
+    assert.equal(conflitoAlterada.tipo, 'faixa_atual_alterada');
+
+    const semConflito = examEligibilityService.detectInviteBeltConflict({
+        inviteAtualId: 2,
+        invitePretendidaId: 3,
+        invitePretendidaOrdem: 5,
+        currentRealBelt: { nivel_id: 2, nome: 'Prajied Amarelo', ordem_hierarquica: 3 }
+    });
+    assert.equal(semConflito.divergente, false);
+
+    // 3. evaluateStudentExamEligibility com RPG sem trava
+    const eligRpgOk = examEligibilityService.evaluateStudentExamEligibility({
+        currentBelt: niveis[0],
+        nextBelt: niveis[1],
+        formalEval: null,
+        rpgEval: {
+            is_rpg: true,
+            score_total: 82,
+            rank_combate: 'A',
+            apto_sparring: true,
+            pilares: { inteligencia: 16, destreza: 17, agilidade: 16, forca: 16, vitalidade: 17 }
+        },
+        wikiProgress: null
+    });
+    assert.equal(eligRpgOk.apto, true);
+    assert.equal(eligRpgOk.fonte, 'rpg');
+    assert.equal(eligRpgOk.percentual, 82);
+
+    // 4. evaluateStudentExamEligibility bloqueado por trava RPG (apto_sparring = false)
+    const eligTrava = examEligibilityService.evaluateStudentExamEligibility({
+        currentBelt: niveis[2],
+        nextBelt: niveis[3],
+        formalEval: { apto: 1, percentual_obtido: 90 },
+        rpgEval: {
+            is_rpg: true,
+            score_total: 84,
+            rank_combate: 'A',
+            apto_sparring: false,
+            pilares: { inteligencia: 17, destreza: 17, agilidade: 17, forca: 16, vitalidade: 17 }
+        },
+        wikiProgress: null
+    });
+    assert.equal(eligTrava.apto, false);
+    assert.equal(eligTrava.fonte, 'trava_rpg');
+    assert.ok(eligTrava.bloqueios.length > 0);
+
+    // 5. evaluateStudentExamEligibility via avaliação formal, Wiki, sem avaliação e nível máximo
+    const eligFormal = examEligibilityService.evaluateStudentExamEligibility({
+        currentBelt: niveis[0],
+        nextBelt: niveis[1],
+        formalEval: { apto: 1, percentual_obtido: 85, professor_nome: 'Mestre' },
+        rpgEval: null,
+        wikiProgress: null
+    });
+    assert.equal(eligFormal.apto, true);
+    assert.equal(eligFormal.fonte, 'avaliacao_graduacao');
+
+    const eligWiki = examEligibilityService.evaluateStudentExamEligibility({
+        currentBelt: niveis[0],
+        nextBelt: niveis[1],
+        formalEval: null,
+        rpgEval: null,
+        wikiProgress: { total_golpes: 10, golpes_dominados: 8 }
+    });
+    assert.equal(eligWiki.apto, true);
+    assert.equal(eligWiki.fonte, 'wiki_golpes');
+    assert.equal(eligWiki.percentual, 80);
+
+    const eligSemAval = examEligibilityService.evaluateStudentExamEligibility({
+        currentBelt: niveis[0],
+        nextBelt: niveis[1],
+        formalEval: null,
+        rpgEval: null,
+        wikiProgress: { total_golpes: 10, golpes_dominados: 0 }
+    });
+    assert.equal(eligSemAval.apto, false);
+    assert.equal(eligSemAval.motivo, 'Sem avaliação registrada para a faixa atual');
+
+    const eligMax = examEligibilityService.evaluateStudentExamEligibility({
+        currentBelt: niveis[3],
+        nextBelt: null
+    });
+    assert.equal(eligMax.apto, false);
+    assert.equal(eligMax.fonte, 'nivel_maximo');
+});
+
 test.after(async () => {
     try {
         await pool.end();

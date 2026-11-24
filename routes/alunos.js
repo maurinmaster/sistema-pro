@@ -13,6 +13,7 @@ const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
 const notificationConfigService = require('../services/notificationConfigService');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
+const examEligibilityService = require('../services/examEligibilityService');
 
 // Configuração do Multer para armazenamento de fotos de perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -153,7 +154,15 @@ router.get('/', authenticateToken, async (req, res) => {
                     WHERE aad.aluno_id = a.id
                 ) AS ultima_avaliacao_desempenho
             FROM alunos a
-            LEFT JOIN aluno_graduacoes ag ON ag.aluno_id = a.id AND ag.atual = 1
+            LEFT JOIN aluno_graduacoes ag ON ag.id = (
+                SELECT ag2.id
+                FROM aluno_graduacoes ag2
+                JOIN modalidades m2 ON m2.id = ag2.modalidade_id
+                WHERE ag2.aluno_id = a.id AND ag2.atual = 1
+                ${(modalidade_id && modalidade_id !== 'todas') ? 'AND ag2.modalidade_id = ?' : ''}
+                ORDER BY (m2.nome LIKE '%Muay%') DESC, ag2.id DESC
+                LIMIT 1
+            )
             LEFT JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
             LEFT JOIN modalidades m ON m.id = ag.modalidade_id
             LEFT JOIN matriculas mat ON mat.aluno_id = a.id AND mat.status = 'ativa'
@@ -162,6 +171,9 @@ router.get('/', authenticateToken, async (req, res) => {
         `;
 
         const params = [];
+        if (modalidade_id && modalidade_id !== 'todas') {
+            params.push(modalidade_id);
+        }
 
         if (busca) {
             query += ` AND (a.nome_completo LIKE ? OR a.cpf LIKE ? OR a.email LIKE ? OR a.telefone_whatsapp LIKE ?)`;
@@ -195,6 +207,28 @@ router.get('/', authenticateToken, async (req, res) => {
         }
 
         const [rows] = await pool.query(query, params);
+
+        const eligibilityByAluno = new Map();
+        try {
+            const alunoIds = rows.map(r => Number(r.id)).filter(id => Number.isInteger(id) && id > 0);
+            if (alunoIds.length > 0) {
+                const modFilter = (modalidade_id && modalidade_id !== 'todas') ? Number(modalidade_id) : null;
+                const eligList = await examEligibilityService.loadExamEligibilityBatch(pool, {
+                    alunoIds,
+                    modalidadeId: Number.isInteger(modFilter) && modFilter > 0 ? modFilter : null,
+                    includeInactive: true
+                });
+                for (const item of eligList) {
+                    const prev = eligibilityByAluno.get(item.aluno_id);
+                    if (!prev || (!prev.apto && item.apto)) {
+                        eligibilityByAluno.set(item.aluno_id, item);
+                    }
+                }
+            }
+        } catch (eligErr) {
+            console.warn('[Alunos] Aviso ao calcular aptidão em lote:', eligErr.message);
+        }
+
         const enrichedRows = rows.map((row) => {
             const dtGrad = row.ultima_avaliacao_graduacao || null;
             const dtDesemp = row.ultima_avaliacao_desempenho || null;
@@ -204,9 +238,17 @@ router.get('/', authenticateToken, async (req, res) => {
             } else {
                 ultimaAvaliacao = dtGrad || dtDesemp || null;
             }
+            const elig = eligibilityByAluno.get(Number(row.id)) || null;
             return {
                 ...row,
-                ultima_avaliacao_data: ultimaAvaliacao
+                ultima_avaliacao_data: ultimaAvaliacao || (elig ? elig.ultima_avaliacao_data : null),
+                aptidao_exame: elig ? {
+                    apto: Boolean(elig.apto),
+                    percentual: Number(elig.percentual_avaliacao || 0),
+                    fonte: elig.aptidao_fonte,
+                    motivo: elig.motivo_elegibilidade,
+                    proxima_graduacao_nome: elig.graduacao_pretendida_nome
+                } : null
             };
         });
 

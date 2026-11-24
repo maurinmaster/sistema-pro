@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=4.7">
+    <link rel="stylesheet" href="/css/style.css?v=4.8">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.3">
 </head>
@@ -73,7 +73,7 @@
                         <polygon
                             points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                     </svg>
-                    <span>Graduações & Faixas</span>
+                    <span>Catálogo de Faixas</span>
                 </a>
                 <a class="nav-item" data-view="exames" id="nav-exames">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -853,57 +853,57 @@
                         </div>
                     </div>
 
-                    <!-- Indicadores Rápidos (KPIs Padronizados) -->
+                    <!-- Indicadores Rápidos (KPIs Dinâmicos do Exame Selecionado) -->
                     <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 24px;">
                         <div class="stat-card">
                             <div class="stat-header">
-                                <span class="stat-title">Exames em Aberto</span>
+                                <span class="stat-title">Aptos p/ Convidar</span>
                                 <div class="stat-icon" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
                                     <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                                 </div>
                             </div>
                             <div class="stat-value" id="kpi-exames-abertos">0</div>
                             <div class="stat-meta">
-                                <span class="positive">Com inscrições abertas</span>
+                                <span class="positive" id="kpi-exames-abertos-meta">Pendentes de convite neste exame</span>
                             </div>
                         </div>
 
                         <div class="stat-card">
                             <div class="stat-header">
-                                <span class="stat-title">Total Convocados</span>
+                                <span class="stat-title">Aguardando Ação</span>
                                 <div class="stat-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
                                     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                                 </div>
                             </div>
                             <div class="stat-value" id="kpi-exames-convidados">0</div>
                             <div class="stat-meta">
-                                <span style="color: #f59e0b;">Convites emitidos</span>
+                                <span style="color: #f59e0b;" id="kpi-exames-convidados-meta">Sem resposta ou aguardando pgto</span>
                             </div>
                         </div>
 
                         <div class="stat-card">
                             <div class="stat-header">
-                                <span class="stat-title">Inscrições Confirmadas</span>
+                                <span class="stat-title">Confirmados (Pagos)</span>
                                 <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
                                     <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
                                 </div>
                             </div>
                             <div class="stat-value" id="kpi-exames-confirmados" style="color: #10b981;">0</div>
                             <div class="stat-meta">
-                                <span class="positive">Taxas pagas / quitadas</span>
+                                <span class="positive" id="kpi-exames-confirmados-meta">Taxas pagas / quitadas</span>
                             </div>
                         </div>
 
                         <div class="stat-card">
                             <div class="stat-header">
-                                <span class="stat-title">Total Arrecadado</span>
+                                <span class="stat-title">Arrecadado no Exame</span>
                                 <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
                                     <svg viewBox="0 0 24 24"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                                 </div>
                             </div>
                             <div class="stat-value" id="kpi-exames-arrecadado" style="color: #10b981;">R$ 0,00</div>
                             <div class="stat-meta">
-                                <span>Online (Gateway) e Baixas Manuais</span>
+                                <span id="kpi-exames-arrecadado-meta">Online (Gateway) e Baixas Manuais</span>
                             </div>
                         </div>
                     </div>
@@ -913,7 +913,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                             <div>
                                 <h3 style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin: 0;">Eventos de Exame de Graduação</h3>
-                                <p style="font-size: 12px; color: var(--text-muted); margin: 3px 0 0 0;">Selecione um evento para visualizar atletas elegíveis e acompanhar convocações</p>
+                                <p style="font-size: 12px; color: var(--text-muted); margin: 3px 0 0 0;">Selecione um evento para gerenciar convocações, financeiro e promoção de faixas</p>
                             </div>
                         </div>
                         <div id="eventos-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
@@ -936,7 +936,7 @@
 
                             <div class="exame-hub-info-cards">
                                 <div class="exame-hub-mini-card">
-                                    <span class="exame-hub-mini-label">Data & Horário</span>
+                                    <span class="exame-hub-mini-label">Data &amp; Horário</span>
                                     <span class="exame-hub-mini-value" id="detalhe-evento-data">--</span>
                                 </div>
                                 <div class="exame-hub-mini-card">
@@ -950,36 +950,41 @@
                             </div>
                         </div>
 
-                        <!-- Abas: Alunos Aptos vs Convites Emitidos -->
-                        <div style="display: flex; gap: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px; margin-bottom: 18px; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-secondary active" id="tab-btn-aptos" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                    <circle cx="9" cy="7" r="4" />
-                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                </svg>
-                                <span>Alunos Aptos para Convite</span>
-                                <span class="badge" id="badge-aptos-count" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0 aptos</span>
+                        <!-- Abas do Funil Linear em 3 Etapas -->
+                        <div class="exame-funnel-tabs">
+                            <button type="button" class="btn btn-secondary exame-funnel-tab active" id="tab-btn-aptos">
+                                <span>1. Aguardando Convite</span>
+                                <span class="badge" id="badge-aptos-count" style="background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0 pendentes</span>
                             </button>
-                            <button type="button" class="btn btn-secondary" id="tab-btn-convites" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="2" y="4" width="20" height="16" rx="2" />
-                                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                                </svg>
-                                <span>Convites & Inscrições</span>
+                            <button type="button" class="btn btn-secondary exame-funnel-tab" id="tab-btn-convites">
+                                <span>2. Convocados &amp; Financeiro</span>
                                 <span class="badge" id="badge-convites-count" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0</span>
+                                <span class="badge" id="badge-convites-alertas" style="display: none; background: rgba(245, 158, 11, 0.2); color: #fbbf24; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0 alertas</span>
+                            </button>
+                            <button type="button" class="btn btn-secondary exame-funnel-tab" id="tab-btn-execucao">
+                                <span>3. Dia do Exame &amp; Promoção</span>
+                                <span class="badge" id="badge-execucao-count" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 11px; padding: 2px 8px; border-radius: 10px;">0 confirmados</span>
                             </button>
                         </div>
 
-                        <!-- Painel Aba 1: Alunos Aptos -->
+                        <!-- Etapa 1: Alunos Aptos Aguardando Convite -->
                         <div id="painel-tab-aptos">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 12px; background: rgba(15, 23, 42, 0.6); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05);">
-                                <div id="filtro-aptos-modalidade-wrap" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                                    <label for="filtro-aptos-modalidade" style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Filtrar Modalidade:</label>
-                                    <select id="filtro-aptos-modalidade" class="form-select" style="min-width: 180px; padding: 6px 12px; font-size: 12.5px;">
-                                        <option value="">Todas as Modalidades</option>
-                                    </select>
+                            <div class="exame-filter-bar">
+                                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; flex: 1;">
+                                    <div id="filtro-aptos-modalidade-wrap" style="display: flex; gap: 8px; align-items: center;">
+                                        <label for="filtro-aptos-modalidade" style="font-size: 12.5px; color: var(--text-muted); font-weight: 600;">Modalidade:</label>
+                                        <select id="filtro-aptos-modalidade" class="form-select" style="min-width: 165px; padding: 6px 10px; font-size: 12.5px;">
+                                            <option value="">Todas</option>
+                                        </select>
+                                    </div>
+                                    <input type="text" id="busca-aptos-exame" class="form-input" placeholder="Buscar atleta apto por nome ou faixa..." style="max-width: 260px; padding: 6px 12px; font-size: 12.5px;">
+                                    <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); cursor: pointer;">
+                                        <input type="checkbox" id="toggle-mostrar-ja-convidados" style="accent-color: #38bdf8;">
+                                        <span>Mostrar já convidados</span>
+                                    </label>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-inelegiveis" style="font-size: 11.5px;">
+                                        Ver em evolução / inelegíveis (0)
+                                    </button>
                                 </div>
                                 <button type="button" class="btn btn-primary is-disabled" id="btn-enviar-convites-lote" disabled style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700;">
                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
@@ -995,7 +1000,7 @@
                                     <thead>
                                         <tr>
                                             <th style="width: 40px; text-align: center;">
-                                                <input type="checkbox" id="check-todos-aptos" title="Selecionar todos os alunos aptos">
+                                                <input type="checkbox" id="check-todos-aptos" title="Selecionar todos os alunos aptos pendentes">
                                             </th>
                                             <th>Aluno</th>
                                             <th>Modalidade</th>
@@ -1005,24 +1010,61 @@
                                         </tr>
                                     </thead>
                                     <tbody id="tabela-alunos-aptos-corpo">
-                                        <!-- Carregado via ExamesModule.carregarAlunosAptos -->
+                                        <!-- Carregado via ExamesModule.renderTabelaAptos -->
                                     </tbody>
                                 </table>
                             </div>
+
+                            <div id="painel-inelegiveis-exame" class="exame-inelegiveis-panel" style="display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                                    <div>
+                                        <strong style="font-size: 13px; color: #f8fafc;">Atletas em Evolução / Não Elegíveis neste momento</strong>
+                                        <div style="font-size: 11.5px; color: var(--text-muted);">Motivos objetivos calculados pelo motor unificado (RPG, Avaliação Formal, Wiki e Trava de Sparring)</div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Atleta</th>
+                                                <th>Faixa Atual &rarr; Próxima</th>
+                                                <th>Progresso</th>
+                                                <th>Motivo / Pendência</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tabela-inelegiveis-corpo"></tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Painel Aba 2: Convites Emitidos -->
+                        <!-- Etapa 2: Convocados & Financeiro -->
                         <div id="painel-tab-convites" style="display: none;">
+                            <div id="convites-alertas-banner" class="exame-alert-banner" style="display: none;"></div>
+
+                            <div class="exame-filter-bar">
+                                <div class="exame-status-pills" id="convites-status-pills">
+                                    <button type="button" class="exame-status-pill active" data-status-filter="todos">Todos</button>
+                                    <button type="button" class="exame-status-pill" data-status-filter="convidado">Sem Resposta</button>
+                                    <button type="button" class="exame-status-pill" data-status-filter="aceito">Aguardando Pgto</button>
+                                    <button type="button" class="exame-status-pill" data-status-filter="pago_online">Pagos Online</button>
+                                    <button type="button" class="exame-status-pill" data-status-filter="pago_manual">Pagos Manual</button>
+                                    <button type="button" class="exame-status-pill" data-status-filter="recusado">Recusados</button>
+                                    <button type="button" class="exame-status-pill" data-status-filter="alertas">Alertas</button>
+                                </div>
+                                <input type="text" id="busca-convites-exame" class="form-input" placeholder="Buscar convocado por nome ou e-mail..." style="max-width: 260px; padding: 6px 12px; font-size: 12.5px;">
+                            </div>
+
                             <div class="table-responsive">
                                 <table class="data-table" id="tabela-convites">
                                     <thead>
                                         <tr>
                                             <th>Aluno Convocado</th>
-                                            <th>Graduação Pretendida</th>
+                                            <th>Evolução de Faixa</th>
                                             <th>Taxa</th>
                                             <th>Data Convite</th>
                                             <th>Status</th>
-                                            <th>Pagamento Online</th>
+                                            <th>Pagamento</th>
                                             <th>Ações</th>
                                         </tr>
                                     </thead>
@@ -1030,6 +1072,45 @@
                                         <!-- Carregado via ExamesModule.renderListaConvites -->
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+
+                        <!-- Etapa 3: Dia do Exame & Promoção de Faixas -->
+                        <div id="painel-tab-execucao" style="display: none;">
+                            <div class="exame-filter-bar">
+                                <div>
+                                    <strong style="font-size: 13.5px; color: #f8fafc;">Lista de Chamada &amp; Promoção em Lote</strong>
+                                    <div style="font-size: 11.5px; color: var(--text-muted);">Somente atletas com taxa confirmada/paga aparecem para avaliação final e promoção automática de faixa.</div>
+                                </div>
+                                <button type="button" class="btn btn-secondary btn-sm" id="btn-marcar-todos-aprovados">
+                                    ✓ Marcar todos pendentes como Aprovado
+                                </button>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="data-table" id="tabela-execucao-exame">
+                                    <thead>
+                                        <tr>
+                                            <th>Atleta Confirmado</th>
+                                            <th>Evolução de Faixa</th>
+                                            <th>Resultado da Banca</th>
+                                            <th>Status da Promoção</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabela-execucao-corpo">
+                                        <!-- Carregado via ExamesModule.renderTabelaExecucao -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="exame-execucao-footer">
+                                <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-primary); cursor: pointer;">
+                                    <input type="checkbox" id="check-concluir-evento-exame" style="accent-color: #10b981;">
+                                    <span>Encerrar e marcar este evento como <strong>Concluído</strong> após promover</span>
+                                </label>
+                                <button type="button" class="btn btn-primary" id="btn-salvar-promocoes-exame">
+                                    🥋 Confirmar Resultados &amp; Promover Faixas
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -3294,6 +3375,37 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- MODAL: BAIXA MANUAL DE TAXA DE EXAME       -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-baixa-manual-exame">
+        <div class="modal-box" style="max-width: 440px;">
+            <div class="modal-header">
+                <h3>Confirmar Baixa Manual (Exame)</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-baixa-manual-exame')">&times;</button>
+            </div>
+            <form id="form-baixa-manual-exame">
+                <div class="modal-body">
+                    <input type="hidden" id="baixa-manual-convite-id">
+                    <p id="baixa-manual-aluno-info" style="font-size: 13.5px; font-weight: 700; color: #f8fafc; margin: 0 0 14px 0;"></p>
+                    <div class="form-group">
+                        <label for="baixa-manual-metodo">Forma de Recebimento</label>
+                        <select id="baixa-manual-metodo" class="form-select" required>
+                            <option value="dinheiro">💵 Dinheiro (Balcão)</option>
+                            <option value="pix_direto">⚡ Pix Direto (Academia)</option>
+                            <option value="cartao_maquininha">💳 Cartão (Maquininha)</option>
+                            <option value="outro">📝 Outro (Acordo / Manual)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-baixa-manual-exame')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Confirmar Pagamento</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- MODAL: CADASTRO / EDIÇÃO DE MISSÃO         -->
     <!-- ========================================== -->
     <div class="modal-overlay" id="modal-missao">
@@ -3403,14 +3515,14 @@
     <script src="/js/auth.js?v=1.2"></script>
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
     <script src="/js/aluno-detalhes.js?v=1.5"></script>
-    <script src="/js/alunos.js?v=5.5"></script>
+    <script src="/js/alunos.js?v=5.6"></script>
     <script src="/js/dashboard.js?v=1.2"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.5"></script>
     <script src="/js/missoes.js?v=1.0"></script>
-    <script src="/js/exames.js?v=3.9"></script>
+    <script src="/js/exames.js?v=4.0"></script>
     <script src="/js/mensagens-config.js?v=1.3"></script>
     <script src="/js/app.js?v=4.1"></script>
 </body>

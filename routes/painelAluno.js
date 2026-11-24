@@ -14,6 +14,7 @@ const asaasService = require('../services/asaasService');
 const notificationConfigService = require('../services/notificationConfigService');
 const paymentReconciliationService = require('../services/paymentReconciliationService');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
+const examEligibilityService = require('../services/examEligibilityService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
@@ -748,6 +749,28 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             proximaGraduacao
         );
 
+        const elegibilidadeUnificada = examEligibilityService.evaluateStudentExamEligibility({
+            currentBelt: graduacaoAtual ? {
+                id: graduacaoAtual.nivel_id,
+                nome: graduacaoAtual.nivel_nome,
+                ordem_hierarquica: graduacaoAtual.ordem_hierarquica,
+                porcentagem_minima: graduacaoAtual.porcentagem_minima
+            } : null,
+            nextBelt: proximaGraduacao ? {
+                id: proximaGraduacao.nivel_id,
+                nome: proximaGraduacao.nivel_nome,
+                ordem_hierarquica: proximaGraduacao.ordem_hierarquica,
+                cor_hex_primaria: proximaGraduacao.cor_hex_primaria,
+                cor_hex_secundaria: proximaGraduacao.cor_hex_secundaria,
+                rpg_rank_minimo: proximaGraduacao.rpg_rank_minimo,
+                rpg_pontuacao_minima_atributo: proximaGraduacao.rpg_pontuacao_minima_atributo,
+                rpg_exige_apto_sparring: proximaGraduacao.rpg_exige_apto_sparring
+            } : null,
+            formalEval: avaliacaoTecnica,
+            rpgEval: rpgAtual,
+            wikiProgress: prontidaoExame
+        });
+
         let exameProximo = null;
         try {
             let modFilter = '';
@@ -1023,9 +1046,16 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
                     percentual_obtido: parseFloat(avaliacaoTecnica.percentual_obtido) || 0,
                     pontos_obtidos: avaliacaoTecnica.total_pontos_obtidos,
                     pontos_possiveis: avaliacaoTecnica.total_pontos_possiveis,
-                    apto: avaliacaoTecnica.apto === 1,
+                    apto: Boolean(elegibilidadeUnificada.apto),
                     observacoes: avaliacaoTecnica.observacoes_professor
-                } : null,
+                } : (elegibilidadeUnificada.apto ? {
+                    percentual_obtido: Number(elegibilidadeUnificada.percentual || 0),
+                    pontos_obtidos: rpgAtual ? rpgAtual.score_total : Number(elegibilidadeUnificada.percentual || 0),
+                    pontos_possiveis: 100,
+                    apto: true,
+                    observacoes: elegibilidadeUnificada.motivo
+                } : null),
+                elegibilidade_unificada: elegibilidadeUnificada,
                 historico: historicoGraduacoes,
                 avaliacoes: graduacoesHistory.map(g => {
                     let itens = [];

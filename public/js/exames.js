@@ -1,15 +1,26 @@
 /**
  * PRO COMBATE - Módulo de Gestão de Exames de Graduação & Integração Asaas
- * Criação de eventos de graduação, configuração de datas e valores,
- * identificação automática de alunos aptos e emissão de convites.
+ * Fluxo linear em 3 Etapas:
+ * 1) Aguardando Convite (Elegibilidade Unificada: RPG + Avaliação Formal + Wiki)
+ * 2) Convocados & Financeiro (Asaas Online vs Baixa Manual, Estorno, Reenvio, Alertas de Faixa)
+ * 3) Dia do Exame & Promoção de Faixas em Lote
  */
 
 const ExamesModule = {
     eventos: [],
     eventoSelecionadoId: null,
+    eventoDetalhesAtual: null,
     alunosAptos: [],
+    alunosInelegiveis: [],
+    resumoAptos: null,
     alunosSelecionadosIds: new Set(),
-    activeTab: 'aptos', // 'aptos' ou 'convites'
+    activeTab: 'aptos', // 'aptos' | 'convites' | 'execucao'
+    mostrarJaConvidados: false,
+    mostrarInelegiveis: false,
+    buscaAptos: '',
+    buscaConvites: '',
+    filtroStatusConvite: 'todos',
+    resultadosExecucao: {}, // { [conviteId]: 'aprovado' | 'reprovado' | 'ausente' }
 
     async init() {
         console.log('🥋 [ExamesModule] Inicializando módulo de exames de graduação...');
@@ -17,41 +28,77 @@ const ExamesModule = {
     },
 
     bindEvents() {
-        // Botão Novo Evento
         document.getElementById('btn-novo-evento-exame')?.addEventListener('click', () => {
             this.abrirModalNovoEvento();
         });
 
-        // Formulário de Criação/Edição de Evento
         document.getElementById('form-evento-exame')?.addEventListener('submit', (e) => {
             e.preventDefault();
             this.salvarEvento();
         });
 
-        // Alternância de Abas no Painel do Evento (Alunos Aptos vs Convites)
-        document.getElementById('tab-btn-aptos')?.addEventListener('click', () => {
-            this.switchTab('aptos');
-        });
-        document.getElementById('tab-btn-convites')?.addEventListener('click', () => {
-            this.switchTab('convites');
+        document.getElementById('form-baixa-manual-exame')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submeterBaixaManual();
         });
 
-        // Filtro de Modalidade na lista de Aptos
+        // Abas do funil em 3 etapas
+        document.getElementById('tab-btn-aptos')?.addEventListener('click', () => this.switchTab('aptos'));
+        document.getElementById('tab-btn-convites')?.addEventListener('click', () => this.switchTab('convites'));
+        document.getElementById('tab-btn-execucao')?.addEventListener('click', () => this.switchTab('execucao'));
+
+        // Controles da Etapa 1 (Aguardando Convite)
         document.getElementById('filtro-aptos-modalidade')?.addEventListener('change', () => {
             this.carregarAlunosAptos();
         });
-
-        // Checkbox Selecionar Todos os Aptos
+        document.getElementById('busca-aptos-exame')?.addEventListener('input', (e) => {
+            this.buscaAptos = String(e.target.value || '').trim().toLowerCase();
+            this.renderTabelaAptos();
+            this.renderTabelaInelegiveis();
+        });
+        document.getElementById('toggle-mostrar-ja-convidados')?.addEventListener('change', (e) => {
+            this.mostrarJaConvidados = Boolean(e.target.checked);
+            this.alunosSelecionadosIds.clear();
+            const chkAll = document.getElementById('check-todos-aptos');
+            if (chkAll) chkAll.checked = false;
+            this.renderTabelaAptos();
+        });
+        document.getElementById('btn-toggle-inelegiveis')?.addEventListener('click', () => {
+            this.mostrarInelegiveis = !this.mostrarInelegiveis;
+            const painel = document.getElementById('painel-inelegiveis-exame');
+            if (painel) painel.style.display = this.mostrarInelegiveis ? 'block' : 'none';
+        });
         document.getElementById('check-todos-aptos')?.addEventListener('change', (e) => {
             this.toggleSelecionarTodos(e.target.checked);
         });
-
-        // Botão Enviar Convites em Lote
         document.getElementById('btn-enviar-convites-lote')?.addEventListener('click', () => {
             this.enviarConvitesSelecionados();
         });
 
-        // Botão Atualizar Listas (concilia com Asaas antes de recarregar)
+        // Controles da Etapa 2 (Convocados & Financeiro)
+        document.getElementById('busca-convites-exame')?.addEventListener('input', (e) => {
+            this.buscaConvites = String(e.target.value || '').trim().toLowerCase();
+            this.renderListaConvites();
+        });
+        document.getElementById('convites-status-pills')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-status-filter]');
+            if (!btn) return;
+            this.filtroStatusConvite = btn.getAttribute('data-status-filter') || 'todos';
+            document.querySelectorAll('#convites-status-pills .exame-status-pill').forEach((p) => {
+                p.classList.toggle('active', p === btn);
+            });
+            this.renderListaConvites();
+        });
+
+        // Controles da Etapa 3 (Dia do Exame & Promoção)
+        document.getElementById('btn-marcar-todos-aprovados')?.addEventListener('click', () => {
+            this.marcarTodosPendentesAprovados();
+        });
+        document.getElementById('btn-salvar-promocoes-exame')?.addEventListener('click', () => {
+            this.submeterPromocoes();
+        });
+
+        // Recarregar & Conciliar Asaas
         document.getElementById('btn-recarregar-exames')?.addEventListener('click', async () => {
             if (this.eventoSelecionadoId) {
                 try {
@@ -91,11 +138,10 @@ const ExamesModule = {
         try {
             const res = await API.get('/exames/eventos');
             this.eventos = res.data || [];
-            this.renderKPIs();
+            this.updateEventScopedKpis();
             this.renderEventosSelect();
             this.renderEventosCards();
 
-            // Se tiver eventos e nenhum selecionado, seleciona o primeiro ativo
             if (this.eventos.length > 0 && !this.eventoSelecionadoId) {
                 const ativo = this.eventos.find(e => e.status === 'aberto') || this.eventos[0];
                 this.selecionarEvento(ativo.id);
@@ -108,27 +154,95 @@ const ExamesModule = {
         }
     },
 
-    renderKPIs() {
-        const abertos = this.eventos.filter(e => e.status === 'aberto').length;
+    /**
+     * Atualiza os KPIs do topo refletindo prioritariamente o evento selecionado,
+     * com fallback global caso nenhum evento esteja aberto/selecionado.
+     */
+    updateEventScopedKpis() {
+        const abertosCount = this.eventos.filter(e => e.status === 'aberto').length;
+        const badgeNav = document.getElementById('total-exames-count');
+        if (badgeNav) {
+            badgeNav.textContent = abertosCount;
+            badgeNav.style.display = abertosCount > 0 ? 'inline-block' : 'none';
+        }
+
+        const elAbertos = document.getElementById('kpi-exames-abertos');
+        const elAbertosMeta = document.getElementById('kpi-exames-abertos-meta');
+        const elConvidados = document.getElementById('kpi-exames-convidados');
+        const elConvidadosMeta = document.getElementById('kpi-exames-convidados-meta');
+        const elConfirmados = document.getElementById('kpi-exames-confirmados');
+        const elConfirmadosMeta = document.getElementById('kpi-exames-confirmados-meta');
+        const elArrecadado = document.getElementById('kpi-exames-arrecadado');
+        const elArrecadadoMeta = document.getElementById('kpi-exames-arrecadado-meta');
+
+        const ev = this.eventoDetalhesAtual || this.eventos.find(e => e.id === this.eventoSelecionadoId) || null;
+        if (ev) {
+            const resumoEv = ev.resumo || {};
+            const pendentesConvite = this.resumoAptos
+                ? Number(this.resumoAptos.pendentes_convite || 0)
+                : this.alunosAptos.filter(a => !a.ja_convidado).length;
+            const semResposta = resumoEv.sem_resposta !== undefined
+                ? Number(resumoEv.sem_resposta)
+                : Number(ev.total_convidados_pendentes || 0);
+            const aguardandoPgto = resumoEv.aguardando_pagamento !== undefined
+                ? Number(resumoEv.aguardando_pagamento)
+                : Number(ev.total_aguardando_pagamento || 0);
+            const pagosOnline = resumoEv.pagos_online !== undefined
+                ? Number(resumoEv.pagos_online)
+                : Number(ev.total_pagos_online || 0);
+            const pagosManual = resumoEv.pagos_manual !== undefined
+                ? Number(resumoEv.pagos_manual)
+                : Number(ev.total_pagos_manual || 0);
+            const totalPagos = resumoEv.pagos !== undefined
+                ? Number(resumoEv.pagos)
+                : Number(ev.total_pagos !== undefined ? ev.total_pagos : (ev.total_confirmados || 0));
+            const arrOnline = resumoEv.arrecadado_online !== undefined
+                ? Number(resumoEv.arrecadado_online)
+                : Number(ev.valor_arrecadado_online || 0);
+            const arrManual = resumoEv.arrecadado_manual !== undefined
+                ? Number(resumoEv.arrecadado_manual)
+                : Number(ev.valor_arrecadado_manual || 0);
+            const arrTotal = resumoEv.arrecadado_total !== undefined
+                ? Number(resumoEv.arrecadado_total)
+                : (Number(ev.total_arrecadado) || (arrOnline + arrManual));
+
+            if (elAbertos) elAbertos.textContent = pendentesConvite;
+            if (elAbertosMeta) {
+                elAbertosMeta.textContent = pendentesConvite === 1
+                    ? '1 atleta apto aguardando convite'
+                    : `${pendentesConvite} aptos aguardando convite`;
+            }
+
+            if (elConvidados) elConvidados.textContent = semResposta + aguardandoPgto;
+            if (elConvidadosMeta) {
+                elConvidadosMeta.textContent = `${semResposta} sem resposta • ${aguardandoPgto} aguardando pgto`;
+            }
+
+            if (elConfirmados) elConfirmados.textContent = totalPagos;
+            if (elConfirmadosMeta) {
+                elConfirmadosMeta.textContent = `${pagosOnline} online • ${pagosManual} manual`;
+            }
+
+            if (elArrecadado) elArrecadado.textContent = `R$ ${arrTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            if (elArrecadadoMeta) {
+                elArrecadadoMeta.textContent = `Online R$ ${arrOnline.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • Manual R$ ${arrManual.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+            }
+            return;
+        }
+
+        // Fallback global se não houver evento selecionado
         const totalConvidados = this.eventos.reduce((acc, e) => acc + (parseInt(e.total_convidados, 10) || 0), 0);
         const totalConfirmados = this.eventos.reduce((acc, e) => acc + (parseInt(e.total_pagos !== undefined ? e.total_pagos : e.total_confirmados, 10) || 0), 0);
         const totalArrecadado = this.eventos.reduce((acc, e) => acc + (parseFloat(e.total_arrecadado) || 0), 0);
 
-        const elAbertos = document.getElementById('kpi-exames-abertos');
-        const elConvidados = document.getElementById('kpi-exames-convidados');
-        const elConfirmados = document.getElementById('kpi-exames-confirmados');
-        const elArrecadado = document.getElementById('kpi-exames-arrecadado');
-
-        if (elAbertos) elAbertos.textContent = abertos;
+        if (elAbertos) elAbertos.textContent = abertosCount;
+        if (elAbertosMeta) elAbertosMeta.textContent = 'Exames com inscrições abertas';
         if (elConvidados) elConvidados.textContent = totalConvidados;
+        if (elConvidadosMeta) elConvidadosMeta.textContent = 'Convites emitidos no histórico';
         if (elConfirmados) elConfirmados.textContent = totalConfirmados;
+        if (elConfirmadosMeta) elConfirmadosMeta.textContent = 'Taxas pagas / quitadas';
         if (elArrecadado) elArrecadado.textContent = `R$ ${totalArrecadado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
-
-        const badgeNav = document.getElementById('total-exames-count');
-        if (badgeNav) {
-            badgeNav.textContent = abertos;
-            badgeNav.style.display = abertos > 0 ? 'inline-block' : 'none';
-        }
+        if (elArrecadadoMeta) elArrecadadoMeta.textContent = 'Online (Gateway) e Baixas Manuais';
     },
 
     renderEventosSelect() {
@@ -236,12 +350,15 @@ const ExamesModule = {
 
     async selecionarEvento(eventoId) {
         this.eventoSelecionadoId = eventoId;
+        this.resultadosExecucao = {};
         this.renderEventosCards();
         this.renderEventosSelect();
         const eventoAtual = this.eventos.find(e => e.id === eventoId);
         await this.syncModalidadeFilterVisibility(eventoAtual);
-        await this.carregarDetalhesEvento(eventoId);
-        await this.carregarAlunosAptos();
+        await Promise.all([
+            this.carregarDetalhesEvento(eventoId),
+            this.carregarAlunosAptos()
+        ]);
     },
 
     async syncModalidadeFilterVisibility(evento) {
@@ -265,6 +382,7 @@ const ExamesModule = {
         try {
             const res = await API.get(`/exames/eventos/${eventoId}?sync_asaas=1`);
             const evento = res.data;
+            this.eventoDetalhesAtual = evento;
 
             const tituloEl = document.getElementById('detalhe-evento-titulo');
             const dataEl = document.getElementById('detalhe-evento-data');
@@ -278,7 +396,9 @@ const ExamesModule = {
             if (localEl) localEl.textContent = evento.local_evento || 'Tatame Principal - Pro Combate';
             if (descEl) descEl.textContent = evento.descricao || 'Sem orientações complementares cadastradas.';
 
-            this.renderListaConvites(evento.convites || []);
+            this.renderListaConvites();
+            this.renderTabelaExecucao();
+            this.updateEventScopedKpis();
 
             const painelDetalhes = document.getElementById('painel-evento-detalhes');
             if (painelDetalhes) painelDetalhes.style.display = 'block';
@@ -286,23 +406,22 @@ const ExamesModule = {
             if (evento.sync_atualizou) {
                 await this.loadEventos();
             }
-
         } catch (err) {
             console.error('Erro ao carregar detalhes do evento:', err);
         }
     },
 
     /**
-     * Carrega os alunos que estão aptos com base nas avaliações e fundamentos
+     * Carrega alunos aptos e inelegíveis pelo motor unificado
      */
     async carregarAlunosAptos() {
         const tbody = document.getElementById('tabela-alunos-aptos-corpo');
         if (!tbody) return;
 
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Analisando avaliações e elegibilidade técnica...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Analisando avaliações RPG, graduais e domínio técnico...</td></tr>';
 
         try {
-            let url = `/exames/alunos-aptos?evento_id=${this.eventoSelecionadoId || ''}`;
+            let url = `/exames/alunos-aptos?evento_id=${this.eventoSelecionadoId || ''}&incluir_inelegiveis=1`;
             const eventoAtual = this.eventos.find(e => e.id === this.eventoSelecionadoId);
             const modFiltro = (eventoAtual && eventoAtual.modalidade_id)
                 ? String(eventoAtual.modalidade_id)
@@ -311,93 +430,180 @@ const ExamesModule = {
 
             const res = await API.get(url);
             this.alunosAptos = res.data || [];
+            this.alunosInelegiveis = res.inelegiveis || [];
+            this.resumoAptos = res.resumo || null;
             this.alunosSelecionadosIds.clear();
+
             const chkAll = document.getElementById('check-todos-aptos');
             if (chkAll) chkAll.checked = false;
 
-            const badgeCount = document.getElementById('badge-aptos-count');
-            if (badgeCount) badgeCount.textContent = `${this.alunosAptos.length} aptos`;
-
-            if (this.alunosAptos.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
-                            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600;">Nenhum aluno apto pendente encontrado.</p>
-                            <span style="font-size: 12px;">Todos os alunos elegíveis já foram convidados ou ainda não atingiram o percentual mínimo de aptidão nas avaliações.</span>
-                        </td>
-                    </tr>
-                `;
-                this.atualizarBotaoEnvioLote();
-                return;
+            const btnIneg = document.getElementById('btn-toggle-inelegiveis');
+            if (btnIneg) {
+                btnIneg.textContent = `Ver em evolução / inelegíveis (${this.alunosInelegiveis.length})`;
             }
 
-            tbody.innerHTML = this.alunosAptos.map(al => {
-                const fotoUrl = UI.sanitizeUrl(al.foto_perfil_url) || `https://ui-avatars.com/api/?name=${encodeURIComponent(al.nome_completo)}&background=0284c7&color=fff`;
-                const isJaConvidado = Boolean(al.ja_convidado);
-                const isSelected = this.alunosSelecionadosIds.has(al.aluno_id);
-                const conviteStatusRaw = String(al.convite_status || 'convidado').toLowerCase();
-                const conviteStatusSafe = UI.escapeHtml(conviteStatusRaw);
-                const conviteBadgeClass = conviteStatusRaw === 'pago'
-                    ? 'exame-status-pago'
-                    : (conviteStatusRaw === 'aceito'
-                        ? 'exame-status-aceito'
-                        : (conviteStatusRaw === 'recusado' ? 'exame-status-recusado' : 'exame-status-convidado'));
-
-                return `
-                    <tr style="${isJaConvidado ? 'opacity: 0.85; background: rgba(255,255,255,0.01);' : ''}">
-                        <td style="width: 40px; text-align: center;">
-                            <input type="checkbox" class="check-aluno-apto" data-aluno-id="${al.aluno_id}" 
-                                   ${isJaConvidado ? 'disabled title="Já convidado para este exame"' : ''}
-                                   ${isSelected ? 'checked' : ''}
-                                   onchange="ExamesModule.toggleSelecionarAluno(${al.aluno_id}, this.checked)">
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <img src="${fotoUrl}" alt="${UI.escapeHtml(al.nome_completo)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);">
-                                <div>
-                                    <div style="font-weight: 700; color: var(--text-primary); font-size: 13.5px;">${UI.escapeHtml(al.nome_completo)}</div>
-                                    <div style="font-size: 11.5px; color: var(--text-muted);">${UI.escapeHtml(al.email || al.telefone_whatsapp || 'Sem contato')}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <span class="status-badge" style="background: rgba(14, 165, 233, 0.12); color: #38bdf8;">
-                                ${UI.escapeHtml(al.modalidade_nome)}
-                            </span>
-                        </td>
-                        <td>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                ${UI.renderBeltBadge(al.graduacao_atual_nome, al.atual_cor_primaria, null)}
-                                <span style="color: var(--text-muted); font-size: 13px;">➜</span>
-                                ${UI.renderBeltBadge(al.graduacao_pretendida_nome, al.pretendida_cor_primaria, null)}
-                            </div>
-                        </td>
-                        <td>
-                            <div style="display: flex; flex-direction: column; gap: 4px; min-width: 110px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
-                                    <strong style="color: #10b981;">${al.percentual_avaliacao}%</strong>
-                                    <span style="font-size: 10.5px; color: var(--text-muted);">Aptidão</span>
-                                </div>
-                                <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;">
-                                    <div style="width: ${Math.min(100, Math.max(0, al.percentual_avaliacao))}%; height: 100%; background: #10b981; border-radius: 999px;"></div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            ${isJaConvidado 
-                                ? `<span class="status-badge ${conviteBadgeClass}" style="font-size: 11px;">✓ Convidado (${conviteStatusSafe})</span>` 
-                                : `<button type="button" class="btn btn-secondary btn-sm" onclick="ExamesModule.convidarAlunoIndividual(${al.aluno_id})">Convidar</button>`}
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            this.atualizarBotaoEnvioLote();
-
+            this.renderTabelaAptos();
+            this.renderTabelaInelegiveis();
+            this.updateEventScopedKpis();
         } catch (err) {
             console.error('Erro ao listar alunos aptos:', err);
             tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--danger-color); padding: 16px;">Erro ao carregar aptos: ${UI.escapeHtml(err.message)}</td></tr>`;
         }
+    },
+
+    renderTabelaAptos() {
+        const tbody = document.getElementById('tabela-alunos-aptos-corpo');
+        if (!tbody) return;
+
+        const totalAptos = this.alunosAptos.length;
+        const pendentes = this.alunosAptos.filter(a => !a.ja_convidado);
+        const badgeCount = document.getElementById('badge-aptos-count');
+        if (badgeCount) {
+            badgeCount.textContent = `${pendentes.length} ${pendentes.length === 1 ? 'pendente' : 'pendentes'}`;
+        }
+
+        let lista = this.mostrarJaConvidados ? this.alunosAptos : pendentes;
+        if (this.buscaAptos) {
+            lista = lista.filter(a => {
+                const hay = `${a.nome_completo || ''} ${a.email || ''} ${a.graduacao_atual_nome || ''} ${a.graduacao_pretendida_nome || ''}`.toLowerCase();
+                return hay.includes(this.buscaAptos);
+            });
+        }
+
+        if (lista.length === 0) {
+            if (!this.mostrarJaConvidados && totalAptos > 0 && pendentes.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                            <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #34d399;">✓ Todos os ${totalAptos} atletas aptos já foram convidados para este exame!</p>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="ExamesModule.switchTab('convites')">
+                                Acompanhar respostas e pagamentos na Etapa 2 &rarr;
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                            <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600;">Nenhum atleta apto pendente encontrado.</p>
+                            <span style="font-size: 12px;">Confira a lista "Ver em evolução / inelegíveis" para entender o que falta para cada aluno.</span>
+                        </td>
+                    </tr>
+                `;
+            }
+            this.atualizarBotaoEnvioLote();
+            return;
+        }
+
+        tbody.innerHTML = lista.map(al => {
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(al.nome_completo || 'Atleta')}&background=0284c7&color=fff`;
+            const fotoUrl = UI.sanitizeUrl(al.foto_perfil_url, fallbackAvatar);
+            const isJaConvidado = Boolean(al.ja_convidado);
+            const isSelected = this.alunosSelecionadosIds.has(al.aluno_id);
+            const conviteStatusRaw = String(al.convite_status || 'convidado').toLowerCase();
+            const conviteStatusSafe = UI.escapeHtml(conviteStatusRaw);
+            const conviteBadgeClass = conviteStatusRaw === 'pago'
+                ? 'exame-status-pago'
+                : (conviteStatusRaw === 'aceito'
+                    ? 'exame-status-aceito'
+                    : (conviteStatusRaw === 'recusado' ? 'exame-status-recusado' : 'exame-status-convidado'));
+
+            const pct = Math.min(100, Math.max(0, Math.round(Number(al.percentual_avaliacao || 0))));
+            const motivoSafe = UI.escapeHtml(al.motivo_elegibilidade || al.apto_motivo || 'Apto');
+
+            return `
+                <tr style="${isJaConvidado ? 'opacity: 0.85; background: rgba(255,255,255,0.015);' : ''}">
+                    <td style="width: 40px; text-align: center;">
+                        <input type="checkbox" class="check-aluno-apto" data-aluno-id="${Number(al.aluno_id)}" 
+                               ${isJaConvidado ? 'disabled title="Já convidado para este exame"' : ''}
+                               ${isSelected ? 'checked' : ''}
+                               onchange="ExamesModule.toggleSelecionarAluno(${Number(al.aluno_id)}, this.checked)">
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="${fotoUrl}" alt="${UI.escapeHtml(al.nome_completo)}" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);">
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-primary); font-size: 13.5px;">${UI.escapeHtml(al.nome_completo)}</div>
+                                <div style="font-size: 11.5px; color: var(--text-muted);">${UI.escapeHtml(al.email || al.telefone_whatsapp || 'Sem contato')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge" style="background: rgba(14, 165, 233, 0.12); color: #38bdf8;">
+                            ${UI.escapeHtml(al.modalidade_nome)}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            ${UI.renderBeltBadge(al.graduacao_atual_nome, al.atual_cor_primaria, al.atual_cor_secundaria)}
+                            <span style="color: var(--text-muted); font-size: 13px;">➜</span>
+                            ${UI.renderBeltBadge(al.graduacao_pretendida_nome, al.pretendida_cor_primaria, al.pretendida_cor_secundaria)}
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; flex-direction: column; gap: 4px; min-width: 150px;" title="${motivoSafe}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; gap: 6px;">
+                                <strong style="color: #10b981;">${pct}%</strong>
+                                <span style="font-size: 10.5px; color: #94a3b8;">${motivoSafe}</span>
+                            </div>
+                            <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden;">
+                                <div style="width: ${pct}%; height: 100%; background: #10b981; border-radius: 999px;"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        ${isJaConvidado 
+                            ? `<span class="status-badge ${conviteBadgeClass}" style="font-size: 11px;">✓ Convidado (${conviteStatusSafe})</span>` 
+                            : `<button type="button" class="btn btn-secondary btn-sm" onclick="ExamesModule.convidarAlunoIndividual(${Number(al.aluno_id)})">Convidar</button>`}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        this.atualizarBotaoEnvioLote();
+    },
+
+    renderTabelaInelegiveis() {
+        const tbody = document.getElementById('tabela-inelegiveis-corpo');
+        if (!tbody) return;
+
+        let lista = this.alunosInelegiveis || [];
+        if (this.buscaAptos) {
+            lista = lista.filter(a => {
+                const hay = `${a.nome_completo || ''} ${a.graduacao_atual_nome || ''} ${a.motivo_inelegibilidade || ''}`.toLowerCase();
+                return hay.includes(this.buscaAptos);
+            });
+        }
+
+        if (lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 18px; color: var(--text-muted);">Nenhum atleta em evolução para os filtros atuais.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = lista.map(a => {
+            const pct = Math.min(100, Math.max(0, Math.round(Number(a.percentual_avaliacao || 0))));
+            const proxBadge = a.graduacao_pretendida_nome
+                ? UI.renderBeltBadge(a.graduacao_pretendida_nome, a.pretendida_cor_primaria, a.pretendida_cor_secundaria)
+                : '<span style="font-size: 11px; color: var(--text-muted);">Nível Máximo</span>';
+            return `
+                <tr>
+                    <td>
+                        <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${UI.escapeHtml(a.nome_completo)}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(a.modalidade_nome || '')}</div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            ${UI.renderBeltBadge(a.graduacao_atual_nome, a.atual_cor_primaria, a.atual_cor_secundaria)}
+                            <span style="color: var(--text-muted);">➜</span>
+                            ${proxBadge}
+                        </div>
+                    </td>
+                    <td><strong>${pct}%</strong></td>
+                    <td style="font-size: 12px; color: #fbbf24;">${UI.escapeHtml(a.motivo_inelegibilidade || 'Em evolução')}</td>
+                </tr>
+            `;
+        }).join('');
     },
 
     toggleSelecionarAluno(alunoId, isChecked) {
@@ -412,15 +618,18 @@ const ExamesModule = {
     toggleSelecionarTodos(isChecked) {
         this.alunosSelecionadosIds.clear();
         if (isChecked) {
-            this.alunosAptos.forEach(al => {
-                if (!al.ja_convidado) {
-                    this.alunosSelecionadosIds.add(al.aluno_id);
+            document.querySelectorAll('#tabela-alunos-aptos-corpo .check-aluno-apto:not([disabled])').forEach(chk => {
+                const aId = Number(chk.getAttribute('data-aluno-id'));
+                if (aId) {
+                    this.alunosSelecionadosIds.add(aId);
+                    chk.checked = true;
                 }
             });
+        } else {
+            document.querySelectorAll('#tabela-alunos-aptos-corpo .check-aluno-apto:not([disabled])').forEach(chk => {
+                chk.checked = false;
+            });
         }
-        document.querySelectorAll('.check-aluno-apto:not([disabled])').forEach(chk => {
-            chk.checked = isChecked;
-        });
         this.atualizarBotaoEnvioLote();
     },
 
@@ -478,12 +687,12 @@ const ExamesModule = {
             const chkAll = document.getElementById('check-todos-aptos');
             if (chkAll) chkAll.checked = false;
 
-            // Recarrega o evento selecionado e altera para a aba de convites
-            await this.carregarDetalhesEvento(this.eventoSelecionadoId);
-            await this.carregarAlunosAptos();
-            await this.loadEventos();
+            await Promise.all([
+                this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                this.carregarAlunosAptos(),
+                this.loadEventos()
+            ]);
             this.switchTab('convites');
-
         } catch (err) {
             console.error('Erro ao enviar convites:', err);
             UI.showToast('Erro ao convidar alunos: ' + err.message, 'error');
@@ -497,49 +706,91 @@ const ExamesModule = {
     },
 
     /**
-     * Renderiza a lista de convites do evento (Status, Fatura Asaas, Ações)
+     * Etapa 2: Renderiza a lista de convocados, financeiro e anomalias (faixa divergente / aluno excluído)
      */
-    renderListaConvites(convites) {
+    renderListaConvites() {
+        const convitesAll = this.eventoDetalhesAtual?.convites || [];
         const tbody = document.getElementById('tabela-convites-corpo');
         const badgeCount = document.getElementById('badge-convites-count');
+        const badgeAlertas = document.getElementById('badge-convites-alertas');
+        const bannerAlertas = document.getElementById('convites-alertas-banner');
         if (!tbody) return;
 
-        if (badgeCount) badgeCount.textContent = `${convites.length} convidados`;
+        if (badgeCount) badgeCount.textContent = `${convitesAll.length} convocados`;
+
+        const divergenciasCount = convitesAll.filter(c => c.faixa_divergente || c.aluno_inativo_ou_excluido).length;
+        if (badgeAlertas) {
+            badgeAlertas.style.display = divergenciasCount > 0 ? 'inline-block' : 'none';
+            badgeAlertas.textContent = `${divergenciasCount} ${divergenciasCount === 1 ? 'alerta' : 'alertas'}`;
+        }
+        if (bannerAlertas) {
+            if (divergenciasCount > 0) {
+                bannerAlertas.style.display = 'flex';
+                bannerAlertas.innerHTML = `
+                    <div>
+                        <strong>⚠️ Atenção:</strong> Existem <strong>${divergenciasCount}</strong> convocações com faixa desatualizada ou atleta inativo/excluído.
+                        Use o filtro <strong>Alertas</strong> para revisar e sincronizar com segurança.
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="ExamesModule.filtrarConvitesAlertas()">
+                        Ver Alertas
+                    </button>
+                `;
+            } else {
+                bannerAlertas.style.display = 'none';
+                bannerAlertas.innerHTML = '';
+            }
+        }
+
+        let convites = convitesAll.filter((c) => {
+            const origin = c.pagamento_origem || c.origem_pagamento || 'online';
+            if (this.filtroStatusConvite === 'convidado' && c.convite_status !== 'convidado') return false;
+            if (this.filtroStatusConvite === 'aceito' && c.convite_status !== 'aceito') return false;
+            if (this.filtroStatusConvite === 'pago_online' && !(c.convite_status === 'pago' && origin === 'online')) return false;
+            if (this.filtroStatusConvite === 'pago_manual' && !(c.convite_status === 'pago' && origin === 'manual')) return false;
+            if (this.filtroStatusConvite === 'recusado' && c.convite_status !== 'recusado') return false;
+            if (this.filtroStatusConvite === 'alertas' && !(c.faixa_divergente || c.aluno_inativo_ou_excluido)) return false;
+
+            if (this.buscaConvites) {
+                const hay = `${c.aluno_nome || ''} ${c.aluno_email || ''} ${c.graduacao_pretendida_nome || ''}`.toLowerCase();
+                if (!hay.includes(this.buscaConvites)) return false;
+            }
+            return true;
+        });
 
         if (convites.length === 0) {
             tbody.innerHTML = `
                 <tr>
                     <td colspan="7" style="text-align: center; padding: 32px; color: var(--text-muted);">
-                        <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600;">Nenhum convite emitido para este exame ainda.</p>
-                        <span style="font-size: 12px;">Selecione os atletas aptos na aba ao lado e clique em "Enviar Convite" para iniciar a convocação oficial.</span>
+                        <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 600;">Nenhum convite encontrado para este filtro.</p>
+                        <span style="font-size: 12px;">Ajuste os filtros acima ou envie convocações na Etapa 1.</span>
                     </td>
                 </tr>
             `;
             return;
         }
 
+        const metodoLabels = {
+            dinheiro: 'Dinheiro',
+            pix_direto: 'Pix Direto',
+            cartao_maquininha: 'Maquininha',
+            outro: 'Manual'
+        };
+
         tbody.innerHTML = convites.map(c => {
-            const fotoUrl = UI.sanitizeUrl(c.aluno_foto) || `https://ui-avatars.com/api/?name=${encodeURIComponent(c.aluno_nome)}&background=0284c7&color=fff`;
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.aluno_nome || 'Atleta')}&background=0284c7&color=fff`;
+            const fotoUrl = UI.sanitizeUrl(c.aluno_foto, fallbackAvatar);
             const valorFmt = parseFloat(c.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
             const dataConvFmt = this.formatarData(c.data_convite);
 
-            let statusBadge = '<span class="status-badge exame-status-convidado">Convidado</span>';
-            const statusAsaasUpper = String(c.asaas_status || '').toUpperCase();
-            const billingUpper = String(c.asaas_billing_type || '').toUpperCase();
-            const isLegacyManual = statusAsaasUpper === 'CONFIRMED' && billingUpper !== 'CREDIT_CARD';
-            const isPagoManual = c.origem_pagamento
-                ? c.origem_pagamento === 'manual'
-                : (
-                    billingUpper === 'MANUAL' ||
-                    ['RECEIVED_MANUALLY', 'MANUAL', 'RECEIVED_IN_CASH'].includes(statusAsaasUpper) ||
-                    (!c.asaas_payment_id && !c.asaas_invoice_url) ||
-                    isLegacyManual ||
-                    ['PENDING', 'OVERDUE', ''].includes(statusAsaasUpper)
-                );
+            const isPagoManual = (c.pagamento_origem || c.origem_pagamento) === 'manual';
 
+            let statusBadge = '<span class="status-badge exame-status-convidado">Sem resposta</span>';
             if (c.convite_status === 'pago') {
-                const pagoLabel = isPagoManual ? '✓ Pago (Manual)' : '✓ Pago (Online)';
-                statusBadge = `<span class="status-badge exame-status-pago">${pagoLabel}</span>`;
+                const methodSuffix = isPagoManual && c.metodo_pagamento_manual && metodoLabels[c.metodo_pagamento_manual]
+                    ? ` • ${metodoLabels[c.metodo_pagamento_manual]}`
+                    : '';
+                const pagoLabel = isPagoManual ? `✓ Pago (Manual${methodSuffix})` : '✓ Pago (Online)';
+                statusBadge = `<span class="status-badge exame-status-pago">${UI.escapeHtml(pagoLabel)}</span>`;
             } else if (c.convite_status === 'aceito') {
                 statusBadge = '<span class="status-badge exame-status-aceito">Aceito (Aguardando Pgto)</span>';
             } else if (c.convite_status === 'recusado') {
@@ -554,9 +805,11 @@ const ExamesModule = {
                 `;
             }
 
-            // Ações e Cobrança Online
+            // BUG FIX: recusado deve ocultar Fatura Digital mesmo que asaas_invoice_url tenha sido gerada antes da desistência
             let asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Aguardando aceite</span>';
-            if (c.convite_status === 'pago' && isPagoManual) {
+            if (c.convite_status === 'recusado') {
+                asaasAction = '<span style="color: #fca5a5; font-size: 11.5px;">Cancelado (Recusado)</span>';
+            } else if (c.convite_status === 'pago' && isPagoManual) {
                 asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Quitado manualmente</span>';
             } else if (c.asaas_invoice_url) {
                 asaasAction = `
@@ -568,30 +821,47 @@ const ExamesModule = {
                 `;
             } else if (c.convite_status === 'pago') {
                 asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Pago via Gateway</span>';
-            } else if (c.convite_status === 'recusado') {
-                asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">—</span>';
             } else if (c.convite_status === 'aceito') {
                 asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Aguardando fatura</span>';
             }
 
-            let actionBtn = '';
+            // Alertas de anomalia (faixa divergente / aluno excluído ou inativo)
+            let anomalyBadges = '';
+            if (c.aluno_excluido) {
+                anomalyBadges += `<span class="exame-anomaly-tag danger">⚠️ Cadastro na Lixeira</span> `;
+            } else if (c.aluno_inativo) {
+                anomalyBadges += `<span class="exame-anomaly-tag">⚠️ Aluno Inativo (${UI.escapeHtml(c.aluno_status)})</span> `;
+            }
+            if (c.faixa_divergente) {
+                anomalyBadges += `<span class="exame-anomaly-tag" title="${UI.escapeHtml(c.faixa_divergente_motivo || '')}">⚠️ ${UI.escapeHtml(c.faixa_divergente_motivo || 'Faixa divergente')}</span>`;
+            }
+
+            // Ações contextuais
+            const cid = Number(c.convite_id);
+            const canReenviar = c.convite_status !== 'pago' && !c.aluno_excluido;
+            const actions = [];
+
+            if (c.faixa_divergente && c.grad_real_proxima_id && !c.promovido_em) {
+                actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="font-size: 11px; color: #38bdf8; border-color: rgba(56,189,248,0.4);" onclick="ExamesModule.sincronizarFaixaConvite(${cid})">Sincronizar Faixa</button>`);
+            }
+
             if (c.convite_status === 'recusado') {
-                actionBtn = `
-                    <button type="button" class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); display: inline-flex; align-items: center; gap: 4px;" 
-                            onclick="ExamesModule.reativarConvite(${c.convite_id})" title="Reativar convocação caso o aluno tenha mudado de ideia">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-                        <span>Reativar Inscrição</span>
-                    </button>
-                `;
-            } else if (c.convite_status !== 'pago') {
-                actionBtn = `
-                    <button type="button" class="btn btn-sm btn-exame-baixa" 
-                            onclick="ExamesModule.confirmarPagamentoManual(${c.convite_id})" title="Confirmar pagamento em dinheiro/balcão">
-                        Baixa Manual
-                    </button>
-                `;
+                actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.4); font-size: 11px;" onclick="ExamesModule.reativarConvite(${cid})">Reativar</button>`);
+                actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); font-size: 11px;" onclick="ExamesModule.cancelarConvite(${cid})">Remover</button>`);
+            } else if (c.convite_status === 'pago') {
+                if (isPagoManual && !c.promovido_em) {
+                    actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="color: #fbbf24; border-color: rgba(245,158,11,0.35); font-size: 11px;" onclick="ExamesModule.estornarBaixaManual(${cid})" title="Estornar pagamento manual">Estornar</button>`);
+                } else if (c.promovido_em) {
+                    actions.push(`<span class="status-badge" style="background: rgba(168,85,247,0.16); color: #c084fc; font-size: 10.5px;">✓ Promovido</span>`);
+                } else {
+                    actions.push(`<span class="exame-action-done" title="Quitado via Gateway Asaas">—</span>`);
+                }
             } else {
-                actionBtn = `<span class="exame-action-done" title="Pagamento já confirmado" aria-label="Inscrição quitada">—</span>`;
+                actions.push(`<button type="button" class="btn btn-sm btn-exame-baixa" onclick="ExamesModule.abrirModalBaixaManual(${cid})">Baixa Manual</button>`);
+                if (canReenviar) {
+                    actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="font-size: 11px;" onclick="ExamesModule.reenviarConvite(${cid})" title="Reenviar WhatsApp / E-mail">Reenviar</button>`);
+                }
+                actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); font-size: 11px;" onclick="ExamesModule.cancelarConvite(${cid})" title="Cancelar convite">Cancelar</button>`);
             }
 
             return `
@@ -602,11 +872,16 @@ const ExamesModule = {
                             <div>
                                 <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${UI.escapeHtml(c.aluno_nome)}</div>
                                 <div style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(c.aluno_email || '')}</div>
+                                ${anomalyBadges ? `<div>${anomalyBadges}</div>` : ''}
                             </div>
                         </div>
                     </td>
                     <td>
-                        ${UI.renderBeltBadge(c.graduacao_pretendida_nome, c.pretendida_cor_primaria, null)}
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            ${UI.renderBeltBadge(c.graduacao_atual_nome, c.atual_cor_primaria, c.atual_cor_secundaria)}
+                            <span style="color: var(--text-muted); font-size: 12px;">➜</span>
+                            ${UI.renderBeltBadge(c.graduacao_pretendida_nome, c.pretendida_cor_primaria, c.pretendida_cor_secundaria)}
+                        </div>
                     </td>
                     <td>
                         <span style="font-weight: 700; color: var(--text-primary);">R$ ${valorFmt}</span>
@@ -615,11 +890,235 @@ const ExamesModule = {
                     <td>${statusBadge}</td>
                     <td>${asaasAction}</td>
                     <td>
-                        ${actionBtn}
+                        <div class="exame-actions-group">
+                            ${actions.join('')}
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
+    },
+
+    filtrarConvitesAlertas() {
+        this.filtroStatusConvite = 'alertas';
+        document.querySelectorAll('#convites-status-pills .exame-status-pill').forEach((p) => {
+            p.classList.toggle('active', p.getAttribute('data-status-filter') === 'alertas');
+        });
+        this.renderListaConvites();
+    },
+
+    /**
+     * Etapa 3: Renderiza atletas confirmados (pagos) para registro de banca e promoção de faixa
+     */
+    renderTabelaExecucao() {
+        const convites = this.eventoDetalhesAtual?.convites || [];
+        const pagos = convites.filter(c => c.convite_status === 'pago');
+
+        const badgeExec = document.getElementById('badge-execucao-count');
+        if (badgeExec) {
+            badgeExec.textContent = `${pagos.length} ${pagos.length === 1 ? 'confirmado' : 'confirmados'}`;
+        }
+
+        const tbody = document.getElementById('tabela-execucao-corpo');
+        if (!tbody) return;
+
+        if (pagos.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 32px; color: var(--text-muted);">
+                        Nenhum atleta com pagamento confirmado neste evento ainda.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = pagos.map(c => {
+            const cid = Number(c.convite_id);
+            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(c.aluno_nome || 'Atleta')}&background=0284c7&color=fff`;
+            const fotoUrl = UI.sanitizeUrl(c.aluno_foto, fallbackAvatar);
+            const jaPromovido = Boolean(c.promovido_em);
+            const savedResult = (c.resultado_exame && c.resultado_exame !== 'pendente')
+                ? c.resultado_exame
+                : (this.resultadosExecucao[cid] || 'aprovado');
+            if (!jaPromovido) {
+                this.resultadosExecucao[cid] = savedResult;
+            }
+
+            const statusPromocaoHtml = jaPromovido
+                ? `<span class="status-badge exame-status-pago">✓ Promovido em ${this.formatarData(c.promovido_em)}</span>`
+                : (c.aluno_excluido
+                    ? '<span class="exame-anomaly-tag danger">Aluno excluído (não promovível)</span>'
+                    : '<span style="font-size: 12px; color: var(--text-muted);">Aguardando confirmação da banca</span>');
+
+            return `
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <img src="${fotoUrl}" alt="${UI.escapeHtml(c.aluno_nome)}" style="width: 34px; height: 34px; border-radius: 50%; object-fit: cover;">
+                            <div>
+                                <div style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${UI.escapeHtml(c.aluno_nome)}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">${UI.escapeHtml(c.modalidade_nome || '')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            ${UI.renderBeltBadge(c.graduacao_atual_nome, c.atual_cor_primaria, c.atual_cor_secundaria)}
+                            <span style="color: var(--text-muted); font-size: 12px;">➜</span>
+                            ${UI.renderBeltBadge(c.graduacao_pretendida_nome, c.pretendida_cor_primaria, c.pretendida_cor_secundaria)}
+                        </div>
+                    </td>
+                    <td>
+                        <select class="form-select select-resultado-exame" data-convite-id="${cid}"
+                                style="max-width: 190px; padding: 6px 10px; font-size: 12.5px;"
+                                ${jaPromovido ? 'disabled' : ''}
+                                onchange="ExamesModule.setResultadoExecucao(${cid}, this.value)">
+                            <option value="aprovado" ${savedResult === 'aprovado' ? 'selected' : ''}>✅ Aprovado</option>
+                            <option value="reprovado" ${savedResult === 'reprovado' ? 'selected' : ''}>❌ Reprovado</option>
+                            <option value="ausente" ${savedResult === 'ausente' ? 'selected' : ''}>⚪ Ausente</option>
+                        </select>
+                    </td>
+                    <td>${statusPromocaoHtml}</td>
+                </tr>
+            `;
+        }).join('');
+    },
+
+    setResultadoExecucao(conviteId, valor) {
+        this.resultadosExecucao[Number(conviteId)] = valor;
+    },
+
+    marcarTodosPendentesAprovados() {
+        const convites = (this.eventoDetalhesAtual?.convites || []).filter(c => c.convite_status === 'pago' && !c.promovido_em);
+        convites.forEach(c => {
+            this.resultadosExecucao[Number(c.convite_id)] = 'aprovado';
+        });
+        document.querySelectorAll('#tabela-execucao-corpo .select-resultado-exame:not([disabled])').forEach(sel => {
+            sel.value = 'aprovado';
+        });
+        UI.showToast('Todos os atletas pendentes marcados como Aprovado.', 'info');
+    },
+
+    async submeterPromocoes() {
+        if (!this.eventoSelecionadoId) return;
+
+        const convites = (this.eventoDetalhesAtual?.convites || []).filter(c => c.convite_status === 'pago' && !c.promovido_em);
+        if (convites.length === 0) {
+            UI.showToast('Não há inscrições confirmadas pendentes de promoção.', 'warning');
+            return;
+        }
+
+        const resultados = convites.map(c => ({
+            convite_id: Number(c.convite_id),
+            resultado: this.resultadosExecucao[Number(c.convite_id)] || 'aprovado'
+        }));
+        const aprovadosCount = resultados.filter(r => r.resultado === 'aprovado').length;
+        const concluirEvento = Boolean(document.getElementById('check-concluir-evento-exame')?.checked);
+
+        if (!confirm(`Confirmar resultados para ${resultados.length} atleta(s)? (${aprovadosCount} serão promovidos para a próxima faixa).`)) {
+            return;
+        }
+
+        try {
+            const res = await API.post(`/exames/eventos/${this.eventoSelecionadoId}/concluir-promocoes`, {
+                resultados,
+                concluir_evento: concluirEvento
+            });
+            UI.showToast(res.message || 'Promoções concluídas com sucesso!', 'success');
+            await this.loadAll();
+        } catch (err) {
+            UI.showToast('Erro ao processar promoções: ' + err.message, 'error');
+        }
+    },
+
+    abrirModalBaixaManual(conviteId) {
+        const conv = (this.eventoDetalhesAtual?.convites || []).find(c => Number(c.convite_id) === Number(conviteId));
+        if (!conv) return;
+
+        const idInput = document.getElementById('baixa-manual-convite-id');
+        const infoEl = document.getElementById('baixa-manual-aluno-info');
+        const metodoEl = document.getElementById('baixa-manual-metodo');
+        if (idInput) idInput.value = String(conv.convite_id);
+        if (metodoEl) metodoEl.value = 'dinheiro';
+        if (infoEl) {
+            const valorFmt = parseFloat(conv.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            infoEl.textContent = `${conv.aluno_nome} • Taxa R$ ${valorFmt}`;
+        }
+
+        UI.openModal('modal-baixa-manual-exame');
+    },
+
+    async submeterBaixaManual() {
+        const conviteId = document.getElementById('baixa-manual-convite-id')?.value;
+        const metodoManual = document.getElementById('baixa-manual-metodo')?.value || 'dinheiro';
+        if (!conviteId) return;
+
+        try {
+            const res = await API.post(`/exames/convites/${conviteId}/confirmar-manual`, {
+                metodo_manual: metodoManual
+            });
+            UI.closeModal('modal-baixa-manual-exame');
+            UI.showToast(res.message || 'Pagamento confirmado!', 'success');
+            await Promise.all([
+                this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                this.loadEventos()
+            ]);
+        } catch (err) {
+            UI.showToast('Erro ao confirmar pagamento: ' + err.message, 'error');
+        }
+    },
+
+    async estornarBaixaManual(conviteId) {
+        if (!confirm('Deseja estornar esta baixa manual e retornar a inscrição para pendente?')) {
+            return;
+        }
+        try {
+            const res = await API.post(`/exames/convites/${conviteId}/estornar-manual`, {});
+            UI.showToast(res.message || 'Baixa manual estornada!', 'success');
+            await Promise.all([
+                this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                this.loadEventos()
+            ]);
+        } catch (err) {
+            UI.showToast('Erro ao estornar pagamento: ' + err.message, 'error');
+        }
+    },
+
+    async sincronizarFaixaConvite(conviteId) {
+        try {
+            const res = await API.post(`/exames/convites/${conviteId}/atualizar-faixa`, {});
+            UI.showToast(res.message || 'Faixa do convite sincronizada!', 'success');
+            await this.carregarDetalhesEvento(this.eventoSelecionadoId);
+        } catch (err) {
+            UI.showToast('Erro ao sincronizar faixa: ' + err.message, 'error');
+        }
+    },
+
+    async reenviarConvite(conviteId) {
+        try {
+            const res = await API.post(`/exames/convites/${conviteId}/reenviar`, {});
+            UI.showToast(res.message || 'Notificação reenviada!', 'success');
+        } catch (err) {
+            UI.showToast('Erro ao reenviar notificação: ' + err.message, 'error');
+        }
+    },
+
+    async cancelarConvite(conviteId) {
+        if (!confirm('Deseja cancelar e remover este convite do evento? Se houver cobrança Asaas em aberto, ela também será cancelada.')) {
+            return;
+        }
+        try {
+            const res = await API.delete(`/exames/convites/${conviteId}`);
+            UI.showToast(res.message || 'Convite cancelado!', 'success');
+            await Promise.all([
+                this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                this.carregarAlunosAptos(),
+                this.loadEventos()
+            ]);
+        } catch (err) {
+            UI.showToast('Erro ao cancelar convite: ' + err.message, 'error');
+        }
     },
 
     async reativarConvite(conviteId) {
@@ -630,46 +1129,32 @@ const ExamesModule = {
         try {
             const res = await API.post(`/exames/convites/${conviteId}/reativar`, {});
             UI.showToast(res.message || 'Inscrição reativada com sucesso!', 'success');
-            await this.carregarDetalhesEvento(this.eventoSelecionadoId);
-            await this.loadEventos();
+            await Promise.all([
+                this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                this.loadEventos()
+            ]);
         } catch (err) {
             UI.showToast('Erro ao reativar inscrição: ' + err.message, 'error');
         }
     },
 
     async confirmarPagamentoManual(conviteId) {
-        if (!confirm('Deseja confirmar manualmente o pagamento deste exame (ex: recebido em espécie ou balcão)?')) {
-            return;
-        }
-
-        try {
-            const res = await API.post(`/exames/convites/${conviteId}/confirmar-manual`, {});
-            UI.showToast(res.message || 'Pagamento confirmado!', 'success');
-            await this.carregarDetalhesEvento(this.eventoSelecionadoId);
-            await this.loadEventos();
-        } catch (err) {
-            UI.showToast('Erro ao confirmar pagamento: ' + err.message, 'error');
-        }
+        this.abrirModalBaixaManual(conviteId);
     },
 
     switchTab(tab) {
         this.activeTab = tab;
-        const btnAptos = document.getElementById('tab-btn-aptos');
-        const btnConvites = document.getElementById('tab-btn-convites');
-        const painelAptos = document.getElementById('painel-tab-aptos');
-        const painelConvites = document.getElementById('painel-tab-convites');
-
-        if (tab === 'aptos') {
-            btnAptos?.classList.add('active');
-            btnConvites?.classList.remove('active');
-            if (painelAptos) painelAptos.style.display = 'block';
-            if (painelConvites) painelConvites.style.display = 'none';
-        } else {
-            btnAptos?.classList.remove('active');
-            btnConvites?.classList.add('active');
-            if (painelAptos) painelAptos.style.display = 'none';
-            if (painelConvites) painelConvites.style.display = 'block';
-        }
+        const tabs = [
+            { key: 'aptos', btn: 'tab-btn-aptos', panel: 'painel-tab-aptos' },
+            { key: 'convites', btn: 'tab-btn-convites', panel: 'painel-tab-convites' },
+            { key: 'execucao', btn: 'tab-btn-execucao', panel: 'painel-tab-execucao' }
+        ];
+        tabs.forEach(t => {
+            const isTarget = t.key === tab;
+            document.getElementById(t.btn)?.classList.toggle('active', isTarget);
+            const panelEl = document.getElementById(t.panel);
+            if (panelEl) panelEl.style.display = isTarget ? 'block' : 'none';
+        });
     },
 
     abrirModalNovoEvento() {
@@ -679,7 +1164,6 @@ const ExamesModule = {
         document.getElementById('evento-modal-id').value = '';
         document.getElementById('modal-evento-titulo-header').textContent = 'Iniciar Novo Evento de Exame de Graduação';
         
-        // Define data padrão para daqui a 3 semanas
         const d = new Date();
         d.setDate(d.getDate() + 21);
         const dataStr = d.toISOString().split('T')[0];
@@ -766,7 +1250,6 @@ const ExamesModule = {
 
             UI.closeModal('modal-evento-exame');
             await this.loadAll();
-
         } catch (err) {
             console.error('Erro ao salvar evento:', err);
             UI.showToast('Erro ao salvar evento: ' + err.message, 'error');
@@ -790,4 +1273,3 @@ const ExamesModule = {
 };
 
 window.ExamesModule = ExamesModule;
-
