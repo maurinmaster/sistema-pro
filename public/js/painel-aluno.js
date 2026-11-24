@@ -29,6 +29,8 @@ const PainelAlunoApp = {
     graduacaoSummary: null,
     missoesData: null,
     missoesBoardFiltro: 'todas',
+    missoesActiveTab: 'ativas',
+    missoesCatalogByKey: new Map(),
 
     escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -469,6 +471,13 @@ const PainelAlunoApp = {
                     this.switchView('dashboard');
                     this.scrollToSection('.content-header');
                 }
+            });
+        });
+
+        // Abas internas (Segmented Control) de Missões
+        document.querySelectorAll('#missoes-segmented-nav [data-missoes-tab]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.switchMissoesTab(btn.dataset.missoesTab || 'ativas');
             });
         });
 
@@ -3912,6 +3921,62 @@ const PainelAlunoApp = {
         }
     },
 
+    switchMissoesTab(tabName = 'ativas') {
+        const nextTab = ['ativas', 'mural', 'concluidas'].includes(tabName) ? tabName : 'ativas';
+        this.missoesActiveTab = nextTab;
+
+        ['ativas', 'mural', 'concluidas'].forEach((t) => {
+            const panel = document.getElementById(`missoes-tab-panel-${t}`);
+            if (panel) panel.style.display = t === nextTab ? 'block' : 'none';
+        });
+
+        document.querySelectorAll('#missoes-segmented-nav [data-missoes-tab]').forEach((btn) => {
+            const active = btn.dataset.missoesTab === nextTab;
+            btn.classList.toggle('active', active);
+            btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        });
+    },
+
+    resolveMissaoAttributeRewards(missao) {
+        const attrs = [
+            { id: 'inteligencia', nome: 'Inteligência', cor: '#38bdf8' },
+            { id: 'destreza', nome: 'Destreza', cor: '#a855f7' },
+            { id: 'agilidade', nome: 'Agilidade', cor: '#10b981' },
+            { id: 'forca', nome: 'Força', cor: '#f59e0b' },
+            { id: 'vitalidade', nome: 'Vitalidade', cor: '#ef4444' }
+        ];
+        const catToAttr = {
+            tecnica: 'destreza',
+            sparring: 'inteligencia',
+            clinch: 'forca',
+            condicionamento: 'vitalidade',
+            disciplina: 'inteligencia',
+            frequencia: 'vitalidade'
+        };
+
+        const rawPilar = String(missao?.pilar_foco || missao?.pilar_nome || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const rawCat = String(missao?.categoria || '').toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+        let primaryId = attrs.find((a) => rawPilar.includes(a.id))?.id || catToAttr[rawCat] || null;
+        if (!primaryId && missao?.badge_texto) {
+            const b = String(missao.badge_texto).toLowerCase();
+            if (b.includes('frequ')) primaryId = 'vitalidade';
+            else if (b.includes('curric')) primaryId = 'destreza';
+        }
+        const primary = attrs.find((a) => a.id === primaryId) || attrs[0];
+        const xpTotal = Number(missao?.recompensa_xp || 0);
+
+        return {
+            primary,
+            breakdown: attrs.map((a) => ({
+                ...a,
+                xp: a.id === primary.id ? xpTotal : 0
+            }))
+        };
+    },
+
     renderMissoesView() {
         const payload = this.missoesData;
         if (!payload) return;
@@ -3927,32 +3992,39 @@ const PainelAlunoApp = {
         const diffLabels = { facil: 'Fácil', media: 'Média', dificil: 'Difícil', epica: 'Épica' };
         const catLabels = { tecnica: 'Técnica', sparring: 'Sparring', clinch: 'Clinch', condicionamento: 'Condicionamento', frequencia: 'Frequência', disciplina: 'Disciplina' };
 
-        // 1. Missões Automáticas
+        this.missoesCatalogByKey = new Map();
+
+        // 1. Aba Ativas - Missões Automáticas
         const autoEl = document.getElementById('missoes-automaticas-container');
         const automaticas = Array.isArray(payload.automaticas) ? payload.automaticas : [];
         if (autoEl) {
             if (automaticas.length === 0) {
                 autoEl.innerHTML = `
-                    <div class="missao-card auto" style="grid-column: 1 / -1;">
-                        <p class="missao-card-desc">Suas missões automáticas serão geradas assim que houver check-ins ou Avaliação Técnica RPG registrada pelo instrutor.</p>
+                    <div class="missao-empty-cta-card">
+                        <p>Suas missões automáticas serão geradas assim que houver check-ins ou Avaliação Técnica RPG registrada.</p>
                     </div>
                 `;
             } else {
-                autoEl.innerHTML = automaticas.map((m) => {
-                    const cor = this.sanitizeColor(m.pilar_cor, '#38bdf8');
+                autoEl.innerHTML = automaticas.map((m, idx) => {
+                    const key = `auto:${idx}`;
+                    const reward = this.resolveMissaoAttributeRewards(m);
+                    this.missoesCatalogByKey.set(key, { kind: 'auto', data: m, reward });
+
+                    const cor = this.sanitizeColor(m.pilar_cor, reward.primary.cor);
                     const pct = Math.max(0, Math.min(100, Number(m.progresso_pct || 0)));
                     const isDone = m.status === 'concluida';
+                    const attrLabel = m.pilar_nome || reward.primary.nome;
                     return `
-                        <article class="missao-card ${isDone ? 'done' : 'auto'}">
+                        <article class="missao-card ${isDone ? 'done' : 'auto'}" data-missao-key="${this.escapeHtml(key)}">
                             <div class="missao-card-top">
-                                <span class="missao-origin-badge ${isDone ? 'done' : 'auto'}">⚡ ${this.escapeHtml(m.badge_texto || 'Automática')}</span>
-                                <span style="font-size: 11px; font-weight: 700; color: ${cor};">${this.escapeHtml(m.pilar_nome || 'Evolução')}</span>
+                                <span class="missao-cat-label">${this.escapeHtml(m.badge_texto || 'AUTOMÁTICA')}</span>
+                                <span class="missao-attr-chip" style="color: ${cor};">${this.escapeHtml(attrLabel)}</span>
                             </div>
                             <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
                             <p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>
                             <div class="missao-progress-row">
                                 <div class="missao-progress-track">
-                                    <div class="missao-progress-fill" style="width: ${pct}%; background: ${isDone ? '#10b981' : cor};"></div>
+                                    <div class="missao-progress-fill" style="width: ${pct}%; background: ${isDone ? '#10B981' : cor};"></div>
                                 </div>
                                 <span class="missao-progress-val">${Number(m.progresso_atual || 0)}/${Number(m.progresso_meta || 100)}</span>
                             </div>
@@ -3962,17 +4034,19 @@ const PainelAlunoApp = {
             }
         }
 
-        // 2. Minhas Missões Escolhidas (Ativas & Aguardando Validação)
+        // Separa escolhidas ativas e concluídas
         const minhasAll = Array.isArray(payload.minhas_missoes) ? payload.minhas_missoes : [];
         const minhasAtivas = minhasAll.filter(m => m.status === 'em_andamento' || m.status === 'aguardando_validacao');
         const minhasConcluidas = minhasAll.filter(m => m.status === 'concluida');
 
+        // 2. Aba Ativas - Minhas Missões Escolhidas do Mestre
         const minhasEl = document.getElementById('missoes-minhas-container');
         if (minhasEl) {
             if (minhasAtivas.length === 0) {
                 minhasEl.innerHTML = `
-                    <div class="missao-card" style="grid-column: 1 / -1;">
-                        <p class="missao-card-desc">Você ainda não escolheu nenhuma missão ativa. Selecione um desafio abaixo no <strong>Quadro de Missões do Professor</strong>!</p>
+                    <div class="missao-empty-cta-card">
+                        <p>Você ainda não escolheu nenhuma missão ativa do mestre.</p>
+                        <button type="button" class="btn-explorar-mural" id="btn-missoes-ir-mural">Explorar Mural do Mestre →</button>
                     </div>
                 `;
             } else {
@@ -3980,30 +4054,33 @@ const PainelAlunoApp = {
                     const diffKey = ['facil', 'media', 'dificil', 'epica'].includes(m.dificuldade) ? m.dificuldade : 'media';
                     const awaiting = m.status === 'aguardando_validacao';
                     const safeMissaoId = Number(m.missao_id);
+                    const key = `ativa:${safeMissaoId}`;
+                    const reward = this.resolveMissaoAttributeRewards(m);
+                    this.missoesCatalogByKey.set(key, { kind: 'ativa', data: m, reward });
+
+                    const catName = catLabels[m.categoria] || m.categoria || 'Desafio';
+                    const attrLabel = reward.primary.nome;
+                    const progPct = awaiting ? 100 : 25;
+                    const progCount = awaiting ? '1/1' : '0/1';
+                    const corAttr = this.sanitizeColor(reward.primary.cor, '#F59E0B');
+
                     return `
-                        <article class="missao-card chosen">
+                        <article class="missao-card chosen" data-missao-key="${this.escapeHtml(key)}">
                             <div class="missao-card-top">
-                                <span class="missao-origin-badge board">${awaiting ? '⏳ Aguardando Professor' : '⚔️ Em Andamento'}</span>
+                                <span class="missao-cat-label">${this.escapeHtml(catName)} • ${awaiting ? 'Em validação' : 'Em andamento'}</span>
                                 <span class="missao-diff-pill ${diffKey}">${this.escapeHtml(diffLabels[diffKey] || m.dificuldade)}</span>
                             </div>
                             <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
-                            <p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>
-                            <div class="missao-card-meta-row">
-                                <span class="missao-xp-tag">⚡ +${Number(m.recompensa_xp || 0)} XP</span>
-                                ${m.recompensa_texto ? `<span>${this.escapeHtml(m.recompensa_texto)}</span>` : ''}
-                            </div>
-                            ${m.feedback_professor ? `
-                                <div class="missao-feedback-box">
-                                    <strong>Professor:</strong> ${this.escapeHtml(m.feedback_professor)}
+                            <span class="missao-attr-chip" style="color: ${corAttr};">${this.escapeHtml(attrLabel)}</span>
+                            <div class="missao-progress-row">
+                                <div class="missao-progress-track">
+                                    <div class="missao-progress-fill" style="width: ${progPct}%; background: ${awaiting ? '#F59E0B' : '#EF4444'};"></div>
                                 </div>
-                            ` : ''}
-                            <div class="missao-card-actions">
-                                ${awaiting ? `
-                                    <button type="button" class="btn-missao-action complete" disabled>Enviada p/ Validação</button>
-                                ` : `
-                                    <button type="button" class="btn-missao-action complete" data-concluir-missao="${safeMissaoId}">✓ Concluí a Missão</button>
-                                `}
-                                <button type="button" class="btn-missao-action abandon" data-abandonar-missao="${safeMissaoId}" title="Sair desta missão">Sair</button>
+                                <span class="missao-progress-val">${progCount}</span>
+                            </div>
+                            <div class="missao-card-footer">
+                                <span class="missao-reward-inline">⚡ +${Number(m.recompensa_xp || 0)} XP • ${this.escapeHtml(catName)}</span>
+                                <button type="button" class="btn-missao-compact outline-slate" data-open-missao-key="${this.escapeHtml(key)}">Ver detalhes</button>
                             </div>
                         </article>
                     `;
@@ -4011,19 +4088,20 @@ const PainelAlunoApp = {
             }
         }
 
-        // 3. Quadro de Missões Disponíveis do Professor
+        // 3. Aba Mural do Mestre (exclui missões já concluídas para evitar duplicidade)
         const quadroEl = document.getElementById('missoes-quadro-container');
         const quadroAll = Array.isArray(payload.quadro_disponiveis) ? payload.quadro_disponiveis : [];
+        const quadroSemConcluidas = quadroAll.filter(m => m.meu_status !== 'concluida');
         const filtro = this.missoesBoardFiltro || 'todas';
         const quadroFiltrado = filtro === 'todas'
-            ? quadroAll
-            : quadroAll.filter(m => String(m.categoria || '').toLowerCase() === filtro);
+            ? quadroSemConcluidas
+            : quadroSemConcluidas.filter(m => String(m.categoria || '').toLowerCase() === filtro);
 
         if (quadroEl) {
             if (quadroFiltrado.length === 0) {
                 quadroEl.innerHTML = `
-                    <div class="missao-card" style="grid-column: 1 / -1;">
-                        <p class="missao-card-desc">Nenhuma missão disponível nesta categoria no momento.</p>
+                    <div class="missao-empty-cta-card">
+                        <p>Nenhuma missão disponível nesta categoria no momento.</p>
                     </div>
                 `;
             } else {
@@ -4031,80 +4109,230 @@ const PainelAlunoApp = {
                 quadroEl.innerHTML = quadroFiltrado.map((m) => {
                     const diffKey = ['facil', 'media', 'dificil', 'epica'].includes(m.dificuldade) ? m.dificuldade : 'media';
                     const safeId = Number(m.id);
+                    const key = `mural:${safeId}`;
                     const status = m.meu_status;
                     const lotada = m.limite_vagas && Number(m.vagas_ocupadas || 0) >= Number(m.limite_vagas);
+                    const canAccept = !status && !lotada && !limitReached;
+                    const reward = this.resolveMissaoAttributeRewards(m);
+                    this.missoesCatalogByKey.set(key, { kind: 'mural', data: m, reward, canAccept, lotada, limitReached });
 
-                    let btnHtml = `<button type="button" class="btn-missao-action accept" data-accept-missao="${safeId}">Escolher Missão</button>`;
-                    if (status === 'em_andamento') {
-                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled>✓ Em Andamento</button>`;
-                    } else if (status === 'aguardando_validacao') {
-                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled>⏳ Aguardando Validação</button>`;
-                    } else if (status === 'concluida') {
-                        btnHtml = `<button type="button" class="btn-missao-action complete" disabled>🏆 Já Concluída</button>`;
-                    } else if (lotada) {
-                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled>Vagas Esgotadas</button>`;
-                    } else if (limitReached) {
-                        btnHtml = `<button type="button" class="btn-missao-action accept" disabled title="Você já possui 3 missões ativas">Limite 3/3 Ativo</button>`;
+                    const catName = catLabels[m.categoria] || m.categoria || 'Desafio';
+                    let compactBtnHtml = `<button type="button" class="btn-missao-compact outline-slate" data-open-missao-key="${this.escapeHtml(key)}">Ver detalhes</button>`;
+                    if (canAccept) {
+                        compactBtnHtml = `<button type="button" class="btn-missao-compact" data-accept-missao="${safeId}">+ Aceitar</button>`;
+                    } else if (status === 'em_andamento' || status === 'aguardando_validacao') {
+                        compactBtnHtml = `<button type="button" class="btn-missao-compact outline-green" data-open-missao-key="${this.escapeHtml(key)}">Ativa</button>`;
                     }
 
                     return `
-                        <article class="missao-card">
+                        <article class="missao-card" data-missao-key="${this.escapeHtml(key)}">
                             <div class="missao-card-top">
-                                <span class="missao-origin-badge board">${this.escapeHtml(catLabels[m.categoria] || m.categoria || 'Desafio')}</span>
+                                <span class="missao-cat-label">${this.escapeHtml(catName)}</span>
                                 <span class="missao-diff-pill ${diffKey}">${this.escapeHtml(diffLabels[diffKey] || m.dificuldade)}</span>
                             </div>
                             <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
                             <p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>
-                            <div class="missao-card-meta-row">
-                                <span class="missao-xp-tag">⚡ +${Number(m.recompensa_xp || 0)} XP</span>
-                                ${m.prazo_dias ? `<span>Prazo sugerido: ${Number(m.prazo_dias)} dias</span>` : ''}
-                                ${m.limite_vagas ? `<span>Vagas: ${Number(m.vagas_ocupadas || 0)}/${Number(m.limite_vagas)}</span>` : ''}
+                            <div class="missao-card-footer">
+                                <span class="missao-reward-inline">⚡ +${Number(m.recompensa_xp || 0)} XP • ${this.escapeHtml(catName)}</span>
+                                ${compactBtnHtml}
                             </div>
-                            ${m.recompensa_texto ? `<div style="font-size:11px; color:#cbd5e1;">🎁 ${this.escapeHtml(m.recompensa_texto)}</div>` : ''}
-                            <div class="missao-card-actions">${btnHtml}</div>
                         </article>
                     `;
                 }).join('');
             }
         }
 
-        // 4. Histórico de Concluídas
-        const conclSec = document.getElementById('missoes-concluidas-section');
+        // 4. Aba Concluídas
         const conclEl = document.getElementById('missoes-concluidas-container');
-        if (conclSec && conclEl) {
+        if (conclEl) {
             if (minhasConcluidas.length === 0) {
-                conclSec.style.display = 'none';
+                conclEl.innerHTML = `
+                    <div class="missao-empty-cta-card">
+                        <p>Você ainda não concluiu missões do Mural do Mestre. Aceite um desafio e solicite validação após cumprir!</p>
+                        <button type="button" class="btn-explorar-mural" id="btn-missoes-concl-ir-mural">Explorar Mural do Mestre →</button>
+                    </div>
+                `;
             } else {
-                conclSec.style.display = 'block';
-                conclEl.innerHTML = minhasConcluidas.map((m) => `
-                    <article class="missao-card done">
-                        <div class="missao-card-top">
-                            <span class="missao-origin-badge done">🏆 Concluída</span>
-                            <span class="missao-xp-tag">+${Number(m.recompensa_xp || 0)} XP</span>
-                        </div>
-                        <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
-                        ${m.feedback_professor ? `<p class="missao-card-desc">Feedback: ${this.escapeHtml(m.feedback_professor)}</p>` : `<p class="missao-card-desc">${this.escapeHtml(m.descricao)}</p>`}
-                    </article>
-                `).join('');
+                conclEl.innerHTML = minhasConcluidas.map((m) => {
+                    const diffKey = ['facil', 'media', 'dificil', 'epica'].includes(m.dificuldade) ? m.dificuldade : 'media';
+                    const safeMissaoId = Number(m.missao_id || m.id);
+                    const key = `concluida:${safeMissaoId}`;
+                    const reward = this.resolveMissaoAttributeRewards(m);
+                    this.missoesCatalogByKey.set(key, { kind: 'concluida', data: m, reward });
+
+                    const catName = catLabels[m.categoria] || m.categoria || 'Conquista';
+                    const descPreview = m.feedback_professor ? `Feedback: ${m.feedback_professor}` : m.descricao;
+                    return `
+                        <article class="missao-card done" data-missao-key="${this.escapeHtml(key)}">
+                            <div class="missao-card-top">
+                                <span class="missao-cat-label" style="color:#10B981;">✓ ${this.escapeHtml(catName)}</span>
+                                <span class="missao-diff-pill ${diffKey}">${this.escapeHtml(diffLabels[diffKey] || m.dificuldade)}</span>
+                            </div>
+                            <h4 class="missao-card-title">${this.escapeHtml(m.titulo)}</h4>
+                            <p class="missao-card-desc">${this.escapeHtml(descPreview)}</p>
+                            <div class="missao-card-footer">
+                                <span class="missao-reward-inline" style="color:#10B981;">⚡ +${Number(m.recompensa_xp || 0)} XP recebido</span>
+                                <button type="button" class="btn-missao-compact outline-green" data-open-missao-key="${this.escapeHtml(key)}">Ver detalhes</button>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
             }
         }
 
-        // Bind seguro de eventos sem handlers inline
+        // Bind de navegação para Mural quando vazio
+        document.getElementById('btn-missoes-ir-mural')?.addEventListener('click', () => {
+            this.switchMissoesTab('mural');
+        });
+        document.getElementById('btn-missoes-concl-ir-mural')?.addEventListener('click', () => {
+            this.switchMissoesTab('mural');
+        });
+
+        // Abertura do Modal de Detalhes ao tocar em qualquer card ou botão "Ver detalhes"
+        document.querySelectorAll('#spa-view-missoes .missao-card[data-missao-key]').forEach((card) => {
+            card.addEventListener('click', () => {
+                this.openMissaoDetalhesModal(card.dataset.missaoKey);
+            });
+        });
+        document.querySelectorAll('[data-open-missao-key]').forEach((btn) => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.openMissaoDetalhesModal(btn.dataset.openMissaoKey);
+            });
+        });
         document.querySelectorAll('[data-accept-missao]').forEach((btn) => {
-            btn.addEventListener('click', () => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
                 this.aceitarMissaoBoard(Number(btn.dataset.acceptMissao));
             });
         });
-        document.querySelectorAll('[data-concluir-missao]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                this.solicitarConclusaoMissao(Number(btn.dataset.concluirMissao));
-            });
+
+        this.switchMissoesTab(this.missoesActiveTab || 'ativas');
+    },
+
+    openMissaoDetalhesModal(key) {
+        const entry = this.missoesCatalogByKey.get(key);
+        const modal = document.getElementById('modal-missao-detalhes');
+        const titleEl = document.getElementById('modal-missao-titulo');
+        const body = document.getElementById('modal-missao-detalhes-body');
+        if (!entry || !modal || !body) return;
+
+        const { kind, data: m, reward, canAccept, lotada, limitReached } = entry;
+        const diffLabels = { facil: 'Fácil', media: 'Média', dificil: 'Difícil', epica: 'Épica' };
+        const catLabels = { tecnica: 'Técnica', sparring: 'Sparring', clinch: 'Clinch', condicionamento: 'Condicionamento', frequencia: 'Frequência', disciplina: 'Disciplina' };
+        const diffKey = ['facil', 'media', 'dificil', 'epica'].includes(m.dificuldade) ? m.dificuldade : 'media';
+        const catName = catLabels[m.categoria] || m.categoria || m.badge_texto || 'Desafio';
+
+        if (titleEl) titleEl.textContent = m.titulo || 'Detalhes da Missão';
+
+        const metaChips = [];
+        if (m.prazo_dias) metaChips.push(`Prazo sugerido: ${Number(m.prazo_dias)} dias`);
+        if (m.limite_vagas) metaChips.push(`Vagas: ${Number(m.vagas_ocupadas || 0)}/${Number(m.limite_vagas)}`);
+        if (m.criador_nome) metaChips.push(`Mestre: ${m.criador_nome}`);
+
+        const attrGridHtml = `
+            <div class="qa-modal-section">
+                <h4 class="qa-modal-section-title">Recompensa em XP por Atributo</h4>
+                <div class="missao-attr-xp-grid">
+                    ${reward.breakdown.map((a) => `
+                        <div class="missao-attr-xp-item ${a.xp > 0 ? 'is-rewarded' : ''}">
+                            <span>${this.escapeHtml(a.nome)}</span>
+                            <strong class="missao-attr-xp-val">${a.xp > 0 ? `+${a.xp} XP` : '0 XP'}</strong>
+                        </div>
+                    `).join('')}
+                </div>
+                ${m.recompensa_texto ? `<div class="qa-modal-subtitle-date">🎁 Recompensa extra: <strong style="color:#f8fafc;">${this.escapeHtml(m.recompensa_texto)}</strong></div>` : ''}
+            </div>
+        `;
+
+        let progressSectionHtml = '';
+        if (kind === 'auto') {
+            const pct = Math.max(0, Math.min(100, Number(m.progresso_pct || 0)));
+            const cor = this.sanitizeColor(m.pilar_cor, reward.primary.cor);
+            progressSectionHtml = `
+                <div class="qa-modal-section">
+                    <h4 class="qa-modal-section-title">Progresso Automático</h4>
+                    <div class="missao-progress-row">
+                        <div class="missao-progress-track">
+                            <div class="missao-progress-fill" style="width: ${pct}%; background: ${m.status === 'concluida' ? '#10B981' : cor};"></div>
+                        </div>
+                        <span class="missao-progress-val">${Number(m.progresso_atual || 0)}/${Number(m.progresso_meta || 100)}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        const feedbackHtml = m.feedback_professor ? `
+            <div class="missao-feedback-box">
+                <strong>Feedback do Mestre:</strong> ${this.escapeHtml(m.feedback_professor)}
+            </div>
+        ` : '';
+
+        let actionsHtml = `<button type="button" class="qa-modal-btn-secondary" data-close-missao-modal="true">Fechar</button>`;
+        const safeMissaoId = Number(m.missao_id || m.id);
+
+        if (kind === 'ativa') {
+            const awaiting = m.status === 'aguardando_validacao';
+            actionsHtml = `
+                ${awaiting ? `
+                    <button type="button" class="btn-missao-modal-primary is-green" disabled>⏳ Aguardando Validação do Mestre</button>
+                ` : `
+                    <button type="button" class="btn-missao-modal-primary is-green" id="btn-modal-missao-concluir">✓ Concluir Missão</button>
+                `}
+                <button type="button" class="btn-missao-modal-danger" id="btn-modal-missao-abandonar">Abandonar Missão</button>
+            `;
+        } else if (kind === 'mural') {
+            if (canAccept) {
+                actionsHtml = `<button type="button" class="btn-missao-modal-primary" id="btn-modal-missao-aceitar">Aceitar Missão</button>`;
+            } else if (m.meu_status === 'em_andamento' || m.meu_status === 'aguardando_validacao') {
+                actionsHtml = `<button type="button" class="btn-missao-modal-primary is-green" disabled>✓ Já está nas suas Ativas</button>`;
+            } else if (lotada) {
+                actionsHtml = `<button type="button" class="btn-missao-modal-primary" disabled>Vagas Esgotadas</button>`;
+            } else if (limitReached) {
+                actionsHtml = `<button type="button" class="btn-missao-modal-primary" disabled>Limite de 3 Missões Ativas Atingido</button>`;
+            }
+        }
+
+        body.innerHTML = `
+            <div class="qa-modal-stack">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                    <span class="missao-cat-label">${this.escapeHtml(catName)}</span>
+                    ${kind !== 'auto' ? `<span class="missao-diff-pill ${diffKey}">${this.escapeHtml(diffLabels[diffKey] || m.dificuldade)}</span>` : ''}
+                </div>
+
+                <div class="qa-modal-section">
+                    <h4 class="qa-modal-section-title">Critérios de Avaliação</h4>
+                    <p class="qa-modal-empty-msg" style="color:#f8fafc;">${this.escapeHtml(m.descricao || 'Sem descrição detalhada.')}</p>
+                    ${metaChips.length > 0 ? `<div class="qa-modal-subtitle-date">${this.escapeHtml(metaChips.join(' • '))}</div>` : ''}
+                </div>
+
+                ${progressSectionHtml}
+                ${attrGridHtml}
+                ${feedbackHtml}
+
+                <div class="qa-modal-actions">
+                    ${actionsHtml}
+                </div>
+            </div>
+        `;
+
+        document.querySelector('[data-close-missao-modal]')?.addEventListener('click', () => {
+            modal.style.display = 'none';
         });
-        document.querySelectorAll('[data-abandonar-missao]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                this.abandonarMissaoBoard(Number(btn.dataset.abandonarMissao));
-            });
+        document.getElementById('btn-modal-missao-aceitar')?.addEventListener('click', () => {
+            modal.style.display = 'none';
+            this.aceitarMissaoBoard(safeMissaoId);
         });
+        document.getElementById('btn-modal-missao-concluir')?.addEventListener('click', () => {
+            modal.style.display = 'none';
+            this.solicitarConclusaoMissao(safeMissaoId);
+        });
+        document.getElementById('btn-modal-missao-abandonar')?.addEventListener('click', () => {
+            modal.style.display = 'none';
+            this.abandonarMissaoBoard(safeMissaoId);
+        });
+
+        modal.style.display = 'flex';
     },
 
     async aceitarMissaoBoard(missaoId) {

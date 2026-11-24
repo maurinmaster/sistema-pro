@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.3">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.4">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -720,93 +720,88 @@
             </div>
 
             <!-- ========================================================= -->
-            <!-- SPA VIEW 6: MISSÕES (AUTOMÁTICAS + QUADRO DO PROFESSOR)   -->
+            <!-- SPA VIEW 6: MISSÕES (AUTOMÁTICAS + MURAL DO MESTRE)       -->
             <!-- ========================================================= -->
             <div class="spa-view" id="spa-view-missoes" style="display: none;">
-                <div class="wiki-header-nav-row">
-                    <button type="button" class="btn-voltar-painel" onclick="PainelAlunoApp.switchView('dashboard')">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                <div class="wiki-header-nav-row missoes-top-bar">
+                    <button type="button" class="btn-voltar-painel missoes-back-btn" onclick="PainelAlunoApp.switchView('dashboard')">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
                         </svg>
-                        <span>Voltar à Visão Geral</span>
+                        <span>Voltar</span>
                     </button>
 
-                    <div class="student-profile-pill">
+                    <div class="student-profile-pill missoes-athlete-badge">
                         <img id="missoes-header-avatar-img"
                             src="https://ui-avatars.com/api/?name=Atleta&background=f59e0b&color=fff" alt="Avatar">
                         <span id="missoes-header-student-name">Atleta</span>
                     </div>
                 </div>
 
-                <div class="faturas-overview-banner" style="margin-bottom: 16px;">
-                    <div class="faturas-overview-header">
-                        <div class="faturas-icon-wrap" style="background: rgba(245, 158, 11, 0.16); color: #fbbf24;">
-                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-                                <circle cx="12" cy="12" r="10" />
-                                <circle cx="12" cy="12" r="6" />
-                                <circle cx="12" cy="12" r="2" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 style="margin: 0; font-size: 19px; color: #f8fafc;">Missões &amp; Quadro de Desafios</h2>
-                            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #94a3b8;">Metas automáticas da sua evolução + desafios extras do professor para você escolher</p>
-                        </div>
-                    </div>
+                <div class="missoes-hero-head">
+                    <h2>Missões &amp; Quadro de Desafios</h2>
+                    <p>Desafios ativos, Mural do Mestre e conquistas concluídas</p>
                 </div>
 
                 <div class="missoes-kpi-strip">
-                    <div class="missoes-kpi-box">
-                        <span>Ativas do Quadro</span>
+                    <div class="missoes-kpi-box is-highlight">
+                        <span>Ativas</span>
                         <strong id="missoes-kpi-ativas">0/3</strong>
                     </div>
                     <div class="missoes-kpi-box">
                         <span>Concluídas</span>
-                        <strong id="missoes-kpi-concluidas" style="color: #34d399;">0</strong>
+                        <strong id="missoes-kpi-concluidas" style="color: #10B981;">0</strong>
                     </div>
                     <div class="missoes-kpi-box">
                         <span>XP em Missões</span>
-                        <strong id="missoes-kpi-xp" style="color: #fbbf24;">0 XP</strong>
+                        <strong id="missoes-kpi-xp" style="color: #F59E0B;">0 XP</strong>
                     </div>
                 </div>
 
-                <!-- 1. MISSÕES AUTOMÁTICAS -->
-                <section class="missoes-section-block">
-                    <div class="missoes-block-header">
-                        <div>
-                            <h3>🎯 Missões Automáticas de Evolução</h3>
-                            <p>Geradas automaticamente pelo seu Foco Técnico RPG, frequência semanal, currículo e exame.</p>
-                        </div>
-                    </div>
-                    <div id="missoes-automaticas-container" class="missoes-cards-grid">
-                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">Carregando missões automáticas...</div>
-                    </div>
-                </section>
+                <!-- Navegação por Abas Internas (Segmented Control Fixo) -->
+                <div class="missoes-segmented-nav" id="missoes-segmented-nav" role="tablist" aria-label="Abas de Missões">
+                    <button type="button" class="missoes-seg-btn active" role="tab" aria-selected="true" data-missoes-tab="ativas" id="btn-missoes-tab-ativas">
+                        <span>Ativas</span>
+                    </button>
+                    <button type="button" class="missoes-seg-btn" role="tab" aria-selected="false" data-missoes-tab="mural" id="btn-missoes-tab-mural">
+                        <span>Mural do Mestre</span>
+                    </button>
+                    <button type="button" class="missoes-seg-btn" role="tab" aria-selected="false" data-missoes-tab="concluidas" id="btn-missoes-tab-concluidas">
+                        <span>Concluídas</span>
+                    </button>
+                </div>
 
-                <!-- 2. MINHAS MISSÕES ESCOLHIDAS DO QUADRO -->
-                <section class="missoes-section-block">
-                    <div class="missoes-block-header">
-                        <div>
-                            <h3>⚔️ Minhas Missões Escolhidas</h3>
-                            <p>Desafios do quadro do professor que você assumiu no momento (máximo de 3 simultâneas).</p>
+                <!-- ABA 1: ATIVAS (Automáticas + até 3 escolhidas do Mestre) -->
+                <div class="missoes-tab-panel" id="missoes-tab-panel-ativas">
+                    <section class="missoes-section-block">
+                        <div class="missoes-block-header">
+                            <div>
+                                <h3>Missões Automáticas de Evolução</h3>
+                            </div>
                         </div>
-                    </div>
-                    <div id="missoes-minhas-container" class="missoes-cards-grid">
-                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 18px;">Carregando suas missões...</div>
-                    </div>
-                </section>
+                        <div id="missoes-automaticas-container" class="missoes-cards-grid">
+                            <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">Carregando missões automáticas...</div>
+                        </div>
+                    </section>
 
-                <!-- 3. QUADRO DE MISSÕES DO PROFESSOR -->
-                <section class="missoes-section-block">
-                    <div class="missoes-block-header">
-                        <div>
-                            <h3>📋 Quadro de Missões do Professor</h3>
-                            <p>Escolha desafios criados pelo seu instrutor para evoluir atributos e acumular XP.</p>
+                    <section class="missoes-section-block">
+                        <div class="missoes-block-header">
+                            <div>
+                                <h3>Escolhidas do Mestre</h3>
+                            </div>
                         </div>
-                    </div>
-                    <div class="wiki-spa-filters" id="missoes-board-filters" style="margin-bottom: 12px; display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button type="button" class="curriculum-pill active" data-missao-cat="todas">Todas</button>
+                        <div id="missoes-minhas-container" class="missoes-cards-grid">
+                            <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 18px;">Carregando suas missões...</div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- ABA 2: MURAL DO MESTRE (Disponíveis p/ aceitar + Carrossel Horizontal de Filtros) -->
+                <div class="missoes-tab-panel" id="missoes-tab-panel-mural" style="display: none;">
+                    <div class="missoes-filters-carousel" id="missoes-board-filters" role="region" aria-label="Filtros de categoria">
+                        <button type="button" class="curriculum-pill active" data-missao-cat="todas">Todos</button>
                         <button type="button" class="curriculum-pill" data-missao-cat="tecnica">Técnica</button>
                         <button type="button" class="curriculum-pill" data-missao-cat="sparring">Sparring</button>
                         <button type="button" class="curriculum-pill" data-missao-cat="clinch">Clinch</button>
@@ -814,20 +809,14 @@
                         <button type="button" class="curriculum-pill" data-missao-cat="disciplina">Disciplina</button>
                     </div>
                     <div id="missoes-quadro-container" class="missoes-cards-grid">
-                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">Carregando quadro de missões...</div>
+                        <div style="grid-column: 1 / -1; text-align: center; color: #94a3b8; padding: 20px;">Carregando Mural do Mestre...</div>
                     </div>
-                </section>
+                </div>
 
-                <!-- 4. HISTÓRICO DE MISSÕES CONCLUÍDAS -->
-                <section class="missoes-section-block" id="missoes-concluidas-section" style="display: none;">
-                    <div class="missoes-block-header">
-                        <div>
-                            <h3>🏆 Missões Concluídas</h3>
-                            <p>Desafios do quadro já validados pelo professor.</p>
-                        </div>
-                    </div>
+                <!-- ABA 3: CONCLUÍDAS (Histórico) -->
+                <div class="missoes-tab-panel" id="missoes-tab-panel-concluidas" style="display: none;">
                     <div id="missoes-concluidas-container" class="missoes-cards-grid"></div>
-                </section>
+                </div>
             </div>
         </main>
 
@@ -1871,6 +1860,17 @@
         </div>
     </div>
 
+    <div class="modal-backdrop modal-bottom-sheet" id="modal-missao-detalhes" style="display: none;">
+        <div class="modal-card modal-sheet-card">
+            <div class="modal-sheet-handle" aria-hidden="true"></div>
+            <div class="modal-header">
+                <h3 id="modal-missao-titulo">Detalhes da Missão</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-missao-detalhes" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-missao-detalhes-body"></div>
+        </div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- BARRA DE NAVEGAÇÃO INFERIOR FIXA MOBILE (5 TABS DO APP)           -->
     <!-- ================================================================= -->
@@ -1914,7 +1914,7 @@
 
     <!-- Script Principal do Painel -->
     <script src="/js/rpg-avaliacao.js?v=2.1"></script>
-    <script src="/js/painel-aluno.js?v=6.7"></script>
+    <script src="/js/painel-aluno.js?v=6.8"></script>
 </body>
 
 </html>
