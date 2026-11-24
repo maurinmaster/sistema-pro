@@ -229,17 +229,11 @@ const PainelAlunoApp = {
             this.saveMedidas();
         });
 
-        // Sub-container clicável de biometria (leva à Evolução se já tiver medidas, ou abre modal para registrar)
+        // Sub-container clicável de biometria (abre modal Ficha RPG / Medidas)
         const bioClickable = document.getElementById('bio-summary-clickable');
         if (bioClickable) {
             const handleBioClick = () => {
-                const m = this.alunoData?.aluno?.medidas;
-                const hasMeasures = m && ((m.peso_kg !== null && m.peso_kg !== undefined) || (m.altura_cm !== null && m.altura_cm !== undefined));
-                if (hasMeasures) {
-                    this.switchView('evolucao');
-                } else {
-                    this.openMedidasModal();
-                }
+                this.openQuickAccessModal('ficha_medidas');
             };
             bioClickable.addEventListener('click', handleBioClick);
             bioClickable.addEventListener('keydown', (e) => {
@@ -249,9 +243,19 @@ const PainelAlunoApp = {
                 }
             });
         }
-        document.getElementById('bio-empty-cta')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.openMedidasModal();
+
+        // Botões da seção central "Acesso Rápido" (4 modais dedicados)
+        document.getElementById('qa-btn-ficha-medidas')?.addEventListener('click', () => {
+            this.openQuickAccessModal('ficha_medidas');
+        });
+        document.getElementById('qa-btn-atributos')?.addEventListener('click', () => {
+            this.openQuickAccessModal('atributos');
+        });
+        document.getElementById('qa-btn-conquistas')?.addEventListener('click', () => {
+            this.openQuickAccessModal('conquistas');
+        });
+        document.getElementById('qa-btn-graduacao')?.addEventListener('click', () => {
+            this.openQuickAccessModal('graduacao');
         });
 
         // Abrir página de histórico e comparativo de evolução
@@ -814,12 +818,10 @@ const PainelAlunoApp = {
         const imcVal = aluno.medidas?.imc;
         const hasMeasures = (pesoVal !== null && pesoVal !== undefined) || (alturaVal !== null && alturaVal !== undefined);
 
+        const bioClickableEl = document.getElementById('bio-summary-clickable');
         const bioValuesEl = document.getElementById('bio-summary-values');
-        const bioEmptyCta = document.getElementById('bio-empty-cta');
-        const bioActionsBar = document.getElementById('athlete-bio-actions-bar');
+        if (bioClickableEl) bioClickableEl.style.display = hasMeasures ? 'block' : 'none';
         if (bioValuesEl) bioValuesEl.style.display = hasMeasures ? 'grid' : 'none';
-        if (bioEmptyCta) bioEmptyCta.style.display = hasMeasures ? 'none' : 'flex';
-        if (bioActionsBar) bioActionsBar.style.display = hasMeasures ? 'flex' : 'none';
 
         if (heightVal) heightVal.textContent = (alturaVal !== null && alturaVal !== undefined) ? alturaVal : '--';
         if (weightVal) weightVal.textContent = (pesoVal !== null && pesoVal !== undefined) ? pesoVal : '--';
@@ -1090,6 +1092,9 @@ const PainelAlunoApp = {
                 `;
             }).join('');
         }
+
+        // 8. Atualiza os points verdes com contagem de atualizações nos 4 ícones de Acesso Rápido
+        this.updateQuickAccessBadges(data);
     },
 
     onChangePortalRpgCompare(compareIdStr) {
@@ -1367,6 +1372,545 @@ const PainelAlunoApp = {
                 this.switchView('missoes');
             });
         }
+    },
+
+    // =========================================================================
+    // SEÇÃO "ACESSO RÁPIDO": BADGES DE ATUALIZAÇÕES & 4 MODAIS DEDICADOS
+    // =========================================================================
+    getQuickAccessStorageKey() {
+        const alunoId = this.alunoData?.aluno?.id || 'default';
+        return `pro_combate_qa_seen_${alunoId}`;
+    },
+
+    readQuickAccessSeenState() {
+        const empty = { ficha_medidas: [], atributos: [], conquistas: [], graduacao: [] };
+        try {
+            const raw = localStorage.getItem(this.getQuickAccessStorageKey());
+            if (!raw) return empty;
+            const parsed = JSON.parse(raw);
+            return {
+                ficha_medidas: Array.isArray(parsed.ficha_medidas) ? parsed.ficha_medidas : [],
+                atributos: Array.isArray(parsed.atributos) ? parsed.atributos : [],
+                conquistas: Array.isArray(parsed.conquistas) ? parsed.conquistas : [],
+                graduacao: Array.isArray(parsed.graduacao) ? parsed.graduacao : []
+            };
+        } catch {
+            return empty;
+        }
+    },
+
+    writeQuickAccessSeenState(state) {
+        try {
+            localStorage.setItem(this.getQuickAccessStorageKey(), JSON.stringify(state));
+        } catch {
+            /* ignore storage quota errors */
+        }
+    },
+
+    collectQuickAccessTokens(payload = null) {
+        const data = payload || this.alunoData || {};
+        const aluno = data.aluno || {};
+        const medidas = aluno.medidas || {};
+        const histMedidas = Array.isArray(aluno.historico_medidas) ? aluno.historico_medidas : [];
+        const hasMeasures = (medidas.peso_kg !== null && medidas.peso_kg !== undefined)
+            || (medidas.altura_cm !== null && medidas.altura_cm !== undefined);
+
+        const rpg = data.avaliacao_rpg || {};
+        const rpgHist = Array.isArray(rpg.historico) ? rpg.historico : [];
+        const rpgAtual = rpg.atual || rpgHist[0] || null;
+        const ui = window.RpgAvaliacaoUI;
+
+        // 1. Ficha RPG / Medidas
+        const fichaMedidasTokens = [];
+        if (histMedidas.length > 0) {
+            histMedidas.forEach((m, idx) => {
+                fichaMedidasTokens.push(`med:${m.id || m.data_medicao || idx}:${m.peso_kg ?? ''}:${m.cintura_cm ?? ''}`);
+            });
+        } else if (hasMeasures) {
+            fichaMedidasTokens.push(`med:current:${medidas.peso_kg ?? ''}:${medidas.altura_cm ?? ''}`);
+        } else {
+            fichaMedidasTokens.push('med:pending_first');
+        }
+        rpgHist.forEach((h, idx) => {
+            fichaMedidasTokens.push(`rpg:${h.id || idx}:${Math.round(Number(h.score_total || 0))}`);
+        });
+
+        // 2. Meus Atributos
+        const atributosTokens = rpgHist.map((h, idx) => (
+            `attr:${h.id || idx}:${Math.round(Number(h.score_total || 0))}:${h.data_avaliacao || ''}`
+        ));
+
+        // 3. Conquistas
+        const conquistasTokens = [];
+        if (rpgAtual && typeof ui !== 'undefined') {
+            const apto = rpgAtual.apto_sparring !== false && rpgAtual.apto_sparring !== 0;
+            const badges = (Array.isArray(rpgAtual.badges) && rpgAtual.badges.length > 0)
+                ? rpgAtual.badges
+                : ui.computeBadges(rpgAtual.criterios, apto);
+            badges.filter((b) => b && b.desbloqueada).forEach((b) => {
+                conquistasTokens.push(`badge:${b.id || b.nome}`);
+            });
+        }
+        if (Array.isArray(data.conquistas)) {
+            data.conquistas.forEach((c, idx) => {
+                if (c && c.desbloqueada !== false && c.unlocked !== false) {
+                    conquistasTokens.push(`ach:${c.id || c.nome || idx}`);
+                }
+            });
+        }
+
+        // 4. Graduação
+        const graduacao = data.graduacao || {};
+        const graduacaoTokens = [];
+        if (Array.isArray(graduacao.historico)) {
+            graduacao.historico.forEach((h, idx) => {
+                graduacaoTokens.push(`hist:${h.nivel_id || h.nivel_nome || idx}:${h.data_graduacao || ''}`);
+            });
+        }
+        if (Array.isArray(graduacao.avaliacoes)) {
+            graduacao.avaliacoes.forEach((a, idx) => {
+                graduacaoTokens.push(`eval:${a.id || idx}:${a.percentual_obtido ?? 0}:${a.apto ? 1 : 0}`);
+            });
+        }
+        const ex = data.exame_proximo;
+        if (ex && ex.id) {
+            graduacaoTokens.push(`exame:${ex.id}:${ex.convite_status || 'aberto'}:${ex.convite_id || ''}`);
+        }
+
+        return {
+            ficha_medidas: fichaMedidasTokens,
+            atributos: atributosTokens,
+            conquistas: conquistasTokens,
+            graduacao: graduacaoTokens
+        };
+    },
+
+    updateQuickAccessBadges(payload = null) {
+        const tokensByKey = this.collectQuickAccessTokens(payload);
+        const seenState = this.readQuickAccessSeenState();
+
+        ['ficha_medidas', 'atributos', 'conquistas', 'graduacao'].forEach((key) => {
+            const badgeEl = document.getElementById(`qa-badge-${key}`);
+            if (!badgeEl) return;
+            const currentTokens = tokensByKey[key] || [];
+            const seenSet = new Set(seenState[key] || []);
+            const unseenCount = currentTokens.filter((t) => !seenSet.has(t)).length;
+
+            if (unseenCount > 0) {
+                badgeEl.textContent = unseenCount > 9 ? '9+' : String(unseenCount);
+                badgeEl.style.display = 'inline-flex';
+                badgeEl.setAttribute('aria-label', `${unseenCount} ${unseenCount === 1 ? 'atualização' : 'atualizações'}`);
+            } else {
+                badgeEl.style.display = 'none';
+            }
+        });
+    },
+
+    markQuickAccessSeen(key) {
+        const tokensByKey = this.collectQuickAccessTokens();
+        if (!tokensByKey[key]) return;
+        const seenState = this.readQuickAccessSeenState();
+        seenState[key] = tokensByKey[key];
+        this.writeQuickAccessSeenState(seenState);
+        this.updateQuickAccessBadges();
+    },
+
+    openQuickAccessModal(key) {
+        const modalMap = {
+            ficha_medidas: { modalId: 'modal-qa-ficha-medidas', render: () => this.renderModalQaFichaMedidas() },
+            atributos: { modalId: 'modal-qa-atributos', render: () => this.renderModalQaAtributos() },
+            conquistas: { modalId: 'modal-qa-conquistas', render: () => this.renderModalQaConquistas() },
+            graduacao: { modalId: 'modal-qa-graduacao', render: () => this.renderModalQaGraduacao() }
+        };
+        const target = modalMap[key];
+        if (!target) return;
+
+        this.markQuickAccessSeen(key);
+        target.render();
+
+        const modalEl = document.getElementById(target.modalId);
+        if (modalEl) {
+            modalEl.style.display = 'flex';
+        }
+    },
+
+    renderModalQaFichaMedidas() {
+        const body = document.getElementById('modal-qa-ficha-medidas-body');
+        if (!body) return;
+
+        const data = this.alunoData || {};
+        const aluno = data.aluno || {};
+        const medidas = aluno.medidas || {};
+        const hasMeasures = (medidas.peso_kg !== null && medidas.peso_kg !== undefined)
+            || (medidas.altura_cm !== null && medidas.altura_cm !== undefined);
+
+        const rpg = data.avaliacao_rpg || {};
+        const historico = Array.isArray(rpg.historico) ? rpg.historico : [];
+        const atual = rpg.atual || historico[0] || null;
+        const ui = window.RpgAvaliacaoUI;
+
+        let rpgSummaryHtml = `
+            <div class="qa-modal-section">
+                <h4 class="qa-modal-section-title">Ficha Técnica RPG</h4>
+                <p class="qa-modal-empty-msg">Nenhuma avaliação técnica RPG registrada pelo instrutor ainda.</p>
+            </div>
+        `;
+
+        if (atual && typeof ui !== 'undefined') {
+            const scoreTotal = Math.round(Number(atual.score_total || 0));
+            const aptoSparring = atual.apto_sparring !== false && atual.apto_sparring !== 0;
+            const arquetipoObj = atual.arquetipo || ui.computeArchetype(atual.pilares, scoreTotal);
+            const dataStr = atual.data_avaliacao
+                ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR')
+                : 'Recente';
+            const avaliadorStr = this.escapeHtml(atual.avaliador_nome || 'Instrutor');
+
+            rpgSummaryHtml = `
+                <div class="qa-modal-section">
+                    <h4 class="qa-modal-section-title">Resumo da Ficha RPG</h4>
+                    <div class="rpg-accordion-head-top">
+                        <div class="rpg-accordion-rank-group">
+                            ${ui.renderRankBadgeHtml(atual.rank_combate, atual.rank_titulo, 'md')}
+                            <div class="portal-rpg-score">
+                                <strong>${scoreTotal}<span>/100</span></strong>
+                            </div>
+                        </div>
+                        <div class="rpg-accordion-meta-right">
+                            ${ui.renderSparringBadgeHtml(aptoSparring)}
+                            <span class="qa-modal-subtitle-date">${this.escapeHtml(dataStr)} • ${avaliadorStr}</span>
+                        </div>
+                    </div>
+                    ${ui.renderArchetypePillHtml(arquetipoObj)}
+                    <button type="button" class="portal-rpg-story-btn" id="btn-qa-story-card">
+                        <span>📸 Gerar Card de Status (Stories 9:16)</span>
+                    </button>
+                </div>
+            `;
+        }
+
+        const pesoFmt = (medidas.peso_kg !== null && medidas.peso_kg !== undefined) ? `${this.escapeHtml(medidas.peso_kg)} kg` : '--';
+        const alturaFmt = (medidas.altura_cm !== null && medidas.altura_cm !== undefined) ? `${this.escapeHtml(medidas.altura_cm)} cm` : '--';
+        const imcFmt = (medidas.imc !== null && medidas.imc !== undefined) ? this.escapeHtml(medidas.imc) : '--';
+        const toraxFmt = (medidas.torax_cm !== null && medidas.torax_cm !== undefined) ? `${this.escapeHtml(medidas.torax_cm)} cm` : '--';
+        const cinturaFmt = (medidas.cintura_cm !== null && medidas.cintura_cm !== undefined) ? `${this.escapeHtml(medidas.cintura_cm)} cm` : '--';
+        const quadrilFmt = (medidas.quadril_cm !== null && medidas.quadril_cm !== undefined) ? `${this.escapeHtml(medidas.quadril_cm)} cm` : '--';
+        const ultimaAfericao = (medidas.dias_ultima_checagem && medidas.dias_ultima_checagem !== 'Sem aferição')
+            ? `Última aferição: ${this.escapeHtml(medidas.dias_ultima_checagem)}`
+            : 'Nenhuma medição registrada ainda';
+
+        const measuresHtml = hasMeasures ? `
+            <div class="qa-modal-section">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
+                    <h4 class="qa-modal-section-title">Medidas Corporais</h4>
+                    <span class="qa-modal-subtitle-date">${ultimaAfericao}</span>
+                </div>
+                <div class="qa-modal-measures-grid">
+                    <div class="qa-measure-box"><span>Peso</span><strong>${pesoFmt}</strong></div>
+                    <div class="qa-measure-box"><span>Altura</span><strong>${alturaFmt}</strong></div>
+                    <div class="qa-measure-box"><span>IMC</span><strong>${imcFmt}</strong></div>
+                    <div class="qa-measure-box"><span>Tórax</span><strong>${toraxFmt}</strong></div>
+                    <div class="qa-measure-box"><span>Cintura</span><strong>${cinturaFmt}</strong></div>
+                    <div class="qa-measure-box"><span>Quadril</span><strong>${quadrilFmt}</strong></div>
+                </div>
+            </div>
+        ` : `
+            <div class="qa-modal-section">
+                <h4 class="qa-modal-section-title">Medidas Corporais</h4>
+                <p class="qa-modal-empty-msg">Você ainda não registrou suas medidas corporais. Toque abaixo para lançar peso, altura e circunferências.</p>
+            </div>
+        `;
+
+        body.innerHTML = `
+            <div class="qa-modal-stack">
+                ${rpgSummaryHtml}
+                ${measuresHtml}
+                <div class="qa-modal-actions">
+                    <button type="button" class="qa-modal-btn-primary" id="btn-qa-registrar-medidas">
+                        <span>${hasMeasures ? '+ Atualizar / Nova Medição' : '+ Registrar Primeiras Medidas'}</span>
+                    </button>
+                    <button type="button" class="qa-modal-btn-secondary" id="btn-qa-ver-evolucao">
+                        <span>Ver Histórico Completo &amp; Gráficos →</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('btn-qa-story-card')?.addEventListener('click', () => {
+            this.openPortalRpgStatusCard();
+        });
+        document.getElementById('btn-qa-registrar-medidas')?.addEventListener('click', () => {
+            const modal = document.getElementById('modal-qa-ficha-medidas');
+            if (modal) modal.style.display = 'none';
+            this.openMedidasModal();
+        });
+        document.getElementById('btn-qa-ver-evolucao')?.addEventListener('click', () => {
+            const modal = document.getElementById('modal-qa-ficha-medidas');
+            if (modal) modal.style.display = 'none';
+            this.switchView('evolucao');
+        });
+    },
+
+    renderModalQaAtributos() {
+        const body = document.getElementById('modal-qa-atributos-body');
+        if (!body) return;
+
+        const rpg = this.alunoData?.avaliacao_rpg || {};
+        const historico = Array.isArray(rpg.historico) ? rpg.historico : [];
+        const atual = rpg.atual || historico[0] || null;
+        const ui = window.RpgAvaliacaoUI;
+
+        if (!atual || typeof ui === 'undefined') {
+            body.innerHTML = `
+                <div class="qa-modal-section">
+                    <p class="qa-modal-empty-msg">Nenhuma avaliação técnica RPG lançada pelo instrutor ainda. Assim que você for avaliado nos 20 critérios, seu gráfico de radar e os 5 atributos aparecerão aqui.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const candidates = historico.filter((h) => String(h.id) !== String(atual.id));
+        let anterior = null;
+        if (this.portalRpgCompareId !== 'none') {
+            if (this.portalRpgCompareId) {
+                anterior = candidates.find((h) => String(h.id) === String(this.portalRpgCompareId)) || null;
+            }
+            if (!anterior) {
+                anterior = (rpg?.anterior && String(rpg.anterior.id) !== String(atual.id)) ? rpg.anterior : (candidates[0] || null);
+            }
+        }
+
+        const deltas = anterior
+            ? ((rpg?.anterior && String(anterior.id) === String(rpg.anterior.id) && rpg.deltas)
+                ? rpg.deltas
+                : ui.computeDeltas(atual, anterior))
+            : null;
+
+        const scoreTotal = Math.round(Number(atual.score_total || 0));
+        const aptoSparring = atual.apto_sparring !== false && atual.apto_sparring !== 0;
+        const dataStr = atual.data_avaliacao ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR') : 'Recente';
+        const arquetipoObj = atual.arquetipo || ui.computeArchetype(atual.pilares, scoreTotal);
+
+        const compareHtml = candidates.length > 0 ? `
+            <div class="portal-rpg-compare">
+                <label for="modal-qa-rpg-compare-select">Comparar radar com:</label>
+                <select id="modal-qa-rpg-compare-select" class="portal-rpg-select">
+                    <option value="none" ${this.portalRpgCompareId === 'none' ? 'selected' : ''}>Sem comparação</option>
+                    ${candidates.map((c) => {
+                        const cDate = c.data_avaliacao ? new Date(c.data_avaliacao).toLocaleDateString('pt-BR') : `#${c.id}`;
+                        const cScore = Math.round(Number(c.score_total || 0));
+                        const cRank = this.escapeHtml(c.rank_combate || 'D');
+                        const selected = anterior && String(anterior.id) === String(c.id) ? 'selected' : '';
+                        return `<option value="${Number(c.id)}" ${selected}>${this.escapeHtml(cDate)} • ${cScore}/100 (Rank ${cRank})</option>`;
+                    }).join('')}
+                </select>
+            </div>
+        ` : '';
+
+        const noteHtml = atual.observacoes_instrutor ? `
+            <div class="portal-rpg-note">
+                <strong style="color:#7dd3fc;">Feedback do Instrutor:</strong> ${this.escapeHtml(atual.observacoes_instrutor)}
+            </div>
+        ` : '';
+
+        const criteriaDetailsHtml = (!atual.is_legacy && atual.criterios && Object.keys(atual.criterios).length > 0) ? `
+            <details class="rpg-criteria-details">
+                <summary class="rpg-criteria-summary">Ver notas dos 20 critérios</summary>
+                <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
+                    ${ui.PILLARS.map((pillar) => {
+                        const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
+                        const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
+                        return `
+                            <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.18); border-top: 2px solid ${pillarColor}; border-radius: 12px; padding: 10px 12px;">
+                                <div style="font-size: 12.5px; font-weight: 800; color: ${pillarColor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
+                                ${items.map((c) => {
+                                    const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
+                                    const lockTxt = !aptoSparring && c.isSparring ? ' (teto 3)' : '';
+                                    return `
+                                        <div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; color:#cbd5e1; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                                            <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:12px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
+                                            <strong style="color:#f8fafc; white-space:nowrap;">${val}/5${this.escapeHtml(lockTxt)}</strong>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </details>
+        ` : '';
+
+        body.innerHTML = `
+            <div class="qa-modal-stack">
+                ${ui.renderArchetypePillHtml(arquetipoObj)}
+                <div class="portal-rpg-grid">
+                    <div class="portal-rpg-radar-wrap">
+                        ${ui.renderRadarSvg(atual.pilares || {}, anterior ? anterior.pilares : null, deltas)}
+                        <div class="rpg-radar-legend">
+                            <span class="rpg-legend-item"><span class="rpg-legend-swatch atual"></span> Atual (${this.escapeHtml(dataStr)})</span>
+                            ${anterior ? `<span class="rpg-legend-item"><span class="rpg-legend-swatch anterior"></span> Anterior (${this.escapeHtml(anterior.data_avaliacao ? new Date(anterior.data_avaliacao).toLocaleDateString('pt-BR') : '')})</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="rpg-pillar-bars-list">
+                        ${ui.renderPillarBarsHtml(atual.pilares || {}, deltas)}
+                    </div>
+                </div>
+                ${compareHtml}
+                ${noteHtml}
+                ${criteriaDetailsHtml}
+                <button type="button" class="portal-rpg-story-btn" id="btn-qa-attr-story">
+                    <span>📸 Gerar Card de Status (Stories 9:16)</span>
+                </button>
+            </div>
+        `;
+
+        document.getElementById('modal-qa-rpg-compare-select')?.addEventListener('change', (e) => {
+            this.onChangePortalRpgCompare(e.target.value);
+            this.renderModalQaAtributos();
+        });
+        document.getElementById('btn-qa-attr-story')?.addEventListener('click', () => {
+            this.openPortalRpgStatusCard();
+        });
+    },
+
+    renderModalQaConquistas() {
+        const body = document.getElementById('modal-qa-conquistas-body');
+        if (!body) return;
+
+        const rpg = this.alunoData?.avaliacao_rpg || {};
+        const historico = Array.isArray(rpg.historico) ? rpg.historico : [];
+        const atual = rpg.atual || historico[0] || null;
+        const ui = window.RpgAvaliacaoUI;
+
+        let badgesHtml = '';
+        if (atual && typeof ui !== 'undefined') {
+            const aptoSparring = atual.apto_sparring !== false && atual.apto_sparring !== 0;
+            const badgesArr = (Array.isArray(atual.badges) && atual.badges.length > 0)
+                ? atual.badges
+                : ui.computeBadges(atual.criterios, aptoSparring);
+            badgesHtml = ui.renderBadgesGridHtml(badgesArr);
+        } else {
+            badgesHtml = `
+                <div class="qa-modal-section">
+                    <p class="qa-modal-empty-msg">Suas insígnias de combate (Muralha, Sniper, Pulmão de Aço, Rei do Clinch, etc.) serão desbloqueadas após sua primeira avaliação técnica RPG.</p>
+                </div>
+            `;
+        }
+
+        body.innerHTML = `
+            <div class="qa-modal-stack">
+                ${badgesHtml}
+                <div class="qa-modal-actions">
+                    <button type="button" class="qa-modal-btn-primary" id="btn-qa-ir-missoes">
+                        <span>🎯 Abrir Quadro de Missões →</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('btn-qa-ir-missoes')?.addEventListener('click', () => {
+            const modal = document.getElementById('modal-qa-conquistas');
+            if (modal) modal.style.display = 'none';
+            this.switchView('missoes');
+        });
+    },
+
+    renderModalQaGraduacao() {
+        const body = document.getElementById('modal-qa-graduacao-body');
+        if (!body) return;
+
+        const data = this.alunoData || {};
+        const graduacao = data.graduacao || {};
+        const gradAtual = graduacao.muay_thai || graduacao.atual || null;
+        const proxGrad = graduacao.proxima_graduacao || null;
+        const exame = data.exame_proximo || null;
+        const ui = window.RpgAvaliacaoUI;
+        const requisitosExame = data.avaliacao_rpg?.requisitos_exame || null;
+
+        const atualNome = this.escapeHtml(gradAtual?.nivel_nome || 'Iniciante');
+        const c1 = this.sanitizeColor(gradAtual?.cor_primaria, '#f59e0b');
+        const c2 = this.sanitizeColor(gradAtual?.cor_secundaria, c1);
+        const proxNome = this.escapeHtml(proxGrad?.nivel_nome || 'Próximo Grau');
+
+        // Reaproveita o cálculo de elegibilidade exibido no card
+        const eligText = document.getElementById('card-eligibility-badge')?.textContent || 'Aguardando Avaliação';
+        const rawBarWidth = document.getElementById('card-next-rank-progress-bar')?.style.width || '0%';
+        const barWidth = /^\d{1,3}%$/.test(rawBarWidth) ? rawBarWidth : '0%';
+
+        let examLine = 'Aguardando definição de data';
+        if (exame && exame.data_evento) {
+            const dObj = new Date(exame.data_evento);
+            const dStr = !isNaN(dObj.getTime()) ? dObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : exame.data_evento;
+            const hStr = exame.horario_inicio ? exame.horario_inicio.substring(0, 5) : '10:00';
+            examLine = `${this.escapeHtml(dStr)} às ${this.escapeHtml(hStr)} • ${this.escapeHtml(exame.local_evento || 'Pro Combate')}`;
+        }
+
+        const timelineArr = Array.isArray(graduacao.historico) ? graduacao.historico : [];
+        const timelineHtml = timelineArr.length > 0 ? timelineArr.map((h) => {
+            const dateStr = h.data_graduacao ? new Date(h.data_graduacao).toLocaleDateString('pt-BR') : 'Atual';
+            const cor1 = this.sanitizeColor(h.cor_primaria, '#38bdf8');
+            const cor2 = this.sanitizeColor(h.cor_secundaria, '#ffffff');
+            return `
+                <div class="timeline-entry">
+                    <div class="timeline-dot" style="background-color: ${cor1}; border: 1px solid ${cor2};"></div>
+                    <span class="timeline-name">${this.escapeHtml(h.nivel_nome || '')}</span>
+                    <span class="timeline-date">${this.escapeHtml(dateStr)}</span>
+                </div>
+            `;
+        }).join('') : '<p class="qa-modal-empty-msg">Sem histórico anterior de graduações registrado.</p>';
+
+        const btnExamWrapVisible = document.getElementById('card-next-rank-action-wrap')?.style.display !== 'none';
+        const btnExamLabel = document.getElementById('btn-inscrever-exame-text')?.textContent || 'Inscrever-se no Exame de Graduação';
+
+        body.innerHTML = `
+            <div class="qa-modal-stack">
+                <div class="qa-modal-section">
+                    <h4 class="qa-modal-section-title">Graduação Atual &amp; Próxima Etapa</h4>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                        <span class="prajied-chip">
+                            <span class="prajied-dot" style="background: linear-gradient(135deg, ${c1}, ${c2});"></span>
+                            <span>${atualNome}</span>
+                        </span>
+                        <span class="eligibility-pill">${this.escapeHtml(eligText)}</span>
+                    </div>
+                    <div style="font-size:14px; font-weight:700; color:#f8fafc;">Rumo ao ${proxNome}</div>
+                    <div class="next-rank-track" style="margin-bottom:4px;">
+                        <div class="next-rank-bar" style="width: ${this.escapeHtml(barWidth)};"></div>
+                    </div>
+                    <div class="qa-modal-subtitle-date">Exame: <strong style="color:#f8fafc;">${examLine}</strong></div>
+                    ${btnExamWrapVisible ? `
+                        <button type="button" class="btn-inscrever-exame" id="btn-qa-inscrever-exame" style="margin-top:6px;">
+                            <span>${this.escapeHtml(btnExamLabel)}</span>
+                        </button>
+                    ` : ''}
+                </div>
+
+                ${(typeof ui !== 'undefined' && requisitosExame) ? ui.renderExamProgressionCardHtml(requisitosExame) : ''}
+
+                <div class="qa-modal-section">
+                    <h4 class="qa-modal-section-title">Trajetória</h4>
+                    <div class="graduations-timeline" style="border-top:none; padding-top:0;">
+                        ${timelineHtml}
+                    </div>
+                </div>
+
+                <div class="qa-modal-actions">
+                    <button type="button" class="qa-modal-btn-secondary" id="btn-qa-ir-graduacoes">
+                        <span>Abrir Página de Graduações &amp; Avaliações →</span>
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById('btn-qa-inscrever-exame')?.addEventListener('click', () => {
+            const modal = document.getElementById('modal-qa-graduacao');
+            if (modal) modal.style.display = 'none';
+            document.getElementById('btn-inscrever-exame')?.click();
+        });
+        document.getElementById('btn-qa-ir-graduacoes')?.addEventListener('click', () => {
+            const modal = document.getElementById('modal-qa-graduacao');
+            if (modal) modal.style.display = 'none';
+            this.switchView('graduacoes');
+        });
     },
 
     renderActivityChart(activityData) {

@@ -23,7 +23,7 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
         rel="stylesheet">
 
-    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.2">
+    <link rel="stylesheet" href="/css/painel-aluno.css?v=6.3">
     <script>
         window.__deferredPwaPrompt = null;
         window.addEventListener('beforeinstallprompt', function (e) {
@@ -962,8 +962,8 @@
                         </div>
                     </div>
 
-                    <!-- Sub-container clicável de Resumo Biométrico (leva para Evolução/Biometria) -->
-                    <div class="bio-summary-strip bio-summary-clickable" id="bio-summary-clickable" role="button" tabindex="0" title="Abrir histórico biométrico e evolução">
+                    <!-- Sub-container clicável de Resumo Biométrico (exibido apenas quando já há medidas) -->
+                    <div class="bio-summary-strip bio-summary-clickable" id="bio-summary-clickable" role="button" tabindex="0" title="Abrir Ficha RPG &amp; Medidas" style="display: none;">
                         <div class="bio-summary-values" id="bio-summary-values">
                             <div class="bio-summary-item">
                                 <span class="bio-inline-label">Peso:</span>
@@ -986,21 +986,68 @@
                                 <span class="chip-status-tag" id="bmi-status-pill" style="display: none;">Não aferido</span>
                             </div>
                         </div>
-
-                        <button type="button" class="bio-empty-cta" id="bio-empty-cta" style="display: none;">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                            <span>Registrar primeiras medidas &rarr;</span>
-                        </button>
                     </div>
                 </div>
+            </section>
 
-                <!-- Barra Inferior de Ações Rápidas (apenas + Medir quando já possui histórico) -->
-                <div class="athlete-bio-actions-bar" id="athlete-bio-actions-bar" style="display: none;">
-                    <div class="meas-quick-actions">
-                        <button type="button" class="btn-meas-action btn-meas-accent" id="btn-modal-medidas" title="Lançar Nova Medição">
-                            <span>+ Medir</span>
-                        </button>
-                    </div>
+            <!-- ========================================================= -->
+            <!-- NOVA SEÇÃO CENTRAL: ACESSO RÁPIDO (4 BOTÕES CIRCULARES)   -->
+            <!-- ========================================================= -->
+            <section class="quick-access-section standalone-panel-card" id="quick-access-section" aria-labelledby="quick-access-heading">
+                <h3 class="quick-access-title" id="quick-access-heading">Acesso Rápido</h3>
+                <div class="quick-access-grid">
+                    <button type="button" class="quick-access-item" id="qa-btn-ficha-medidas" data-qa-key="ficha_medidas" aria-haspopup="dialog">
+                        <span class="qa-circle qa-circle-blue">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14 2 14 8 20 8"/>
+                                <path d="M8 13h2l1.5 3 2.5-6 1.5 3H17"/>
+                            </svg>
+                            <span class="qa-modal-cue" aria-hidden="true">↗</span>
+                            <span class="qa-update-badge" id="qa-badge-ficha_medidas" style="display: none;" aria-label="Novas atualizações">0</span>
+                        </span>
+                        <span class="quick-access-label">Ficha RPG / Medidas</span>
+                    </button>
+
+                    <button type="button" class="quick-access-item" id="qa-btn-atributos" data-qa-key="atributos" aria-haspopup="dialog">
+                        <span class="qa-circle qa-circle-purple">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="12 2 21.5 9 17.8 20 6.2 20 2.5 9 12 2"/>
+                                <polygon points="12 7 17 10.7 15.1 16.5 8.9 16.5 7 10.7 12 7"/>
+                            </svg>
+                            <span class="qa-modal-cue" aria-hidden="true">↗</span>
+                            <span class="qa-update-badge" id="qa-badge-atributos" style="display: none;" aria-label="Novas atualizações">0</span>
+                        </span>
+                        <span class="quick-access-label">Meus Atributos</span>
+                    </button>
+
+                    <button type="button" class="quick-access-item" id="qa-btn-conquistas" data-qa-key="conquistas" aria-haspopup="dialog">
+                        <span class="qa-circle qa-circle-amber">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+                                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+                                <path d="M4 22h16"/>
+                                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+                                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+                                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+                            </svg>
+                            <span class="qa-modal-cue" aria-hidden="true">↗</span>
+                            <span class="qa-update-badge" id="qa-badge-conquistas" style="display: none;" aria-label="Novas atualizações">0</span>
+                        </span>
+                        <span class="quick-access-label">Conquistas</span>
+                    </button>
+
+                    <button type="button" class="quick-access-item" id="qa-btn-graduacao" data-qa-key="graduacao" aria-haspopup="dialog">
+                        <span class="qa-circle qa-circle-red">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="8" r="6"/>
+                                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+                            </svg>
+                            <span class="qa-modal-cue" aria-hidden="true">↗</span>
+                            <span class="qa-update-badge" id="qa-badge-graduacao" style="display: none;" aria-label="Novas atualizações">0</span>
+                        </span>
+                        <span class="quick-access-label">Graduação</span>
+                    </button>
                 </div>
             </section>
 
@@ -1858,6 +1905,49 @@
     </div>
 
     <!-- ================================================================= -->
+    <!-- MODAIS DO ACESSO RÁPIDO (FICHA/MEDIDAS, ATRIBUTOS, CONQUISTAS, GRADUAÇÃO) -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop" id="modal-qa-ficha-medidas" style="display: none;">
+        <div class="modal-card modal-medium" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3>Ficha RPG &amp; Medidas</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-qa-ficha-medidas" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-qa-ficha-medidas-body"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="modal-qa-atributos" style="display: none;">
+        <div class="modal-card modal-large">
+            <div class="modal-header">
+                <h3>Meus Atributos</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-qa-atributos" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-qa-atributos-body"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="modal-qa-conquistas" style="display: none;">
+        <div class="modal-card modal-medium" style="max-width: 580px;">
+            <div class="modal-header">
+                <h3>Insígnias &amp; Conquistas</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-qa-conquistas" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-qa-conquistas-body"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="modal-qa-graduacao" style="display: none;">
+        <div class="modal-card modal-medium" style="max-width: 580px;">
+            <div class="modal-header">
+                <h3>Graduação &amp; Trajetória</h3>
+                <button type="button" class="modal-close-btn" data-close="modal-qa-graduacao" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-qa-graduacao-body"></div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
     <!-- BARRA DE NAVEGAÇÃO INFERIOR FIXA MOBILE (5 TABS DO APP)           -->
     <!-- ================================================================= -->
     <nav class="mobile-bottom-nav" id="mobile-bottom-nav">
@@ -1900,7 +1990,7 @@
 
     <!-- Script Principal do Painel -->
     <script src="/js/rpg-avaliacao.js?v=2.1"></script>
-    <script src="/js/painel-aluno.js?v=6.5"></script>
+    <script src="/js/painel-aluno.js?v=6.6"></script>
 </body>
 
 </html>
