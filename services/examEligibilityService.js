@@ -687,6 +687,96 @@ function summarizeIntendedBeltsForPurchase(convites = []) {
     return { faixas, totais };
 }
 
+/**
+ * Normaliza o método de cobrança digital Asaas permitido para taxas de exame.
+ *
+ * @param {string} value
+ * @returns {'PIX'|'BOLETO'|'UNDEFINED'}
+ */
+function normalizeExamBillingType(value) {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (normalized === 'BOLETO' || normalized === 'UNDEFINED' || normalized === 'PIX') {
+        return normalized;
+    }
+    return 'PIX';
+}
+
+/**
+ * Valida se um convite de exame pode ser aprovado manualmente por professor/admin/recepção
+ * (cenário em que o aluno está sem acesso à plataforma, mas deseja participar).
+ *
+ * @param {object|null} convite
+ * @param {{ gerarCobranca?: boolean }} [options]
+ * @returns {{ allowed: boolean, mode?: 'accept_and_bill'|'accept_only'|'generate_invoice', code?: string, error?: string }}
+ */
+function validateManualInviteAcceptance(convite, { gerarCobranca = true } = {}) {
+    if (!convite) {
+        return {
+            allowed: false,
+            code: 'NOT_FOUND',
+            error: 'Convite não encontrado.'
+        };
+    }
+
+    if (convite.aluno_excluido || convite.aluno_deleted_at || convite.deleted_at) {
+        return {
+            allowed: false,
+            code: 'STUDENT_DELETED',
+            error: 'Não é possível aprovar o convite de um aluno na lixeira.'
+        };
+    }
+
+    const status = String(convite.convite_status ?? convite.status ?? '').trim().toLowerCase();
+    if (status === 'pago') {
+        return {
+            allowed: false,
+            code: 'ALREADY_PAID',
+            error: 'Este convite já está quitado e confirmado.'
+        };
+    }
+
+    if (status === 'recusado') {
+        return {
+            allowed: false,
+            code: 'REFUSED',
+            error: 'Este convite está marcado como recusado. Reative-o antes de aprovar manualmente.'
+        };
+    }
+
+    const wantsBilling = gerarCobranca !== false;
+    if (status === 'aceito') {
+        const hasInvoice = Boolean(convite.asaas_invoice_url || convite.asaas_payment_id);
+        if (wantsBilling && !hasInvoice) {
+            return { allowed: true, mode: 'generate_invoice' };
+        }
+        if (wantsBilling) {
+            return {
+                allowed: false,
+                code: 'ALREADY_ACCEPTED_WITH_INVOICE',
+                error: 'Este convite já foi aceito e já possui fatura digital gerada.'
+            };
+        }
+        return {
+            allowed: false,
+            code: 'ALREADY_ACCEPTED',
+            error: 'Este convite já está marcado como aceito (aguardando pagamento).'
+        };
+    }
+
+    if (status === 'convidado') {
+        return {
+            allowed: true,
+            mode: wantsBilling ? 'accept_and_bill' : 'accept_only'
+        };
+    }
+
+    return {
+        allowed: false,
+        code: 'INVALID_STATUS',
+        error: 'Status do convite inválido para aprovação manual.'
+    };
+}
+
 module.exports = {
     findNextLevel,
     findPreviousLevel,
@@ -694,5 +784,7 @@ module.exports = {
     detectInviteBeltConflict,
     evaluateStudentExamEligibility,
     loadExamEligibilityBatch,
-    summarizeIntendedBeltsForPurchase
+    summarizeIntendedBeltsForPurchase,
+    normalizeExamBillingType,
+    validateManualInviteAcceptance
 };

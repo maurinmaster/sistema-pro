@@ -1281,6 +1281,99 @@ router.post('/convites/:conviteId/reativar', authenticateToken, authorizeRoles('
 });
 
 /**
+ * POST /api/exames/convites/:conviteId/aceitar-manual
+ * Permite que professor/admin/recepção aprove manualmente o convite em nome de um aluno
+ * sem acesso à plataforma, com geração opcional da fatura digital Asaas.
+ */
+router.post('/convites/:conviteId/aceitar-manual', authenticateToken, authorizeRoles('admin', 'recepcao', 'professor'), async (req, res) => {
+    try {
+        const conviteId = parseInt(req.params.conviteId, 10);
+        if (isNaN(conviteId)) {
+            return res.status(400).json({ success: false, error: 'ID do convite inválido.' });
+        }
+
+        const gerarCobranca = req.body?.gerar_cobranca !== false;
+        const billingType = examEligibilityService.normalizeExamBillingType(req.body?.billing_type);
+
+        const [rows] = await pool.query(`
+            SELECT c.id, c.aluno_id, c.status, c.valor, c.asaas_payment_id, c.asaas_invoice_url,
+                   a.deleted_at AS aluno_deleted_at,
+                   eg.titulo AS evento_titulo
+            FROM evento_graduacao_convites c
+            JOIN alunos a ON a.id = c.aluno_id
+            JOIN eventos_graduacao eg ON eg.id = c.evento_id
+            WHERE c.id = ?
+            LIMIT 1
+        `, [conviteId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Convite não encontrado.' });
+        }
+
+        const conv = rows[0];
+        const validation = examEligibilityService.validateManualInviteAcceptance(conv, { gerarCobranca });
+        if (!validation.allowed) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        if (gerarCobranca) {
+            try {
+                const result = await executarAceiteConvite({
+                    conviteId,
+                    alunoId: conv.aluno_id,
+                    billingType
+                });
+                const customMessage = validation.mode === 'generate_invoice'
+                    ? 'Fatura digital gerada com sucesso!'
+                    : 'Convite aprovado manualmente e cobrança digital gerada com sucesso!';
+                return res.status(result.status || 200).json({
+                    ...result,
+                    message: customMessage
+                });
+            } catch (asaasErr) {
+                console.error('Erro ao gerar cobrança Asaas no aceite manual do convite:', asaasErr);
+                return res.status(400).json({
+                    success: false,
+                    error: 'Não foi possível gerar a cobrança digital no Asaas (verifique se o aluno possui CPF e e-mail válidos). Se preferir, desmarque "Gerar Fatura Digital" para aprovar apenas para pagamento no balcão.'
+                });
+            }
+        }
+
+        await pool.query(`
+            UPDATE evento_graduacao_convites
+            SET status = 'aceito',
+                data_resposta = NOW(),
+                motivo_recusa = NULL
+            WHERE id = ?
+        `, [conviteId]);
+
+        const valorTaxaFmt = Number(conv.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        Promise.resolve(
+            notificationConfigService.dispatchEvent('inscricao_exame', {
+                alunoId: conv.aluno_id,
+                variables: { evento: conv.evento_titulo || 'Exame de Graduação', valor: valorTaxaFmt },
+                detalhes: [
+                    { label: 'Exame', value: conv.evento_titulo || 'Exame de Graduação' },
+                    { label: 'Taxa', value: valorTaxaFmt }
+                ]
+            })
+        ).catch((notifErr) => {
+            console.warn('[Exames] Aviso ao notificar aceite manual sem cobrança:', notifErr.message);
+        });
+
+        res.json({
+            success: true,
+            convite_id: conviteId,
+            cobranca: null,
+            message: 'Convite aprovado manualmente! Inscrição marcada como Aceita (Aguardando Pgto).'
+        });
+    } catch (err) {
+        console.error('Erro ao aprovar convite manualmente:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao aprovar convite manualmente.' });
+    }
+});
+
+/**
  * POST /api/exames/eventos/:id/concluir-promocoes
  * Etapa 3: Registra aprovação/reprovação/ausência dos inscritos pagos e promove a faixa dos aprovados em lote.
  */
@@ -1543,6 +1636,7 @@ async function executarAceiteConvite({ conviteId, alunoId, billingType = 'PIX' }
         UPDATE evento_graduacao_convites
         SET status = 'aceito',
             data_resposta = NOW(),
+            motivo_recusa = NULL,
             asaas_customer_id = ?,
             asaas_payment_id = ?,
             asaas_invoice_url = ?,

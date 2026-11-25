@@ -43,6 +43,15 @@ const ExamesModule = {
             this.submeterBaixaManual();
         });
 
+        document.getElementById('form-aceite-manual-exame')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.submeterAceiteManual();
+        });
+        document.getElementById('aceite-manual-gerar-cobranca')?.addEventListener('change', (e) => {
+            const billingWrap = document.getElementById('aceite-manual-billing-wrap');
+            if (billingWrap) billingWrap.style.display = e.target.checked ? 'block' : 'none';
+        });
+
         // Abas do funil em 3 etapas
         document.getElementById('tab-btn-aptos')?.addEventListener('click', () => this.switchTab('aptos'));
         document.getElementById('tab-btn-convites')?.addEventListener('click', () => this.switchTab('convites'));
@@ -1005,6 +1014,8 @@ const ExamesModule = {
                 `;
             }
 
+            const cid = Number(c.convite_id);
+
             // BUG FIX: recusado deve ocultar Fatura Digital mesmo que asaas_invoice_url tenha sido gerada antes da desistência
             let asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Aguardando aceite</span>';
             if (c.convite_status === 'recusado') {
@@ -1013,10 +1024,13 @@ const ExamesModule = {
                 asaasAction = '<span style="color: var(--text-muted); font-size: 11.5px;">Quitado manualmente</span>';
             } else if (c.asaas_invoice_url) {
                 asaasAction = `
-                    <div style="display: flex; gap: 6px; align-items: center;">
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
                         <a href="${UI.sanitizeUrl(c.asaas_invoice_url)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" title="Abrir Fatura Digital">
                             🔗 Fatura Digital
                         </a>
+                        <button type="button" class="btn btn-secondary btn-sm" style="font-size: 11px; padding: 4px 8px;" onclick="ExamesModule.copiarLinkFatura(${cid})" title="Copiar link da fatura para enviar ao aluno">
+                            📋 Copiar Link
+                        </button>
                     </div>
                 `;
             } else if (c.convite_status === 'pago') {
@@ -1037,7 +1051,6 @@ const ExamesModule = {
             }
 
             // Ações contextuais
-            const cid = Number(c.convite_id);
             const canReenviar = c.convite_status !== 'pago' && !c.aluno_excluido;
             const actions = [];
 
@@ -1057,6 +1070,11 @@ const ExamesModule = {
                     actions.push(`<span class="exame-action-done" title="Quitado via Gateway Asaas">—</span>`);
                 }
             } else {
+                if (c.convite_status === 'convidado' && !c.aluno_excluido) {
+                    actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.45); font-size: 11px;" onclick="ExamesModule.abrirModalAceiteManual(${cid})" title="Aprovar convite manualmente em nome do aluno">✓ Aceitar Convite</button>`);
+                } else if (c.convite_status === 'aceito' && !c.asaas_invoice_url && !c.aluno_excluido) {
+                    actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.45); font-size: 11px;" onclick="ExamesModule.abrirModalAceiteManual(${cid})" title="Gerar fatura digital Asaas">Gerar Fatura</button>`);
+                }
                 actions.push(`<button type="button" class="btn btn-sm btn-exame-baixa" onclick="ExamesModule.abrirModalBaixaManual(${cid})">Baixa Manual</button>`);
                 if (canReenviar) {
                     actions.push(`<button type="button" class="btn btn-secondary btn-sm" style="font-size: 11px;" onclick="ExamesModule.reenviarConvite(${cid})" title="Reenviar WhatsApp / E-mail">Reenviar</button>`);
@@ -1266,6 +1284,108 @@ const ExamesModule = {
             ]);
         } catch (err) {
             UI.showToast('Erro ao confirmar pagamento: ' + err.message, 'error');
+        }
+    },
+
+    abrirModalAceiteManual(conviteId) {
+        const conv = (this.eventoDetalhesAtual?.convites || []).find(c => Number(c.convite_id) === Number(conviteId));
+        if (!conv) return;
+
+        const idInput = document.getElementById('aceite-manual-convite-id');
+        const infoEl = document.getElementById('aceite-manual-aluno-info');
+        const tituloEl = document.getElementById('modal-aceite-manual-titulo');
+        const checkCobranca = document.getElementById('aceite-manual-gerar-cobranca');
+        const billingWrap = document.getElementById('aceite-manual-billing-wrap');
+        const billingSelect = document.getElementById('aceite-manual-billing-type');
+        const btnSubmit = document.getElementById('btn-confirmar-aceite-manual');
+
+        if (idInput) idInput.value = String(conv.convite_id);
+        if (infoEl) {
+            const valorFmt = parseFloat(conv.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+            infoEl.textContent = `${conv.aluno_nome} • ${conv.graduacao_pretendida_nome || 'Graduação'} • Taxa R$ ${valorFmt}`;
+        }
+
+        const jaAceito = conv.convite_status === 'aceito';
+        if (tituloEl) {
+            tituloEl.textContent = jaAceito ? 'Gerar Fatura Digital (Asaas)' : 'Aprovar Convite Manualmente';
+        }
+        if (checkCobranca) {
+            checkCobranca.checked = true;
+            checkCobranca.disabled = jaAceito;
+        }
+        if (billingWrap) billingWrap.style.display = 'block';
+        if (billingSelect) billingSelect.value = 'PIX';
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = jaAceito ? 'Gerar Fatura Digital' : 'Confirmar Participação';
+        }
+
+        UI.openModal('modal-aceite-manual-exame');
+    },
+
+    async submeterAceiteManual() {
+        const conviteId = document.getElementById('aceite-manual-convite-id')?.value;
+        const gerarCobranca = Boolean(document.getElementById('aceite-manual-gerar-cobranca')?.checked);
+        const billingType = document.getElementById('aceite-manual-billing-type')?.value || 'PIX';
+        const btnSubmit = document.getElementById('btn-confirmar-aceite-manual');
+        if (!conviteId) return;
+
+        const originalText = btnSubmit ? btnSubmit.textContent : 'Confirmar Participação';
+        if (btnSubmit) {
+            btnSubmit.disabled = true;
+            btnSubmit.textContent = 'Processando...';
+        }
+
+        try {
+            const res = await API.post(`/exames/convites/${conviteId}/aceitar-manual`, {
+                gerar_cobranca: gerarCobranca,
+                billing_type: billingType
+            });
+            UI.closeModal('modal-aceite-manual-exame');
+            UI.showToast(res.message || 'Convite aprovado manualmente!', 'success');
+            await Promise.all([
+                this.carregarDetalhesEvento(this.eventoSelecionadoId),
+                this.loadEventos()
+            ]);
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao aprovar convite manualmente.', 'error');
+        } finally {
+            if (btnSubmit) {
+                btnSubmit.disabled = false;
+                btnSubmit.textContent = originalText;
+            }
+        }
+    },
+
+    async copiarLinkFatura(conviteId) {
+        const conv = (this.eventoDetalhesAtual?.convites || []).find(c => Number(c.convite_id) === Number(conviteId));
+        if (!conv || !conv.asaas_invoice_url) {
+            UI.showToast('Este convite ainda não possui link de fatura gerado.', 'warning');
+            return;
+        }
+
+        const safeUrl = UI.sanitizeUrl(conv.asaas_invoice_url, '');
+        if (!safeUrl || safeUrl === '#') {
+            UI.showToast('Link da fatura inválido para cópia.', 'error');
+            return;
+        }
+
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(safeUrl);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = safeUrl;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            UI.showToast('Link da fatura copiado! Envie ao aluno via WhatsApp.', 'success');
+        } catch (err) {
+            UI.showToast('Não foi possível copiar o link automaticamente.', 'error');
         }
     },
 

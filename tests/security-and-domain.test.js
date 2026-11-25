@@ -2903,6 +2903,66 @@ test('Regras de Domínio: Contagem de Faixas Pretendidas para Compras', () => {
     assert.equal(resumo.faixas[1].cor_secundaria, '#ffffff');
 });
 
+test('Regras de Domínio: Aprovação Manual de Convite pelo Professor', () => {
+    const examEligibilityService = require('../services/examEligibilityService');
+
+    assert.equal(examEligibilityService.normalizeExamBillingType('pix'), 'PIX');
+    assert.equal(examEligibilityService.normalizeExamBillingType('BOLETO'), 'BOLETO');
+    assert.equal(examEligibilityService.normalizeExamBillingType('UNDEFINED'), 'UNDEFINED');
+    assert.equal(examEligibilityService.normalizeExamBillingType('CARTAO_INVALIDO'), 'PIX');
+
+    const okWithBill = examEligibilityService.validateManualInviteAcceptance(
+        { id: 1, status: 'convidado', aluno_deleted_at: null },
+        { gerarCobranca: true }
+    );
+    assert.equal(okWithBill.allowed, true);
+    assert.equal(okWithBill.mode, 'accept_and_bill');
+
+    const okWithoutBill = examEligibilityService.validateManualInviteAcceptance(
+        { id: 2, status: 'convidado', aluno_deleted_at: null },
+        { gerarCobranca: false }
+    );
+    assert.equal(okWithoutBill.allowed, true);
+    assert.equal(okWithoutBill.mode, 'accept_only');
+
+    const okGenerateInvoice = examEligibilityService.validateManualInviteAcceptance(
+        { id: 3, status: 'aceito', asaas_invoice_url: null, asaas_payment_id: null },
+        { gerarCobranca: true }
+    );
+    assert.equal(okGenerateInvoice.allowed, true);
+    assert.equal(okGenerateInvoice.mode, 'generate_invoice');
+
+    const blockAceitoWithInvoice = examEligibilityService.validateManualInviteAcceptance(
+        { id: 4, status: 'aceito', asaas_invoice_url: 'https://sandbox.asaas.com/i/abc' },
+        { gerarCobranca: true }
+    );
+    assert.equal(blockAceitoWithInvoice.allowed, false);
+
+    const blockAceitoNoBill = examEligibilityService.validateManualInviteAcceptance(
+        { id: 5, status: 'aceito', asaas_invoice_url: null },
+        { gerarCobranca: false }
+    );
+    assert.equal(blockAceitoNoBill.allowed, false);
+
+    const blockPago = examEligibilityService.validateManualInviteAcceptance(
+        { id: 6, status: 'pago' },
+        { gerarCobranca: true }
+    );
+    assert.equal(blockPago.allowed, false);
+
+    const blockRecusado = examEligibilityService.validateManualInviteAcceptance(
+        { id: 7, status: 'recusado' },
+        { gerarCobranca: true }
+    );
+    assert.equal(blockRecusado.allowed, false);
+
+    const blockDeleted = examEligibilityService.validateManualInviteAcceptance(
+        { id: 8, status: 'convidado', aluno_deleted_at: '2026-11-20T10:00:00Z' },
+        { gerarCobranca: false }
+    );
+    assert.equal(blockDeleted.allowed, false);
+});
+
 test.after(async () => {
     try {
         await pool.end();
