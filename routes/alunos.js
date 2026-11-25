@@ -14,6 +14,7 @@ const whatsappService = require('../services/whatsappService');
 const notificationConfigService = require('../services/notificationConfigService');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
 const examEligibilityService = require('../services/examEligibilityService');
+const conquistasService = require('../services/conquistasService');
 
 // Configuração do Multer para armazenamento de fotos de perfil
 const uploadDir = path.join(__dirname, '../public/uploads/alunos');
@@ -588,6 +589,22 @@ router.get('/:id', authenticateToken, async (req, res) => {
             targetAval ? targetAval.proxima_graduacao : null
         );
 
+        // 7. Conquistas de Luta / Honrarias concedidas pelo Professor
+        let conquistasProfessor = [];
+        try {
+            await conquistasService.ensureProfessorAchievementsSchema(pool);
+            const [conqProfRows] = await pool.query(`
+                SELECT acm.*, ue.nome AS professor_nome
+                FROM aluno_conquistas_manuais acm
+                LEFT JOIN usuarios_equipe ue ON ue.id = acm.professor_id
+                WHERE acm.aluno_id = ?
+                ORDER BY acm.data_conquista DESC, acm.id DESC
+            `, [id]);
+            conquistasProfessor = conqProfRows.map(r => conquistasService.normalizeProfessorAchievementRow(r));
+        } catch (conqErr) {
+            console.warn('Aviso ao consultar conquistas do professor no dossiê:', conqErr.message);
+        }
+
         res.json({
             success: true,
             data: {
@@ -602,6 +619,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
                     historico: rpgOnly,
                     requisitos_exame: requisitosExame
                 },
+                conquistas_professor: conquistasProfessor,
+                conquistas_presets: conquistasService.PROFESSOR_ACHIEVEMENT_PRESETS,
                 matricula: matriculas[0] || null,
                 matriculas_historico: matriculas,
                 faturas,
@@ -1263,6 +1282,92 @@ router.get('/:id/avaliacoes-desempenho', authenticateToken, async (req, res) => 
     }
 });
 
+// POST /api/alunos/:id/conquistas-professor - Conceder conquista de luta/honraria ao atleta
+router.post('/:id/conquistas-professor', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const alunoId = parseInt(req.params.id, 10);
+        if (isNaN(alunoId) || alunoId <= 0) {
+            return res.status(400).json({ success: false, error: 'ID de aluno inválido.' });
+        }
+
+        const validation = conquistasService.validateProfessorAchievementPayload(req.body || {});
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        const [alunoRows] = await pool.query(
+            'SELECT id FROM alunos WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+            [alunoId]
+        );
+        if (alunoRows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const d = validation.data;
+        const professorId = req.user && req.user.id ? Number(req.user.id) : null;
+
+        const [result] = await pool.query(`
+            INSERT INTO aluno_conquistas_manuais (
+                aluno_id, professor_id, codigo_preset, titulo, descricao, icone, categoria, cor_hex, data_conquista
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+            alunoId,
+            professorId,
+            d.codigo_preset,
+            d.titulo,
+            d.descricao,
+            d.icone,
+            d.categoria,
+            d.cor_hex,
+            d.data_conquista
+        ]);
+
+        const [insertedRows] = await pool.query(`
+            SELECT acm.*, ue.nome AS professor_nome
+            FROM aluno_conquistas_manuais acm
+            LEFT JOIN usuarios_equipe ue ON ue.id = acm.professor_id
+            WHERE acm.id = ?
+            LIMIT 1
+        `, [result.insertId]);
+
+        res.status(201).json({
+            success: true,
+            data: conquistasService.normalizeProfessorAchievementRow(insertedRows[0] || { id: result.insertId, aluno_id: alunoId, ...d }),
+            message: 'Conquista de luta adicionada ao perfil do atleta!'
+        });
+    } catch (err) {
+        console.error('Erro ao conceder conquista do professor:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao salvar conquista do atleta.' });
+    }
+});
+
+// DELETE /api/alunos/:id/conquistas-professor/:conquistaId - Remover conquista concedida pelo professor
+router.delete('/:id/conquistas-professor/:conquistaId', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const alunoId = parseInt(req.params.id, 10);
+        const conquistaId = parseInt(req.params.conquistaId, 10);
+        if (isNaN(alunoId) || alunoId <= 0 || isNaN(conquistaId) || conquistaId <= 0) {
+            return res.status(400).json({ success: false, error: 'Parâmetros inválidos.' });
+        }
+
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const [result] = await pool.query(
+            'DELETE FROM aluno_conquistas_manuais WHERE id = ? AND aluno_id = ?',
+            [conquistaId, alunoId]
+        );
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Conquista não encontrada para este aluno.' });
+        }
+
+        res.json({ success: true, message: 'Conquista removida com sucesso.' });
+    } catch (err) {
+        console.error('Erro ao remover conquista do professor:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao remover conquista.' });
+    }
+});
+
 // DELETE /api/alunos/:id/avaliacoes-desempenho/:evalId - Excluir avaliação de desempenho
 router.delete('/:id/avaliacoes-desempenho/:evalId', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
     try {
@@ -1605,6 +1710,11 @@ async function executarExclusaoPermanente(conn, alunoId) {
     await conn.query('DELETE FROM aluno_avaliacoes_desempenho WHERE aluno_id = ?', [alunoId]);
     await conn.query('DELETE FROM aluno_avaliacoes_graduacao WHERE aluno_id = ?', [alunoId]);
     await conn.query('DELETE FROM aluno_conquistas WHERE aluno_id = ?', [alunoId]);
+    try {
+        await conn.query('DELETE FROM aluno_conquistas_manuais WHERE aluno_id = ?', [alunoId]);
+    } catch {
+        // tabela pode não ter sido criada ainda
+    }
     await conn.query('DELETE FROM aluno_golpes_progresso WHERE aluno_id = ?', [alunoId]);
     await conn.query('DELETE FROM aluno_graduacoes WHERE aluno_id = ?', [alunoId]);
     await conn.query('DELETE FROM aluno_historico_medidas WHERE aluno_id = ?', [alunoId]);

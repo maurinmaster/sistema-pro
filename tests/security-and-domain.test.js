@@ -3034,6 +3034,60 @@ test('Regras de Domínio: Badges da Sidebar exibem apenas pendências reais com 
     assert.equal(indexHtml.includes('title="Missões aguardando validação"'), true);
 });
 
+test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
+    const conquistasService = require('../services/conquistasService');
+
+    const presets = conquistasService.PROFESSOR_ACHIEVEMENT_PRESETS;
+    assert.equal(presets.some(p => p.codigo === 'primeira_luta'), true);
+    assert.equal(presets.some(p => p.codigo === 'seis_lutas'), true);
+    assert.equal(presets.some(p => p.codigo === 'seis_vitorias_seguidas'), true);
+
+    const invalidShort = conquistasService.validateProfessorAchievementPayload({
+        titulo: 'Oi',
+        descricao: 'Descrição válida'
+    });
+    assert.equal(invalidShort.valid, false);
+
+    const invalidDesc = conquistasService.validateProfessorAchievementPayload({
+        titulo: 'Primeira Luta',
+        descricao: 'ab'
+    });
+    assert.equal(invalidDesc.valid, false);
+
+    const okNormalized = conquistasService.validateProfessorAchievementPayload({
+        codigo_preset: 'seis_vitorias_seguidas',
+        titulo: '  6 Vitórias Consecutivas  ',
+        descricao: '  Venceu 6 combates em sequência no evento regional.  ',
+        categoria: 'Invalida',
+        icone: '<script>',
+        cor_hex: 'javascript:alert(1)',
+        data_conquista: '2026-11-25'
+    });
+    assert.equal(okNormalized.valid, true);
+    assert.equal(okNormalized.data.titulo, '6 Vitórias Consecutivas');
+    assert.equal(okNormalized.data.categoria, 'Lutas');
+    assert.equal(okNormalized.data.icone, '🥊');
+    assert.equal(okNormalized.data.cor_hex, '#f59e0b');
+    assert.equal(okNormalized.data.data_conquista, '2026-11-25');
+
+    const rowNorm = conquistasService.normalizeProfessorAchievementRow({
+        id: 7,
+        aluno_id: 1,
+        titulo: 'Primeira Luta',
+        descricao: 'Estreia oficial no ringue.',
+        icone: '🥊',
+        categoria: 'Lutas',
+        cor_hex: '#f59e0b',
+        data_conquista: '2026-11-24T00:00:00.000Z',
+        professor_nome: null
+    });
+    assert.equal(rowNorm.id, 7);
+    assert.equal(rowNorm.data_conquista, '2026-11-24');
+    assert.equal(rowNorm.professor_nome, 'Não Informado');
+    assert.equal(rowNorm.origem, 'professor');
+    assert.equal(rowNorm.desbloqueada, true);
+});
+
 test.after(async () => {
     try {
         await pool.end();

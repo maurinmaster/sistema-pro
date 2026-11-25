@@ -1479,6 +1479,13 @@ const PainelAlunoApp = {
                 }
             });
         }
+        if (Array.isArray(data.conquistas_professor)) {
+            data.conquistas_professor.forEach((c, idx) => {
+                if (c) {
+                    conquistasTokens.push(`prof:${c.id || c.titulo || idx}`);
+                }
+            });
+        }
 
         // 4. Graduação
         const graduacao = data.graduacao || {};
@@ -1778,6 +1785,48 @@ const PainelAlunoApp = {
         const historico = Array.isArray(rpg.historico) ? rpg.historico : [];
         const atual = rpg.atual || historico[0] || null;
         const ui = window.RpgAvaliacaoUI;
+        const conquistasProf = Array.isArray(this.alunoData?.conquistas_professor) ? this.alunoData.conquistas_professor : [];
+
+        const profSectionHtml = `
+            <div class="portal-prof-conquistas-section">
+                <div class="portal-prof-conquistas-head">
+                    <span>🥊 Conquistas de Luta &amp; Honrarias</span>
+                    <span class="portal-prof-conquistas-count">${conquistasProf.length} ${conquistasProf.length === 1 ? 'conquista' : 'conquistas'}</span>
+                </div>
+                ${conquistasProf.length === 0 ? `
+                    <p class="qa-modal-empty-msg" style="font-size: 13px;">
+                        Conquistas especiais registradas pelo seu professor (como Primeira Luta, 6 Lutas ou Sequência de Vitórias) aparecerão em destaque aqui.
+                    </p>
+                ` : `
+                    <div class="portal-prof-conquistas-grid">
+                        ${conquistasProf.map((cp) => {
+                            const accent = this.sanitizeColor(cp.cor_hex, '#f59e0b');
+                            const dataFmt = cp.data_conquista
+                                ? new Date(`${cp.data_conquista}T12:00:00Z`).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                                : '';
+                            return `
+                                <div class="portal-prof-conquista-card" style="border-color: ${accent}66; background: ${accent}14;">
+                                    <div class="portal-prof-conquista-icon" style="background: ${accent}24; border-color: ${accent}55;">
+                                        <span>${this.escapeHtml(cp.icone || '🥊')}</span>
+                                    </div>
+                                    <div class="portal-prof-conquista-body">
+                                        <div class="portal-prof-conquista-top">
+                                            <strong>${this.escapeHtml(cp.titulo)}</strong>
+                                            <span class="portal-prof-conquista-cat" style="color: ${accent}; border-color: ${accent}55;">${this.escapeHtml(cp.categoria || 'Lutas')}</span>
+                                        </div>
+                                        <p class="portal-prof-conquista-desc">${this.escapeHtml(cp.descricao)}</p>
+                                        <div class="portal-prof-conquista-meta">
+                                            ${dataFmt ? `<span>📅 ${this.escapeHtml(dataFmt)}</span>` : ''}
+                                            <span>👨‍🏫 ${this.escapeHtml(cp.professor_nome || 'Professor')}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+        `;
 
         let badgesHtml = '';
         if (atual && typeof ui !== 'undefined') {
@@ -1796,6 +1845,7 @@ const PainelAlunoApp = {
 
         body.innerHTML = `
             <div class="qa-modal-stack">
+                ${profSectionHtml}
                 ${badgesHtml}
                 <div class="qa-modal-actions">
                     <button type="button" class="qa-modal-btn-primary" id="btn-qa-ir-missoes">
@@ -3403,8 +3453,13 @@ const PainelAlunoApp = {
             ctx.fillText(item.label, fx + fBoxW / 2, fy + 132);
         });
 
-        // 7. Card de Conquistas (até 6 conquistas desbloqueadas)
-        const unlocked = conquistas.filter(c => c.desbloqueada);
+        // 7. Card de Conquistas (inclui conquistas de luta do professor + conquistas gerais)
+        const conquistasProf = Array.isArray(this.alunoData?.conquistas_professor) ? this.alunoData.conquistas_professor : [];
+        const unlocked = [
+            ...conquistasProf,
+            ...conquistas.filter(c => c.desbloqueada)
+        ];
+        const totalConquistasCard = conquistas.length + conquistasProf.length;
         this.drawRoundedRect(ctx, 64, 1124, W - 128, 650, 32);
         ctx.fillStyle = 'rgba(22, 31, 46, 0.9)';
         ctx.fill();
@@ -3420,7 +3475,7 @@ const PainelAlunoApp = {
         ctx.textAlign = 'right';
         ctx.fillStyle = '#cbd5e1';
         ctx.font = '700 24px Plus Jakarta Sans, sans-serif';
-        ctx.fillText(`${unlocked.length} de ${conquistas.length} desbloqueadas`, W - 104, 1188);
+        ctx.fillText(`${unlocked.length} de ${totalConquistasCard} desbloqueadas`, W - 104, 1188);
 
         const listToShow = unlocked.slice(0, 6);
         if (listToShow.length === 0) {

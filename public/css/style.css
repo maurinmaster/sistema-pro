@@ -3199,6 +3199,147 @@ img.aluno-avatar-zoomable:hover {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
 }
 
+/* ========================================================================= */
+/* CONQUISTAS DE LUTA & HONRARIAS DO PROFESSOR (DOSSIÊ 360°)                 */
+/* ========================================================================= */
+.conquistas-prof-section {
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(245, 158, 11, 0.24);
+    border-radius: 14px;
+    padding: 16px;
+    margin: 16px 0 20px 0;
+}
+
+.conquistas-prof-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.conquistas-prof-head h4 {
+    margin: 0;
+    font-size: 15px;
+    color: #f8fafc;
+}
+
+.conquistas-prof-head p {
+    margin: 3px 0 0 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.conquistas-prof-empty {
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px dashed rgba(148, 163, 184, 0.25);
+    text-align: center;
+    font-size: 12.5px;
+    color: var(--text-muted);
+}
+
+.conquistas-prof-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 10px;
+}
+
+.conquista-prof-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.conquista-prof-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.conquista-prof-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.conquista-prof-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.conquista-prof-top strong {
+    font-size: 13.5px;
+    color: #f8fafc;
+}
+
+.conquista-prof-cat {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    text-transform: uppercase;
+}
+
+.conquista-prof-desc {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: #cbd5e1;
+    line-height: 1.4;
+}
+
+.conquista-prof-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.conquista-preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.conquista-preset-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: #e2e8f0;
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
+}
+
+.conquista-preset-chip:hover,
+.conquista-preset-chip.active {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: #f59e0b;
+    color: #ffffff;
+}
+
 
 
 

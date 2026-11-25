@@ -15,6 +15,7 @@ const notificationConfigService = require('../services/notificationConfigService
 const paymentReconciliationService = require('../services/paymentReconciliationService');
 const rpgEvaluationService = require('../services/rpgEvaluationService');
 const examEligibilityService = require('../services/examEligibilityService');
+const conquistasService = require('../services/conquistasService');
 const { createRateLimiter } = require('../middlewares/auth');
 const { hasValidImageSignature } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, resolveOrRestoreUpload } = require('../services/uploadStorage');
@@ -829,6 +830,22 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             ORDER BY c.id ASC
         `, [alunoId]);
 
+        // 7b. Conquistas de Luta & Honrarias concedidas pelo Professor
+        let conquistasProfessor = [];
+        try {
+            await conquistasService.ensureProfessorAchievementsSchema(pool);
+            const [conqProfRows] = await pool.query(`
+                SELECT acm.*, ue.nome AS professor_nome
+                FROM aluno_conquistas_manuais acm
+                LEFT JOIN usuarios_equipe ue ON ue.id = acm.professor_id
+                WHERE acm.aluno_id = ?
+                ORDER BY acm.data_conquista DESC, acm.id DESC
+            `, [alunoId]);
+            conquistasProfessor = conqProfRows.map(r => conquistasService.normalizeProfessorAchievementRow(r));
+        } catch (conqProfErr) {
+            console.warn('Aviso ao consultar conquistas do professor no painel do aluno:', conqProfErr.message);
+        }
+
         // 8. Histórico de Medidas Físicas e Comparativo de Evolução
         const [historicoMedidas] = await pool.query(`
             SELECT id, data_medicao, peso_kg, altura_cm, torax_cm, cintura_cm, quadril_cm,
@@ -1121,6 +1138,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             exame_proximo: exameProximo,
             avisos_campanhas: avisos,
             conquistas,
+            conquistas_professor: conquistasProfessor,
             notas_tecnicas: notasTecnicas,
             avaliacao_rpg: avaliacaoRpgPayload,
             golpes_faixa_atual: golpesFaixaAtual,

@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.2">
+    <link rel="stylesheet" href="/css/style.css?v=5.3">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.4">
 </head>
@@ -2317,6 +2317,102 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- MODAL: CONQUISTA DE LUTA / HONRARIA (PROFESSOR) -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-conquista-professor">
+        <div class="modal-box" style="max-width: 580px;">
+            <div class="modal-header">
+                <div>
+                    <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px; margin: 0;">
+                        <span>🥊</span>
+                        <span>Adicionar Conquista de Luta / Honraria</span>
+                    </h3>
+                    <div id="conquista-prof-aluno-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                        Conquistas concedidas pelo professor aparecem no Painel do Aluno
+                    </div>
+                </div>
+                <button type="button" class="modal-close" onclick="UI.closeModal('modal-conquista-professor')">&times;</button>
+            </div>
+            <form id="form-conquista-professor">
+                <div class="modal-body">
+                    <input type="hidden" id="conquista-prof-aluno-id">
+                    <input type="hidden" id="conquista-prof-preset-code">
+
+                    <div style="margin-bottom: 14px;">
+                        <label class="form-label" style="font-size: 12px; color: #fbbf24; font-weight: 700; display: block; margin-bottom: 6px;">
+                            ⚡ Atalhos Rápidos (1 clique para preencher):
+                        </label>
+                        <div class="conquista-preset-chips" id="conquista-prof-presets"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="conquista-prof-titulo">Título da Conquista <span class="required">*</span></label>
+                        <input type="text" id="conquista-prof-titulo" class="form-input" required minlength="3" maxlength="100"
+                            placeholder="Ex: Primeira Luta, 6 Lutas Oficiais, 6 Vitórias Consecutivas">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label for="conquista-prof-descricao">Descrição / Feito no Ringue <span class="required">*</span></label>
+                        <textarea id="conquista-prof-descricao" class="form-textarea" rows="2" required minlength="3" maxlength="255"
+                            placeholder="Ex: Estreia oficial no evento Pro Fight Night com vitória por decisão unânime."></textarea>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label for="conquista-prof-categoria">Categoria</label>
+                            <select id="conquista-prof-categoria" class="form-select">
+                                <option value="Lutas">🥊 Lutas</option>
+                                <option value="Vitórias">🏆 Vitórias</option>
+                                <option value="Campeonatos">🥇 Campeonatos</option>
+                                <option value="Mérito no Tatame">🥋 Mérito no Tatame</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="conquista-prof-icone">Ícone / Troféu</label>
+                            <select id="conquista-prof-icone" class="form-select">
+                                <option value="🥊">🥊 Luvas (Luta)</option>
+                                <option value="🔥">🔥 Fogo (Sequência)</option>
+                                <option value="⚔️">⚔️ Combate (Cartel)</option>
+                                <option value="🏆">🏆 Troféu</option>
+                                <option value="⚡">⚡ Raio (Invicto)</option>
+                                <option value="👑">👑 Coroa (Domínio)</option>
+                                <option value="💥">💥 Nocaute / TKO</option>
+                                <option value="🥇">🥇 Medalha de Ouro</option>
+                                <option value="🛡️">🛡️ Escudo</option>
+                                <option value="⭐">⭐ Estrela</option>
+                                <option value="🥋">🥋 Tatame</option>
+                                <option value="🏅">🏅 Honraria</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="conquista-prof-data">Data da Conquista <span class="required">*</span></label>
+                            <input type="date" id="conquista-prof-data" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="conquista-prof-cor">Cor de Destaque</label>
+                            <select id="conquista-prof-cor" class="form-select">
+                                <option value="#f59e0b">🟡 Dourado</option>
+                                <option value="#ef4444">🔴 Vermelho Combate</option>
+                                <option value="#a855f7">🟣 Roxo Elite</option>
+                                <option value="#10b981">🟢 Verde Vitória</option>
+                                <option value="#f97316">🟠 Laranja Fogo</option>
+                                <option value="#38bdf8">🔵 Azul Pro</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-conquista-professor')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-conquista-prof">Salvar Conquista</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- MODAL: CHECK-IN RÁPIDO / CHAMADA           -->
     <!-- ========================================== -->
     <div class="modal-overlay" id="modal-checkin">
@@ -3778,7 +3874,7 @@
     <script src="/js/ui.js?v=1.1"></script>
     <script src="/js/auth.js?v=1.3"></script>
     <script src="/js/rpg-avaliacao.js?v=2.2"></script>
-    <script src="/js/aluno-detalhes.js?v=1.9"></script>
+    <script src="/js/aluno-detalhes.js?v=2.0"></script>
     <script src="/js/alunos.js?v=5.8"></script>
     <script src="/js/dashboard.js?v=1.3"></script>
     <script src="/js/checkins.js"></script>

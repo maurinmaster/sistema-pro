@@ -70,6 +70,20 @@ const AlunoDetalhesModule = {
                 this.setRpgCriterionScore(criterionId, val);
             });
         }
+
+        const formConquistaProf = document.getElementById('form-conquista-professor');
+        if (formConquistaProf) {
+            formConquistaProf.addEventListener('submit', (e) => this.submitConquistaProfessor(e));
+        }
+
+        const presetsWrap = document.getElementById('conquista-prof-presets');
+        if (presetsWrap) {
+            presetsWrap.addEventListener('click', (e) => {
+                const chip = e.target.closest('.conquista-preset-chip[data-preset-code]');
+                if (!chip) return;
+                this.applyConquistaPreset(chip.getAttribute('data-preset-code'));
+            });
+        }
     },
 
     bindContractEvents() {
@@ -824,8 +838,61 @@ const AlunoDetalhesModule = {
             `;
         };
 
+        const conquistasProf = Array.isArray(data.conquistas_professor) ? data.conquistas_professor : [];
+        const canGrantConquista = !window.AuthModule || AuthModule.can('manage_graduacoes') || AuthModule.can('manage_avaliacoes');
+        const conquistasProfHtml = `
+            <div class="conquistas-prof-section">
+                <div class="conquistas-prof-head">
+                    <div>
+                        <h4>🥊 Conquistas de Luta &amp; Honrarias (Professor)</h4>
+                        <p>Prêmios de cartel, sequências de vitórias e feitos concedidos manualmente ao atleta (exibidos no Painel do Aluno).</p>
+                    </div>
+                    ${canGrantConquista ? `
+                        <button type="button" class="btn btn-secondary btn-sm" style="border-color: rgba(245, 158, 11, 0.45); color: #fbbf24;" onclick="AlunoDetalhesModule.openModalConquistaProfessor(${safeAlunoId})">
+                            + Adicionar Conquista
+                        </button>
+                    ` : ''}
+                </div>
+                ${conquistasProf.length === 0 ? `
+                    <div class="conquistas-prof-empty">
+                        Nenhuma conquista de luta ou honraria adicionada pelo professor ainda.
+                    </div>
+                ` : `
+                    <div class="conquistas-prof-grid">
+                        ${conquistasProf.map((cp) => {
+                            const accent = UI.sanitizeColor(cp.cor_hex, '#f59e0b');
+                            const cId = Number(cp.id);
+                            return `
+                                <div class="conquista-prof-card" style="border-color: ${accent}55; background: ${accent}10;">
+                                    <div class="conquista-prof-icon" style="background: ${accent}22; border-color: ${accent}55;">
+                                        <span>${UI.escapeHtml(cp.icone || '🥊')}</span>
+                                    </div>
+                                    <div class="conquista-prof-body">
+                                        <div class="conquista-prof-top">
+                                            <strong>${UI.escapeHtml(cp.titulo)}</strong>
+                                            <span class="conquista-prof-cat" style="color: ${accent}; border-color: ${accent}44;">${UI.escapeHtml(cp.categoria || 'Lutas')}</span>
+                                        </div>
+                                        <p class="conquista-prof-desc">${UI.escapeHtml(cp.descricao)}</p>
+                                        <div class="conquista-prof-meta">
+                                            <span>📅 ${UI.escapeHtml(UI.formatDate(cp.data_conquista))} • 👨‍🏫 ${UI.escapeHtml(cp.professor_nome || 'Não Informado')}</span>
+                                            ${canGrantConquista ? `
+                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px; color: #fca5a5; border-color: rgba(239,68,68,0.35);" onclick="AlunoDetalhesModule.deleteConquistaProfessor(${cId})">
+                                                    Remover
+                                                </button>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `}
+            </div>
+        `;
+
         desTabEl.innerHTML = `
             ${heroHtml}
+            ${conquistasProfHtml}
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
                 <div>
@@ -1771,6 +1838,115 @@ const AlunoDetalhesModule = {
             if (window.AlunosModule) AlunosModule.loadAlunos();
         } catch (err) {
             UI.showToast('Erro ao excluir avaliação: ' + err.message, 'error');
+        }
+    },
+
+    openModalConquistaProfessor(alunoId) {
+        const idTarget = Number(alunoId || this.currentAlunoId);
+        const aluno = this.currentData?.aluno || {};
+        const nomeFmt = window.AlunosModule?.formatNomeDisplay
+            ? AlunosModule.formatNomeDisplay(aluno.nome_completo || '')
+            : (aluno.nome_completo || 'Atleta');
+
+        const form = document.getElementById('form-conquista-professor');
+        if (form) form.reset();
+
+        document.getElementById('conquista-prof-aluno-id').value = String(idTarget);
+        document.getElementById('conquista-prof-preset-code').value = '';
+        document.getElementById('conquista-prof-data').value = new Date().toISOString().split('T')[0];
+
+        const sub = document.getElementById('conquista-prof-aluno-sub');
+        if (sub) {
+            sub.textContent = `Atleta: ${nomeFmt} • Exibida no quadro de conquistas do aluno`;
+        }
+
+        const presets = Array.isArray(this.currentData?.conquistas_presets) && this.currentData.conquistas_presets.length > 0
+            ? this.currentData.conquistas_presets
+            : [
+                { codigo: 'primeira_luta', titulo: 'Primeira Luta', icone: '🥊', categoria: 'Lutas', cor_hex: '#f59e0b', descricao: 'Realizou sua primeira luta oficial representando a equipe.' },
+                { codigo: 'seis_lutas', titulo: '6 Lutas Oficiais', icone: '⚔️', categoria: 'Lutas', cor_hex: '#ef4444', descricao: 'Alcançou a marca de 6 lutas oficiais no cartel.' },
+                { codigo: 'seis_vitorias_seguidas', titulo: '6 Vitórias Consecutivas', icone: '👑', categoria: 'Vitórias', cor_hex: '#a855f7', descricao: 'Sequência dominante de 6 vitórias consecutivas no ringue.' }
+            ];
+
+        const presetsWrap = document.getElementById('conquista-prof-presets');
+        if (presetsWrap) {
+            presetsWrap.innerHTML = presets.map((p) => {
+                const cor = UI.sanitizeColor(p.cor_hex, '#f59e0b');
+                return `
+                    <button type="button" class="conquista-preset-chip" data-preset-code="${UI.escapeHtml(p.codigo)}" style="border-color: ${cor}55;">
+                        <span>${UI.escapeHtml(p.icone || '🥊')}</span>
+                        <span>${UI.escapeHtml(p.titulo)}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        UI.openModal('modal-conquista-professor');
+    },
+
+    applyConquistaPreset(code) {
+        const presets = Array.isArray(this.currentData?.conquistas_presets) ? this.currentData.conquistas_presets : [];
+        const preset = presets.find(p => p.codigo === code);
+        if (!preset) return;
+
+        document.getElementById('conquista-prof-preset-code').value = preset.codigo || '';
+        document.getElementById('conquista-prof-titulo').value = preset.titulo || '';
+        document.getElementById('conquista-prof-descricao').value = preset.descricao || '';
+        document.getElementById('conquista-prof-categoria').value = preset.categoria || 'Lutas';
+        document.getElementById('conquista-prof-icone').value = preset.icone || '🥊';
+        document.getElementById('conquista-prof-cor').value = preset.cor_hex || '#f59e0b';
+
+        document.querySelectorAll('#conquista-prof-presets .conquista-preset-chip').forEach((chip) => {
+            chip.classList.toggle('active', chip.getAttribute('data-preset-code') === code);
+        });
+    },
+
+    async submitConquistaProfessor(e) {
+        e.preventDefault();
+        const alunoId = Number(document.getElementById('conquista-prof-aluno-id')?.value || this.currentAlunoId);
+        const btn = document.getElementById('btn-salvar-conquista-prof');
+        const originalText = btn ? btn.textContent : 'Salvar Conquista';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+        }
+
+        try {
+            const res = await API.post(`/alunos/${alunoId}/conquistas-professor`, {
+                codigo_preset: document.getElementById('conquista-prof-preset-code')?.value || null,
+                titulo: document.getElementById('conquista-prof-titulo')?.value || '',
+                descricao: document.getElementById('conquista-prof-descricao')?.value || '',
+                categoria: document.getElementById('conquista-prof-categoria')?.value || 'Lutas',
+                icone: document.getElementById('conquista-prof-icone')?.value || '🥊',
+                data_conquista: document.getElementById('conquista-prof-data')?.value || '',
+                cor_hex: document.getElementById('conquista-prof-cor')?.value || '#f59e0b'
+            });
+
+            UI.closeModal('modal-conquista-professor');
+            UI.showToast(res.message || 'Conquista adicionada!', 'success');
+            await this.openDossier(alunoId);
+            this.switchTab('desempenho');
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao adicionar conquista.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+    },
+
+    async deleteConquistaProfessor(conquistaId) {
+        if (!confirm('Deseja remover esta conquista de luta do perfil do atleta?')) {
+            return;
+        }
+        try {
+            const res = await API.delete(`/alunos/${this.currentAlunoId}/conquistas-professor/${conquistaId}`);
+            UI.showToast(res.message || 'Conquista removida!', 'success');
+            await this.openDossier(this.currentAlunoId);
+            this.switchTab('desempenho');
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao remover conquista.', 'error');
         }
     }
 };

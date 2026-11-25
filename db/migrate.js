@@ -433,6 +433,26 @@ async function runMigrations() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
+        // 9b. Conquistas de Luta & Honrarias concedidas manualmente pelo Professor
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS aluno_conquistas_manuais (
+                id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                aluno_id BIGINT UNSIGNED NOT NULL,
+                professor_id BIGINT UNSIGNED NULL,
+                codigo_preset VARCHAR(60) NULL,
+                titulo VARCHAR(100) NOT NULL,
+                descricao VARCHAR(255) NOT NULL,
+                icone VARCHAR(20) NOT NULL DEFAULT '🥊',
+                categoria VARCHAR(40) NOT NULL DEFAULT 'Lutas',
+                cor_hex VARCHAR(10) NOT NULL DEFAULT '#f59e0b',
+                data_conquista DATE NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_acm_aluno_data (aluno_id, data_conquista DESC, id DESC),
+                CONSTRAINT fk_acm_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+                CONSTRAINT fk_acm_prof FOREIGN KEY (professor_id) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
         // 10. Histórico de Dados Físicos para Comparativo de Evolução
         await pool.query(`
             CREATE TABLE IF NOT EXISTS aluno_historico_medidas (
