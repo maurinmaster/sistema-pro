@@ -2974,6 +2974,23 @@ test('Regras de Domínio: Aprovação Manual de Convite pelo Professor', () => {
     assert.equal(blockDeleted.allowed, false);
 });
 
+test('Regras de Domínio: Badges da Sidebar exibem apenas pendências reais com tooltip', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+
+    // Badges estáticos que enganavam o usuário foram removidos da barra lateral
+    assert.equal(indexHtml.includes('id="total-exames-count"'), false);
+    assert.equal(indexHtml.includes('id="total-golpes-count"'), false);
+    assert.equal(indexHtml.includes('id="total-equipe-count"'), false);
+
+    // Badges de pendência real possuem classe de alerta e tooltip descritivo
+    assert.equal(indexHtml.includes('id="total-financeiro-pendentes-count"'), true);
+    assert.equal(indexHtml.includes('title="Alunos com mensalidade em atraso"'), true);
+    assert.equal(indexHtml.includes('id="total-missoes-pendentes-count"'), true);
+    assert.equal(indexHtml.includes('title="Missões aguardando validação"'), true);
+});
+
 test.after(async () => {
     try {
         await pool.end();

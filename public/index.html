@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.0">
+    <link rel="stylesheet" href="/css/style.css?v=5.1">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.3">
 </head>
@@ -59,7 +59,7 @@
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                     <span>Alunos</span>
-                    <span class="nav-badge" id="total-alunos-count">-</span>
+                    <span class="nav-badge nav-badge-count" id="total-alunos-count" title="Total de alunos cadastrados na base">-</span>
                 </a>
                 <a class="nav-item" data-view="checkins" id="nav-checkins">
                     <svg viewBox="0 0 24 24">
@@ -81,7 +81,6 @@
                         <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
                     </svg>
                     <span>Exames de Graduação</span>
-                    <span class="nav-badge" id="total-exames-count" style="display: none; background: #10b981;">0</span>
                 </a>
                 <a class="nav-item" data-view="financeiro" id="nav-financeiro">
                     <svg viewBox="0 0 24 24">
@@ -89,6 +88,7 @@
                         <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                     </svg>
                     <span>Planos & Mensalidades</span>
+                    <span class="nav-badge nav-badge-alert danger" id="total-financeiro-pendentes-count" style="display: none;" title="Alunos com mensalidade em atraso" aria-label="Alunos com mensalidade em atraso">0</span>
                 </a>
                 <a class="nav-item" data-view="wiki" id="nav-wiki">
                     <svg viewBox="0 0 24 24">
@@ -98,7 +98,6 @@
                         <line x1="9" y1="11" x2="15" y2="11" />
                     </svg>
                     <span>Wiki de Golpes</span>
-                    <span class="nav-badge" id="total-golpes-count" style="display: none;">0</span>
                 </a>
                 <a class="nav-item" data-view="missoes" id="nav-missoes">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -107,7 +106,7 @@
                         <circle cx="12" cy="12" r="2" />
                     </svg>
                     <span>Quadro de Missões</span>
-                    <span class="nav-badge" id="total-missoes-pendentes-count" style="display: none; background: #f59e0b; color: #090d16;">0</span>
+                    <span class="nav-badge nav-badge-alert warning" id="total-missoes-pendentes-count" style="display: none;" title="Missões aguardando validação" aria-label="Missões aguardando validação">0</span>
                 </a>
                 <a class="nav-item" data-view="equipe" id="nav-equipe" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -117,7 +116,6 @@
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                     <span>Professores &amp; Equipe</span>
-                    <span class="nav-badge" id="total-equipe-count" style="display: none; background: #38bdf8; color: #090d16;">0</span>
                 </a>
                 <a class="nav-item" data-view="mensagens" id="nav-mensagens" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3781,16 +3779,16 @@
     <script src="/js/auth.js?v=1.3"></script>
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
     <script src="/js/aluno-detalhes.js?v=1.8"></script>
-    <script src="/js/alunos.js?v=5.7"></script>
-    <script src="/js/dashboard.js?v=1.2"></script>
+    <script src="/js/alunos.js?v=5.8"></script>
+    <script src="/js/dashboard.js?v=1.3"></script>
     <script src="/js/checkins.js"></script>
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
-    <script src="/js/wiki.js?v=4.5"></script>
-    <script src="/js/missoes.js?v=1.0"></script>
-    <script src="/js/exames.js?v=4.2"></script>
+    <script src="/js/wiki.js?v=4.6"></script>
+    <script src="/js/missoes.js?v=1.1"></script>
+    <script src="/js/exames.js?v=4.3"></script>
     <script src="/js/mensagens-config.js?v=1.3"></script>
-    <script src="/js/equipe.js?v=1.0"></script>
+    <script src="/js/equipe.js?v=1.1"></script>
     <script src="/js/app.js?v=4.2"></script>
 </body>
 

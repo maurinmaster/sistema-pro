@@ -615,7 +615,9 @@ const AlunosModule = {
             this.alunosList = res.data || [];
 
             if (countSpan) {
-                countSpan.textContent = res.total_base !== undefined ? Number(res.total_base) : this.alunosList.length;
+                const totalBase = res.total_base !== undefined ? Number(res.total_base) : this.alunosList.length;
+                countSpan.textContent = totalBase;
+                countSpan.title = `${totalBase} ${totalBase === 1 ? 'aluno cadastrado' : 'alunos cadastrados'} na base`;
             }
             if (lixeiraBadge && res.total_lixeira !== undefined) {
                 lixeiraBadge.textContent = Number(res.total_lixeira);

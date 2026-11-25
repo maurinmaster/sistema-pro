@@ -113,16 +113,49 @@ const DashboardModule = {
     },
 
     renderStats(data) {
-        const { alunos, presencas, financeiro, modalidades, frequencia_semanal, top_assiduos } = data;
+        const { alunos, presencas, financeiro, modalidades, frequencia_semanal, top_assiduos, pendencias } = data;
 
         // KPI Cards
-        document.getElementById('stat-total-alunos').textContent = alunos.total_alunos || 0;
+        const totalAlunosNum = Number(alunos.total_alunos || 0);
+        document.getElementById('stat-total-alunos').textContent = totalAlunosNum;
         const sidebarTotalAlunos = document.getElementById('total-alunos-count');
-        if (sidebarTotalAlunos) sidebarTotalAlunos.textContent = alunos.total_alunos || 0;
+        if (sidebarTotalAlunos) {
+            sidebarTotalAlunos.textContent = totalAlunosNum;
+            sidebarTotalAlunos.title = `${totalAlunosNum} ${totalAlunosNum === 1 ? 'aluno cadastrado' : 'alunos cadastrados'} na base`;
+        }
+
+        const inadimplentesNum = Number(pendencias?.financeiro_inadimplentes ?? financeiro?.alunos_inadimplentes ?? 0);
+        const sidebarFinPendentes = document.getElementById('total-financeiro-pendentes-count');
+        if (sidebarFinPendentes) {
+            const podeVerFinanceiro = !window.AuthModule || AuthModule.can('manage_financeiro');
+            if (podeVerFinanceiro && inadimplentesNum > 0) {
+                const finTitle = `${inadimplentesNum} ${inadimplentesNum === 1 ? 'aluno com mensalidade em atraso' : 'alunos com mensalidade em atraso'}`;
+                sidebarFinPendentes.textContent = String(inadimplentesNum);
+                sidebarFinPendentes.title = finTitle;
+                sidebarFinPendentes.setAttribute('aria-label', finTitle);
+                sidebarFinPendentes.style.display = 'inline-flex';
+            } else {
+                sidebarFinPendentes.style.display = 'none';
+            }
+        }
+
+        if (pendencias && pendencias.missoes_aguardando_validacao !== undefined) {
+            const totalMissoesPend = Number(pendencias.missoes_aguardando_validacao || 0);
+            if (window.MissoesModule && typeof MissoesModule.updateBadgeCount === 'function') {
+                MissoesModule.updateBadgeCount(totalMissoesPend);
+            } else {
+                const navMissoes = document.getElementById('total-missoes-pendentes-count');
+                if (navMissoes) {
+                    navMissoes.textContent = String(totalMissoesPend);
+                    navMissoes.style.display = totalMissoesPend > 0 ? 'inline-flex' : 'none';
+                }
+            }
+        }
+
         document.getElementById('stat-alunos-ativos').textContent = alunos.ativos || 0;
         document.getElementById('stat-checkins-hoje').textContent = presencas.checkins_hoje || 0;
         document.getElementById('stat-menores').textContent = alunos.menores_idade || 0;
-        document.getElementById('stat-inadimplentes').textContent = financeiro.alunos_inadimplentes || 0;
+        document.getElementById('stat-inadimplentes').textContent = inadimplentesNum;
         document.getElementById('stat-receita').textContent = UI.formatCurrency(financeiro.receita_mes || 0);
 
         // Gráfico de frequência semanal (sempre exibe 7 dias e usa teto mínimo de 10 para proporção visual)

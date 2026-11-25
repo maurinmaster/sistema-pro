@@ -135,6 +135,35 @@ body {
     font-weight: 700;
     color: var(--primary-light);
     border: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.nav-badge-count {
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-muted);
+    border-color: rgba(148, 163, 184, 0.2);
+    font-weight: 600;
+}
+
+.nav-badge-alert {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    font-weight: 800;
+    cursor: help;
+}
+
+.nav-badge-alert.warning {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border-color: rgba(245, 158, 11, 0.5);
+}
+
+.nav-badge-alert.danger {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.5);
 }
 
 .sidebar-footer {

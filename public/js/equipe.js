@@ -76,16 +76,10 @@ const EquipeModule = {
         const elProf = document.getElementById('kpi-equipe-professores');
         const elAtivos = document.getElementById('kpi-equipe-ativos');
         const elInativos = document.getElementById('kpi-equipe-inativos');
-        const badgeNav = document.getElementById('total-equipe-count');
 
         if (elProf) elProf.textContent = Number(r.professores_ativos || 0);
         if (elAtivos) elAtivos.textContent = Number(r.ativos || 0);
         if (elInativos) elInativos.textContent = Number(r.inativos || 0);
-        if (badgeNav) {
-            const totalAtivos = Number(r.ativos || 0);
-            badgeNav.textContent = totalAtivos;
-            badgeNav.style.display = totalAtivos > 0 ? 'inline-block' : 'none';
-        }
     },
 
     renderTabela() {

@@ -184,11 +184,6 @@ const ExamesModule = {
      */
     updateEventScopedKpis() {
         const abertosCount = this.eventos.filter(e => e.status === 'aberto').length;
-        const badgeNav = document.getElementById('total-exames-count');
-        if (badgeNav) {
-            badgeNav.textContent = abertosCount;
-            badgeNav.style.display = abertosCount > 0 ? 'inline-block' : 'none';
-        }
 
         const elAbertos = document.getElementById('kpi-exames-abertos');
         const elAbertosMeta = document.getElementById('kpi-exames-abertos-meta');

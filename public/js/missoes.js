@@ -70,15 +70,22 @@ const MissoesModule = {
     },
 
     updateBadgeCount(total) {
+        const count = Number(total || 0);
+        const desc = count > 0
+            ? `${count} ${count === 1 ? 'entrega de missão aguardando validação' : 'entregas de missão aguardando validação'}`
+            : 'Nenhuma entrega aguardando validação';
         const navBadge = document.getElementById('total-missoes-pendentes-count');
         const subBadge = document.getElementById('missoes-validacoes-badge');
         if (navBadge) {
-            navBadge.textContent = String(total);
-            navBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+            navBadge.textContent = String(count);
+            navBadge.title = desc;
+            navBadge.setAttribute('aria-label', desc);
+            navBadge.style.display = count > 0 ? 'inline-flex' : 'none';
         }
         if (subBadge) {
-            subBadge.textContent = total > 0 ? String(total) : '0';
-            subBadge.style.display = total > 0 ? 'inline-flex' : 'none';
+            subBadge.textContent = count > 0 ? String(count) : '0';
+            subBadge.title = desc;
+            subBadge.style.display = count > 0 ? 'inline-flex' : 'none';
         }
     },
 

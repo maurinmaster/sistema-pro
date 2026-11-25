@@ -93,6 +93,20 @@ router.get('/stats', authenticateToken, async (req, res) => {
             LIMIT 5
         `);
 
+        // 7. Contagem de missões aguardando validação do professor/admin (não-bloqueante caso tabela ainda não exista)
+        let missoesAguardando = 0;
+        try {
+            const [missoesRows] = await pool.query(`
+                SELECT COUNT(*) AS aguardando_validacao
+                FROM aluno_missoes am
+                JOIN alunos a ON a.id = am.aluno_id AND a.deleted_at IS NULL
+                WHERE am.status = 'aguardando_validacao'
+            `);
+            missoesAguardando = Number(missoesRows[0]?.aguardando_validacao || 0);
+        } catch (missoesErr) {
+            console.warn('Aviso ao contar missões aguardando validação:', missoesErr.message);
+        }
+
         res.json({
             success: true,
             data: {
@@ -101,7 +115,11 @@ router.get('/stats', authenticateToken, async (req, res) => {
                 financeiro: financeiro[0],
                 modalidades: modalidadesDist,
                 frequencia_semanal: graficoFrequencia,
-                top_assiduos: topAssiduos
+                top_assiduos: topAssiduos,
+                pendencias: {
+                    missoes_aguardando_validacao: missoesAguardando,
+                    financeiro_inadimplentes: Number(financeiro[0]?.alunos_inadimplentes || 0)
+                }
             }
         });
     } catch (err) {

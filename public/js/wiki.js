@@ -211,12 +211,8 @@ const WikiModule = {
         }
     },
 
-    atualizarContador(total) {
-        const badge = document.getElementById('total-golpes-count');
-        if (badge) {
-            badge.textContent = total;
-            badge.style.display = total > 0 ? 'inline-block' : 'none';
-        }
+    atualizarContador(_total) {
+        // Contador estático removido da sidebar para manter apenas badges de pendências reais
     },
 
     filtrarGolpes() {
