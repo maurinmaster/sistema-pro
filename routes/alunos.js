@@ -401,14 +401,46 @@ router.get('/:id', authenticateToken, async (req, res) => {
             JOIN modalidades m ON m.id = ag.modalidade_id
             LEFT JOIN usuarios_equipe ue ON ue.id = ag.professor_avaliador_id
             WHERE ag.aluno_id = ?
-            ORDER BY ag.atual DESC, ag.data_graduacao DESC
+            ORDER BY ag.atual DESC, ag.data_graduacao DESC, ag.id DESC
         `, [id]);
 
-        // Carrega avaliações técnicas detalhadas para as graduações ativas do aluno
+        // Carrega avaliações técnicas detalhadas e elegibilidade de retrocesso para as graduações ativas
         const activeGrads = graduacoes.filter(g => g.atual === 1);
         const avaliacoes = [];
+        const rollbackByGradId = new Map();
+        const modLevelsCache = new Map();
 
         for (const ag of activeGrads) {
+            const modIdNum = Number(ag.modalidade_id);
+            if (!modLevelsCache.has(modIdNum)) {
+                const [lvlRows] = await pool.query(`
+                    SELECT id, nome, ordem_hierarquica, cor_hex_primaria, cor_hex_secundaria
+                    FROM graduacoes_niveis
+                    WHERE modalidade_id = ?
+                    ORDER BY ordem_hierarquica ASC, id ASC
+                `, [ag.modalidade_id]);
+                modLevelsCache.set(modIdNum, lvlRows);
+            }
+
+            const modHistory = graduacoes.filter(g => Number(g.modalidade_id) === modIdNum);
+            const rollbackPlan = examEligibilityService.resolveGraduationRollbackPlan({
+                historyForModality: modHistory,
+                levelsForModality: modLevelsCache.get(modIdNum) || []
+            });
+            const rollbackMeta = rollbackPlan.allowed
+                ? {
+                    id: rollbackPlan.toLevel.id,
+                    nome: rollbackPlan.toLevel.nome,
+                    cor_hex_primaria: rollbackPlan.toLevel.cor_hex_primaria,
+                    cor_hex_secundaria: rollbackPlan.toLevel.cor_hex_secundaria,
+                    modo: rollbackPlan.mode
+                }
+                : null;
+            rollbackByGradId.set(Number(ag.id), {
+                pode_retroceder: Boolean(rollbackPlan.allowed),
+                graduacao_anterior_retrocesso: rollbackMeta
+            });
+
             const [evalRows] = await pool.query(`
                 SELECT aag.*, ue.nome AS professor_nome
                 FROM aluno_avaliacoes_graduacao aag
@@ -456,6 +488,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
             const apto = evalData ? (evalData.apto === 1) : (pct >= minPct);
 
             avaliacoes.push({
+                aluno_graduacao_id: ag.id,
                 modalidade_id: ag.modalidade_id,
                 modalidade_nome: ag.modalidade_nome,
                 graduacao_nivel_id: ag.graduacao_nivel_id,
@@ -474,9 +507,16 @@ router.get('/:id', authenticateToken, async (req, res) => {
                 observacoes_professor: evalData ? evalData.observacoes_professor : null,
                 data_avaliacao: evalData ? evalData.data_avaliacao : null,
                 professor_avaliador: evalData ? evalData.professor_nome : null,
-                proxima_graduacao: nextNivelRows[0] || null
+                proxima_graduacao: nextNivelRows[0] || null,
+                pode_retroceder: Boolean(rollbackPlan.allowed),
+                graduacao_anterior_retrocesso: rollbackMeta
             });
         }
+
+        const graduacoesEnriquecidas = graduacoes.map((g) => {
+            const rb = rollbackByGradId.get(Number(g.id));
+            return rb ? { ...g, ...rb } : g;
+        });
 
         // 4. Histórico Financeiro / Faturas
         const { classifyFaturaPaymentOrigin } = require('../services/paymentReconciliationService');
@@ -552,7 +592,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
             success: true,
             data: {
                 aluno,
-                graduacoes,
+                graduacoes: graduacoesEnriquecidas,
                 avaliacoes,
                 avaliacoes_desempenho: avaliacoesDesempenho,
                 avaliacao_rpg: {
@@ -1355,6 +1395,123 @@ router.post('/:id/aprovar-promocao', authenticateToken, authorizeRoles('admin', 
         await conn.rollback();
         console.error('Erro ao aprovar promoção de graduação:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao aprovar promoção.' });
+    } finally {
+        conn.release();
+    }
+});
+
+// POST /api/alunos/:id/retroceder-graduacao - Desfaz promoção indevida e restaura faixa anterior (admin e professor)
+router.post('/:id/retroceder-graduacao', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    const conn = await pool.getConnection();
+    try {
+        const alunoId = parseInt(req.params.id, 10);
+        const modalidadeId = parseInt(req.body?.modalidade_id, 10);
+        const graduacaoIdParam = req.body?.graduacao_id ? parseInt(req.body.graduacao_id, 10) : null;
+        const rawMotivo = typeof req.body?.motivo === 'string' ? req.body.motivo.trim().substring(0, 255) : '';
+
+        if (!Number.isInteger(alunoId) || alunoId <= 0 || !Number.isInteger(modalidadeId) || modalidadeId <= 0) {
+            return res.status(400).json({
+                success: false,
+                error: 'ID de aluno e modalidade válidos são obrigatórios para retroceder a graduação.'
+            });
+        }
+
+        await conn.beginTransaction();
+
+        const [alunoRows] = await conn.query(
+            'SELECT id FROM alunos WHERE id = ? AND deleted_at IS NULL LIMIT 1',
+            [alunoId]
+        );
+        if (alunoRows.length === 0) {
+            await conn.rollback();
+            return res.status(404).json({ success: false, error: 'Aluno não encontrado.' });
+        }
+
+        const [historyRows] = await conn.query(`
+            SELECT ag.id, ag.graduacao_nivel_id, ag.data_graduacao, ag.atual,
+                   gn.nome AS nivel_nome, gn.ordem_hierarquica,
+                   gn.cor_hex_primaria, gn.cor_hex_secundaria
+            FROM aluno_graduacoes ag
+            JOIN graduacoes_niveis gn ON gn.id = ag.graduacao_nivel_id
+            WHERE ag.aluno_id = ? AND ag.modalidade_id = ?
+            ORDER BY ag.atual DESC, ag.data_graduacao DESC, ag.id DESC
+            FOR UPDATE
+        `, [alunoId, modalidadeId]);
+
+        const currentActive = historyRows.find(r => Number(r.atual) === 1);
+        if (!currentActive) {
+            await conn.rollback();
+            return res.status(400).json({ success: false, error: 'O aluno não possui graduação ativa nesta modalidade.' });
+        }
+
+        if (graduacaoIdParam && Number(currentActive.id) !== Number(graduacaoIdParam)) {
+            await conn.rollback();
+            return res.status(409).json({
+                success: false,
+                error: 'A graduação atual foi alterada por outra ação. Atualize o dossiê antes de retroceder.'
+            });
+        }
+
+        const [levelsForModality] = await conn.query(`
+            SELECT id, nome, ordem_hierarquica, cor_hex_primaria, cor_hex_secundaria
+            FROM graduacoes_niveis
+            WHERE modalidade_id = ?
+            ORDER BY ordem_hierarquica ASC, id ASC
+        `, [modalidadeId]);
+
+        const plan = examEligibilityService.resolveGraduationRollbackPlan({
+            historyForModality: historyRows,
+            levelsForModality
+        });
+
+        if (!plan.allowed) {
+            await conn.rollback();
+            return res.status(400).json({ success: false, error: plan.error });
+        }
+
+        if (plan.mode === 'restore_history') {
+            await conn.query(
+                'DELETE FROM aluno_graduacoes WHERE id = ? AND aluno_id = ?',
+                [plan.deleteGradId, alunoId]
+            );
+            await conn.query(
+                'UPDATE aluno_graduacoes SET atual = 1 WHERE id = ? AND aluno_id = ?',
+                [plan.restoreGradId, alunoId]
+            );
+        } else {
+            const obsRetrocesso = rawMotivo
+                ? `Retrocedido de ${plan.fromLevel.nome}: ${rawMotivo}`
+                : `Retrocedido administrativamente de ${plan.fromLevel.nome} para ${plan.toLevel.nome}.`;
+            await conn.query(
+                'UPDATE aluno_graduacoes SET graduacao_nivel_id = ?, observacoes = ? WHERE id = ? AND aluno_id = ?',
+                [plan.targetLevelId, obsRetrocesso, plan.updateGradId, alunoId]
+            );
+        }
+
+        // Remove apenas ficha de avaliação vazia criada automaticamente pela promoção indevida;
+        // mantém intacta a avaliação salva anteriormente na faixa restaurada.
+        await conn.query(`
+            DELETE FROM aluno_avaliacoes_graduacao
+            WHERE aluno_id = ? AND modalidade_id = ? AND graduacao_nivel_id = ?
+              AND total_pontos_obtidos = 0
+              AND (observacoes_professor IS NULL OR TRIM(observacoes_professor) = '')
+        `, [alunoId, modalidadeId, plan.fromLevel.id]);
+
+        await conn.commit();
+
+        res.json({
+            success: true,
+            message: `Graduação retrocedida de "${plan.fromLevel.nome}" para "${plan.toLevel.nome}" com sucesso!`,
+            data: {
+                modo: plan.mode,
+                faixa_removida: plan.fromLevel,
+                faixa_restaurada: plan.toLevel
+            }
+        });
+    } catch (err) {
+        await conn.rollback().catch(() => {});
+        console.error('Erro ao retroceder graduação:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao retroceder graduação.' });
     } finally {
         conn.release();
     }

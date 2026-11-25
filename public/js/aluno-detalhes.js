@@ -268,6 +268,7 @@ const AlunoDetalhesModule = {
         `;
 
         // TAB 2: GRADUAÇÕES (AVALIAÇÃO ACIMA, HISTÓRICO ABAIXO)
+        const canPromote = !window.AuthModule || AuthModule.can('promote_faixas');
         let avaliacoesHtml = '';
         if (avaliacoes.length === 0) {
             avaliacoesHtml = `
@@ -299,7 +300,10 @@ const AlunoDetalhesModule = {
                             const minPct = Number(av.porcentagem_minima || 70);
                             const safeModId = Number(av.modalidade_id);
                             const safeNivelId = Number(av.graduacao_nivel_id);
+                            const safeAlunoGradId = Number(av.aluno_graduacao_id) || 0;
                             const hasNextBelt = !!av.proxima_graduacao;
+                            const podeRetroceder = canPromote && Boolean(av.pode_retroceder) && Boolean(av.graduacao_anterior_retrocesso);
+                            const retroNome = av.graduacao_anterior_retrocesso?.nome || '';
 
                             return `
                                 <div class="stat-card" style="cursor: pointer; padding: 16px; border-left: 4px solid ${UI.sanitizeColor(av.cor_hex_primaria, '#38bdf8')}; transition: transform 0.2s, box-shadow 0.2s; position: relative;"
@@ -347,6 +351,13 @@ const AlunoDetalhesModule = {
                                                     Promover
                                                 </button>
                                             ` : ''}
+                                            ${podeRetroceder ? `
+                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 6px 11px; min-height: 36px; font-size: 12px; color: #f59e0b; border-color: rgba(245, 158, 11, 0.35);"
+                                                    title="${UI.escapeHtml(`Desfazer promoção e retroceder para "${retroNome}"`)}"
+                                                    onclick="event.stopPropagation(); AlunoDetalhesModule.retrocederGraduacao(${safeAlunoId}, ${safeModId}, ${safeAlunoGradId})">
+                                                    ↩ Retroceder
+                                                </button>
+                                            ` : ''}
                                         </div>
                                     </div>
                                 </div>
@@ -365,7 +376,10 @@ const AlunoDetalhesModule = {
             <div style="margin-top: 10px;">
                 <div style="font-weight: 700; font-size: 14px; color: #ffffff; margin-bottom: 12px;">Histórico de Graduações</div>
                 <div class="timeline">
-                    ${graduacoes.map(g => `
+                    ${graduacoes.map(g => {
+                        const canRollbackItem = canPromote && g.atual && Boolean(g.pode_retroceder) && Boolean(g.graduacao_anterior_retrocesso);
+                        const rollbackTargetNome = g.graduacao_anterior_retrocesso?.nome || '';
+                        return `
                         <div class="timeline-item">
                             <div class="timeline-dot" style="border-color: ${UI.sanitizeColor(g.cor_hex_primaria, '#94a3b8')};"></div>
                             <div class="timeline-card">
@@ -381,13 +395,23 @@ const AlunoDetalhesModule = {
                                         </div>
                                         ${g.observacoes ? `<div style="font-size: 12px; margin-top: 6px; font-style: italic; color: var(--text-secondary); word-break: break-word;">${UI.escapeHtml(g.observacoes)}</div>` : ''}
                                     </div>
-                                    <div style="text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap;">
-                                        ${UI.formatDate(g.data_graduacao)}
+                                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                                        <div style="text-align: right; font-family: var(--font-mono); font-size: 12px; color: var(--text-muted); white-space: nowrap;">
+                                            ${UI.formatDate(g.data_graduacao)}
+                                        </div>
+                                        ${canRollbackItem ? `
+                                            <button type="button" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 11px; color: #f59e0b; border-color: rgba(245, 158, 11, 0.35);"
+                                                title="${UI.escapeHtml(`Desfazer promoção e retroceder para "${rollbackTargetNome}"`)}"
+                                                onclick="AlunoDetalhesModule.retrocederGraduacao(${safeAlunoId}, ${Number(g.modalidade_id)}, ${Number(g.id)})">
+                                                ↩ Retroceder
+                                            </button>
+                                        ` : ''}
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    `).join('')}
+                    `;
+                    }).join('')}
                 </div>
             </div>
         `;
@@ -1425,6 +1449,39 @@ const AlunoDetalhesModule = {
                 btn.disabled = false;
                 btn.textContent = '🎓 Aprovar Graduação & Promover';
             }
+        }
+    },
+
+    async retrocederGraduacao(alunoId, modalidadeId, graduacaoId = null) {
+        const av = this.currentData?.avaliacoes?.find(
+            a => Number(a.modalidade_id) === Number(modalidadeId) && (!graduacaoId || Number(a.aluno_graduacao_id) === Number(graduacaoId))
+        );
+        const grad = this.currentData?.graduacoes?.find(
+            g => Number(g.modalidade_id) === Number(modalidadeId) && Number(g.atual) === 1
+        );
+
+        const faixaAtualNome = av?.nivel_nome || grad?.nivel_nome || 'faixa atual';
+        const faixaDestinoNome = av?.graduacao_anterior_retrocesso?.nome
+            || grad?.graduacao_anterior_retrocesso?.nome
+            || 'faixa anterior';
+
+        if (!confirm(`Deseja retroceder a graduação de "${faixaAtualNome}" de volta para "${faixaDestinoNome}"? A avaliação salva anteriormente será preservada.`)) {
+            return;
+        }
+
+        try {
+            const payload = { modalidade_id: Number(modalidadeId) };
+            if (graduacaoId && Number(graduacaoId) > 0) {
+                payload.graduacao_id = Number(graduacaoId);
+            }
+
+            const res = await API.post(`/alunos/${Number(alunoId)}/retroceder-graduacao`, payload);
+            UI.showToast(res.message || 'Graduação retrocedida com sucesso!', 'success');
+            await this.openDossier(alunoId);
+            this.switchTab('graduacoes');
+            if (window.AlunosModule) AlunosModule.loadAlunos();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao retroceder graduação.', 'error');
         }
     },
 

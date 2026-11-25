@@ -32,6 +32,111 @@ function findNextLevel(levelsForModality, currentOrder) {
 }
 
 /**
+ * Encontra o nível imediatamente inferior dentro de uma modalidade.
+ *
+ * @param {Array<object>} levelsForModality
+ * @param {number} currentOrder
+ * @returns {object|null}
+ */
+function findPreviousLevel(levelsForModality, currentOrder) {
+    if (!Array.isArray(levelsForModality) || levelsForModality.length === 0) {
+        return null;
+    }
+
+    const orderNum = Number(currentOrder);
+    if (!Number.isFinite(orderNum)) {
+        return null;
+    }
+
+    const candidates = levelsForModality
+        .filter((lvl) => Number(lvl.ordem_hierarquica) < orderNum)
+        .sort((a, b) => Number(b.ordem_hierarquica) - Number(a.ordem_hierarquica));
+
+    return candidates.length > 0 ? candidates[0] : null;
+}
+
+/**
+ * Resolve de forma determinística o plano para retroceder uma graduação aprovada por engano.
+ * Prioriza restaurar o registro imediatamente anterior no histórico (modo `restore_history`)
+ * e, se houver apenas um registro acima do nível inicial, desce um nível na hierarquia (modo `step_down_level`).
+ *
+ * @param {object} params
+ * @returns {object}
+ */
+function resolveGraduationRollbackPlan({ historyForModality = [], levelsForModality = [] }) {
+    if (!Array.isArray(historyForModality) || historyForModality.length === 0) {
+        return {
+            allowed: false,
+            error: 'O aluno não possui graduação ativa nesta modalidade.'
+        };
+    }
+
+    const sorted = [...historyForModality].sort((a, b) => {
+        const atualDiff = (Number(b.atual) ? 1 : 0) - (Number(a.atual) ? 1 : 0);
+        if (atualDiff !== 0) return atualDiff;
+        const dateA = a.data_graduacao ? new Date(a.data_graduacao).getTime() : 0;
+        const dateB = b.data_graduacao ? new Date(b.data_graduacao).getTime() : 0;
+        if (dateB !== dateA) return dateB - dateA;
+        return Number(b.id || 0) - Number(a.id || 0);
+    });
+
+    const current = sorted.find((g) => Number(g.atual) === 1 || g.atual === true);
+    if (!current) {
+        return {
+            allowed: false,
+            error: 'O aluno não possui graduação ativa nesta modalidade.'
+        };
+    }
+
+    const fromLevel = {
+        id: Number(current.graduacao_nivel_id),
+        nome: current.nivel_nome || 'Graduação Atual',
+        ordem_hierarquica: Number(current.ordem_hierarquica)
+    };
+
+    const previous = sorted.find((g) => Number(g.id) !== Number(current.id));
+    if (previous) {
+        return {
+            allowed: true,
+            mode: 'restore_history',
+            deleteGradId: Number(current.id),
+            restoreGradId: Number(previous.id),
+            fromLevel,
+            toLevel: {
+                id: Number(previous.graduacao_nivel_id),
+                nome: previous.nivel_nome || 'Graduação Anterior',
+                ordem_hierarquica: Number(previous.ordem_hierarquica),
+                cor_hex_primaria: previous.cor_hex_primaria || null,
+                cor_hex_secundaria: previous.cor_hex_secundaria || null
+            }
+        };
+    }
+
+    const prevLevel = findPreviousLevel(levelsForModality, current.ordem_hierarquica);
+    if (prevLevel) {
+        return {
+            allowed: true,
+            mode: 'step_down_level',
+            updateGradId: Number(current.id),
+            targetLevelId: Number(prevLevel.id),
+            fromLevel,
+            toLevel: {
+                id: Number(prevLevel.id),
+                nome: prevLevel.nome || 'Graduação Anterior',
+                ordem_hierarquica: Number(prevLevel.ordem_hierarquica),
+                cor_hex_primaria: prevLevel.cor_hex_primaria || null,
+                cor_hex_secundaria: prevLevel.cor_hex_secundaria || null
+            }
+        };
+    }
+
+    return {
+        allowed: false,
+        error: 'Este aluno já está na graduação inicial desta modalidade e não possui histórico anterior para retroceder.'
+    };
+}
+
+/**
  * Detecta conflitos ou divergências entre a graduação registrada em um convite
  * e a graduação ativa real do aluno no momento.
  *
@@ -497,6 +602,8 @@ async function loadExamEligibilityBatch(pool, { modalidadeId = null, alunoIds = 
 
 module.exports = {
     findNextLevel,
+    findPreviousLevel,
+    resolveGraduationRollbackPlan,
     detectInviteBeltConflict,
     evaluateStudentExamEligibility,
     loadExamEligibilityBatch

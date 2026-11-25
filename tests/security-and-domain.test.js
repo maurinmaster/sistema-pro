@@ -2698,6 +2698,58 @@ test('Regras de Domínio: Elegibilidade Unificada e Consistência de Exames de G
     assert.equal(eligMax.fonte, 'nivel_maximo');
 });
 
+test('Regras de Domínio: Retrocesso de Graduação (Visão 360)', () => {
+    const examEligibilityService = require('../services/examEligibilityService');
+
+    const niveis = [
+        { id: 1, nome: 'Prajied Branco', ordem_hierarquica: 1, cor_hex_primaria: '#ffffff', cor_hex_secundaria: null },
+        { id: 2, nome: 'Prajied Amarelo', ordem_hierarquica: 3, cor_hex_primaria: '#eab308', cor_hex_secundaria: null },
+        { id: 3, nome: 'Prajied Verde', ordem_hierarquica: 6, cor_hex_primaria: '#16a34a', cor_hex_secundaria: null }
+    ];
+
+    // 1. findPreviousLevel tolerando lacunas e retornando null na inicial
+    assert.equal(examEligibilityService.findPreviousLevel(niveis, 6)?.id, 2);
+    assert.equal(examEligibilityService.findPreviousLevel(niveis, 3)?.id, 1);
+    assert.equal(examEligibilityService.findPreviousLevel(niveis, 1), null);
+
+    // 2. Modo restore_history: remove promoção indevida e reativa a anterior
+    const planRestore = examEligibilityService.resolveGraduationRollbackPlan({
+        historyForModality: [
+            { id: 10, graduacao_nivel_id: 1, nivel_nome: 'Prajied Branco', ordem_hierarquica: 1, atual: 0, data_graduacao: '2026-01-10' },
+            { id: 15, graduacao_nivel_id: 2, nivel_nome: 'Prajied Amarelo', ordem_hierarquica: 3, atual: 1, data_graduacao: '2026-11-24', cor_hex_primaria: '#eab308' }
+        ],
+        levelsForModality: niveis
+    });
+    assert.equal(planRestore.allowed, true);
+    assert.equal(planRestore.mode, 'restore_history');
+    assert.equal(planRestore.deleteGradId, 15);
+    assert.equal(planRestore.restoreGradId, 10);
+    assert.equal(planRestore.toLevel.id, 1);
+
+    // 3. Modo step_down_level: registro único acima da faixa inicial desce 1 faixa
+    const planStepDown = examEligibilityService.resolveGraduationRollbackPlan({
+        historyForModality: [
+            { id: 22, graduacao_nivel_id: 3, nivel_nome: 'Prajied Verde', ordem_hierarquica: 6, atual: 1, data_graduacao: '2026-05-01' }
+        ],
+        levelsForModality: niveis
+    });
+    assert.equal(planStepDown.allowed, true);
+    assert.equal(planStepDown.mode, 'step_down_level');
+    assert.equal(planStepDown.updateGradId, 22);
+    assert.equal(planStepDown.targetLevelId, 2);
+    assert.equal(planStepDown.toLevel.nome, 'Prajied Amarelo');
+
+    // 4. Bloqueado quando já está na graduação inicial sem histórico anterior
+    const planBlocked = examEligibilityService.resolveGraduationRollbackPlan({
+        historyForModality: [
+            { id: 30, graduacao_nivel_id: 1, nivel_nome: 'Prajied Branco', ordem_hierarquica: 1, atual: 1, data_graduacao: '2026-01-01' }
+        ],
+        levelsForModality: niveis
+    });
+    assert.equal(planBlocked.allowed, false);
+    assert.ok(planBlocked.error);
+});
+
 test.after(async () => {
     try {
         await pool.end();
