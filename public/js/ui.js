@@ -11,14 +11,18 @@ const UI = {
             .replace(/'/g, '&#39;');
     },
 
-    // Validação segura de URLs de imagem (bloqueia javascript:, data: malicioso, etc.)
+    // Validação segura de URLs de imagem (bloqueia javascript:, data: malicioso, traversal, etc.)
     sanitizeUrl(url, fallback = '') {
         if (!url || typeof url !== 'string') return fallback;
         const trimmed = url.trim();
+        if (!trimmed || trimmed.includes('..')) {
+            return fallback;
+        }
         if (
             trimmed.startsWith('https://') ||
             trimmed.startsWith('http://') ||
-            trimmed.startsWith('/uploads/')
+            trimmed.startsWith('/uploads/') ||
+            trimmed.startsWith('/assets/')
         ) {
             return this.escapeHtml(trimmed);
         }
@@ -29,13 +33,14 @@ const UI = {
     getSafeImageUrl(url, fallback = '') {
         if (!url || typeof url !== 'string') return fallback;
         const trimmed = url.trim();
-        if (!trimmed || /[\s<>"'`\u0000-\u001F\u007F]/.test(trimmed)) {
+        if (!trimmed || trimmed.includes('..') || /[\s<>"'`\u0000-\u001F\u007F]/.test(trimmed)) {
             return fallback;
         }
         if (
             trimmed.startsWith('https://') ||
             trimmed.startsWith('http://') ||
-            trimmed.startsWith('/uploads/')
+            trimmed.startsWith('/uploads/') ||
+            trimmed.startsWith('/assets/')
         ) {
             return trimmed;
         }

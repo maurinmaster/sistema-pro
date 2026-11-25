@@ -102,6 +102,9 @@ test('Segurança Frontend: UI.escapeHtml, UI.sanitizeUrl e UI.sanitizeColor', ()
     assert.equal(UI.sanitizeUrl('javascript:alert(1)', '/fallback.png'), '/fallback.png');
     assert.equal(UI.sanitizeUrl('data:text/html,<script>alert(1)</script>', '/fallback.png'), '/fallback.png');
     assert.equal(UI.sanitizeUrl('/uploads/alunos/aluno-123.jpg', '/fallback.png'), '/uploads/alunos/aluno-123.jpg');
+    assert.equal(UI.sanitizeUrl('/assets/icones-conquistas/trofeu-dourado.webp', '/fallback.png'), '/assets/icones-conquistas/trofeu-dourado.webp');
+    assert.equal(UI.sanitizeUrl('/assets/../secret.png', '/fallback.png'), '/fallback.png');
+    assert.equal(UI.sanitizeUrl('/uploads/../secret.png', '/fallback.png'), '/fallback.png');
 
     // URLs seguras para atribuição direta em DOM (img.src / a.href) preservando '&'
     assert.equal(
@@ -109,6 +112,9 @@ test('Segurança Frontend: UI.escapeHtml, UI.sanitizeUrl e UI.sanitizeColor', ()
         'https://ui-avatars.com/api/?name=Ana&background=0284c7&color=fff'
     );
     assert.equal(UI.getSafeImageUrl('/uploads/alunos/foto.webp', ''), '/uploads/alunos/foto.webp');
+    assert.equal(UI.getSafeImageUrl('/assets/icones-conquistas/luvas-douradas.webp', ''), '/assets/icones-conquistas/luvas-douradas.webp');
+    assert.equal(UI.getSafeImageUrl('/assets/../secret.png', '/fallback.png'), '/fallback.png');
+    assert.equal(UI.getSafeImageUrl('/uploads/../secret.png', '/fallback.png'), '/fallback.png');
     assert.equal(UI.getSafeImageUrl('javascript:alert(1)', '/fallback.png'), '/fallback.png');
     assert.equal(UI.getSafeImageUrl('data:text/html,<script>', '/fallback.png'), '/fallback.png');
     assert.equal(UI.getSafeImageUrl('https://exemplo.com/a b.jpg', '/fallback.png'), '/fallback.png');
