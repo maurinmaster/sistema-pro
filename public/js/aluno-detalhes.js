@@ -882,9 +882,14 @@ const AlunoDetalhesModule = {
                                         <div class="conquista-prof-meta">
                                             <span>📅 ${UI.escapeHtml(UI.formatDate(cp.data_conquista))} • 👨‍🏫 ${UI.escapeHtml(cp.professor_nome || 'Não Informado')}</span>
                                             ${canGrantConquista ? `
-                                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px; color: #fca5a5; border-color: rgba(239,68,68,0.35);" onclick="AlunoDetalhesModule.deleteConquistaProfessor(${cId})">
-                                                    Remover
-                                                </button>
+                                                <div style="display: inline-flex; gap: 6px; align-items: center;">
+                                                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px; color: #38bdf8; border-color: rgba(56,189,248,0.35);" onclick="AlunoDetalhesModule.openEditConquistaProfessor(${cId})">
+                                                        ✏️ Editar
+                                                    </button>
+                                                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 11px; color: #fca5a5; border-color: rgba(239,68,68,0.35);" onclick="AlunoDetalhesModule.deleteConquistaProfessor(${cId})">
+                                                        Remover
+                                                    </button>
+                                                </div>
                                             ` : ''}
                                         </div>
                                     </div>
@@ -1847,6 +1852,99 @@ const AlunoDetalhesModule = {
         }
     },
 
+    conquistaModalMode: 'grant', // 'grant' | 'edit_award' | 'create_model' | 'edit_model'
+
+    getConquistaAllPresets() {
+        const defaults = [
+            { codigo: 'primeira_luta', titulo: 'Primeira Luta', icone: '🥊', categoria: 'Lutas', cor_hex: '#f59e0b', descricao: 'Realizou sua primeira luta oficial representando a equipe.' },
+            { codigo: 'seis_lutas', titulo: '6 Lutas Oficiais', icone: '⚔️', categoria: 'Lutas', cor_hex: '#ef4444', descricao: 'Alcançou a marca de 6 lutas oficiais no cartel.' },
+            { codigo: 'seis_vitorias_seguidas', titulo: '6 Vitórias Consecutivas', icone: '👑', categoria: 'Vitórias', cor_hex: '#a855f7', descricao: 'Sequência dominante de 6 vitórias consecutivas no ringue.' }
+        ];
+        const builtin = Array.isArray(this.currentData?.conquistas_presets) && this.currentData.conquistas_presets.length > 0
+            ? this.currentData.conquistas_presets
+            : defaults;
+        const custom = Array.isArray(this.currentData?.conquistas_modelos_custom)
+            ? this.currentData.conquistas_modelos_custom
+            : [];
+        return { builtin, custom };
+    },
+
+    renderConquistaPresetsAndCustom() {
+        const { builtin, custom } = this.getConquistaAllPresets();
+        const presetsWrap = document.getElementById('conquista-prof-presets');
+        if (presetsWrap) {
+            presetsWrap.innerHTML = builtin.map((p) => {
+                const cor = UI.sanitizeColor(p.cor_hex, '#f59e0b');
+                return `
+                    <button type="button" class="conquista-preset-chip" data-preset-code="${UI.escapeHtml(p.codigo)}" style="border-color: ${cor}55;">
+                        <span>${UI.escapeHtml(p.icone || '🥊')}</span>
+                        <span>${UI.escapeHtml(p.titulo)}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        const customWrap = document.getElementById('conquista-prof-custom-presets');
+        if (customWrap) {
+            if (custom.length === 0) {
+                customWrap.innerHTML = `<span style="font-size: 11.5px; color: var(--text-muted);">Nenhum modelo personalizado criado ainda. Clique em "+ Criar Novo Modelo" ou marque a caixa abaixo ao salvar.</span>`;
+            } else {
+                customWrap.innerHTML = custom.map((m) => {
+                    const cor = UI.sanitizeColor(m.cor_hex, '#38bdf8');
+                    const mid = Number(m.id);
+                    return `
+                        <div class="conquista-custom-chip-wrap" style="border-color: ${cor}55;">
+                            <button type="button" class="conquista-preset-chip custom-apply" onclick="AlunoDetalhesModule.applyConquistaPreset('${UI.escapeHtml(m.codigo)}')" title="${UI.escapeHtml(m.descricao || m.titulo)}">
+                                <span>${UI.escapeHtml(m.icone || '🥊')}</span>
+                                <span>${UI.escapeHtml(m.titulo)}</span>
+                            </button>
+                            <button type="button" class="conquista-chip-action-btn edit" onclick="AlunoDetalhesModule.startEditCustomConquistaModelo(${mid})" title="Editar modelo">✏️</button>
+                            <button type="button" class="conquista-chip-action-btn del" onclick="AlunoDetalhesModule.deleteCustomConquistaModelo(${mid})" title="Excluir modelo">&times;</button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    },
+
+    setConquistaModalMode(mode) {
+        this.conquistaModalMode = mode;
+        const tituloModal = document.getElementById('modal-conquista-prof-titulo');
+        const banner = document.getElementById('conquista-prof-mode-banner');
+        const bannerText = document.getElementById('conquista-prof-mode-banner-text');
+        const atalhosSec = document.getElementById('conquista-prof-atalhos-section');
+        const dataWrap = document.getElementById('conquista-prof-data-wrap');
+        const dataInput = document.getElementById('conquista-prof-data');
+        const salvarModeloWrap = document.getElementById('conquista-prof-salvar-modelo-wrap');
+        const btnSubmit = document.getElementById('btn-salvar-conquista-prof');
+
+        const isModelMode = mode === 'create_model' || mode === 'edit_model';
+        const isEditAward = mode === 'edit_award';
+
+        if (tituloModal) {
+            if (mode === 'edit_award') tituloModal.textContent = 'Editar Conquista do Atleta';
+            else if (mode === 'create_model') tituloModal.textContent = 'Criar Novo Modelo de Conquista';
+            else if (mode === 'edit_model') tituloModal.textContent = 'Editar Modelo de Conquista';
+            else tituloModal.textContent = 'Adicionar Conquista de Luta / Honraria';
+        }
+        if (banner) banner.style.display = isModelMode ? 'flex' : 'none';
+        if (bannerText) {
+            bannerText.textContent = mode === 'edit_model'
+                ? 'Editando modelo personalizado reutilizável'
+                : 'Criando novo modelo personalizado reutilizável';
+        }
+        if (atalhosSec) atalhosSec.style.display = (isModelMode || isEditAward) ? 'none' : 'block';
+        if (dataWrap) dataWrap.style.display = isModelMode ? 'none' : 'block';
+        if (dataInput) dataInput.required = !isModelMode;
+        if (salvarModeloWrap) salvarModeloWrap.style.display = mode === 'grant' ? 'inline-flex' : 'none';
+        if (btnSubmit) {
+            if (mode === 'edit_award') btnSubmit.textContent = 'Salvar Alterações';
+            else if (mode === 'create_model') btnSubmit.textContent = 'Salvar Novo Modelo';
+            else if (mode === 'edit_model') btnSubmit.textContent = 'Atualizar Modelo';
+            else btnSubmit.textContent = 'Salvar Conquista';
+        }
+    },
+
     openModalConquistaProfessor(alunoId) {
         const idTarget = Number(alunoId || this.currentAlunoId);
         const aluno = this.currentData?.aluno || {};
@@ -1859,40 +1957,100 @@ const AlunoDetalhesModule = {
 
         document.getElementById('conquista-prof-aluno-id').value = String(idTarget);
         document.getElementById('conquista-prof-preset-code').value = '';
+        document.getElementById('conquista-prof-edit-id').value = '';
+        document.getElementById('conquista-prof-modelo-edit-id').value = '';
         document.getElementById('conquista-prof-data').value = new Date().toISOString().split('T')[0];
 
         const sub = document.getElementById('conquista-prof-aluno-sub');
         if (sub) {
-            sub.textContent = `Atleta: ${nomeFmt} • Exibida no quadro de conquistas do aluno`;
+            sub.textContent = `Atleta: ${nomeFmt} • Exibida no quadro de conquistas do aluno e notifica via WhatsApp/E-mail`;
         }
 
-        const presets = Array.isArray(this.currentData?.conquistas_presets) && this.currentData.conquistas_presets.length > 0
-            ? this.currentData.conquistas_presets
-            : [
-                { codigo: 'primeira_luta', titulo: 'Primeira Luta', icone: '🥊', categoria: 'Lutas', cor_hex: '#f59e0b', descricao: 'Realizou sua primeira luta oficial representando a equipe.' },
-                { codigo: 'seis_lutas', titulo: '6 Lutas Oficiais', icone: '⚔️', categoria: 'Lutas', cor_hex: '#ef4444', descricao: 'Alcançou a marca de 6 lutas oficiais no cartel.' },
-                { codigo: 'seis_vitorias_seguidas', titulo: '6 Vitórias Consecutivas', icone: '👑', categoria: 'Vitórias', cor_hex: '#a855f7', descricao: 'Sequência dominante de 6 vitórias consecutivas no ringue.' }
-            ];
-
-        const presetsWrap = document.getElementById('conquista-prof-presets');
-        if (presetsWrap) {
-            presetsWrap.innerHTML = presets.map((p) => {
-                const cor = UI.sanitizeColor(p.cor_hex, '#f59e0b');
-                return `
-                    <button type="button" class="conquista-preset-chip" data-preset-code="${UI.escapeHtml(p.codigo)}" style="border-color: ${cor}55;">
-                        <span>${UI.escapeHtml(p.icone || '🥊')}</span>
-                        <span>${UI.escapeHtml(p.titulo)}</span>
-                    </button>
-                `;
-            }).join('');
-        }
-
+        this.renderConquistaPresetsAndCustom();
+        this.setConquistaModalMode('grant');
         UI.openModal('modal-conquista-professor');
     },
 
+    openEditConquistaProfessor(conquistaId) {
+        const list = Array.isArray(this.currentData?.conquistas_professor) ? this.currentData.conquistas_professor : [];
+        const item = list.find(c => Number(c.id) === Number(conquistaId));
+        if (!item) return;
+
+        const aluno = this.currentData?.aluno || {};
+        const nomeFmt = window.AlunosModule?.formatNomeDisplay
+            ? AlunosModule.formatNomeDisplay(aluno.nome_completo || '')
+            : (aluno.nome_completo || 'Atleta');
+
+        document.getElementById('conquista-prof-aluno-id').value = String(item.aluno_id || this.currentAlunoId);
+        document.getElementById('conquista-prof-edit-id').value = String(item.id);
+        document.getElementById('conquista-prof-modelo-edit-id').value = '';
+        document.getElementById('conquista-prof-preset-code').value = item.codigo_preset || '';
+        document.getElementById('conquista-prof-titulo').value = item.titulo || '';
+        document.getElementById('conquista-prof-descricao').value = item.descricao || '';
+        document.getElementById('conquista-prof-categoria').value = item.categoria || 'Lutas';
+        document.getElementById('conquista-prof-icone').value = item.icone || '🥊';
+        document.getElementById('conquista-prof-cor').value = item.cor_hex || '#f59e0b';
+        document.getElementById('conquista-prof-data').value = item.data_conquista || new Date().toISOString().split('T')[0];
+
+        const sub = document.getElementById('conquista-prof-aluno-sub');
+        if (sub) sub.textContent = `Editando conquista de ${nomeFmt}`;
+
+        this.setConquistaModalMode('edit_award');
+        UI.openModal('modal-conquista-professor');
+    },
+
+    startNewCustomConquistaModelo() {
+        document.getElementById('conquista-prof-modelo-edit-id').value = '';
+        document.getElementById('conquista-prof-edit-id').value = '';
+        document.getElementById('conquista-prof-preset-code').value = '';
+        document.getElementById('conquista-prof-titulo').value = '';
+        document.getElementById('conquista-prof-descricao').value = '';
+        document.getElementById('conquista-prof-categoria').value = 'Lutas';
+        document.getElementById('conquista-prof-icone').value = '🥊';
+        document.getElementById('conquista-prof-cor').value = '#f59e0b';
+        this.setConquistaModalMode('create_model');
+    },
+
+    startEditCustomConquistaModelo(modeloId) {
+        const { custom } = this.getConquistaAllPresets();
+        const mod = custom.find(m => Number(m.id) === Number(modeloId));
+        if (!mod) return;
+
+        document.getElementById('conquista-prof-modelo-edit-id').value = String(mod.id);
+        document.getElementById('conquista-prof-edit-id').value = '';
+        document.getElementById('conquista-prof-preset-code').value = mod.codigo || '';
+        document.getElementById('conquista-prof-titulo').value = mod.titulo || '';
+        document.getElementById('conquista-prof-descricao').value = mod.descricao || '';
+        document.getElementById('conquista-prof-categoria').value = mod.categoria || 'Lutas';
+        document.getElementById('conquista-prof-icone').value = mod.icone || '🥊';
+        document.getElementById('conquista-prof-cor').value = mod.cor_hex || '#f59e0b';
+        this.setConquistaModalMode('edit_model');
+    },
+
+    cancelCustomModeloMode() {
+        document.getElementById('conquista-prof-modelo-edit-id').value = '';
+        this.setConquistaModalMode('grant');
+    },
+
+    async deleteCustomConquistaModelo(modeloId) {
+        if (!confirm('Deseja excluir este modelo personalizado de conquista? As conquistas já concedidas aos alunos não serão removidas.')) {
+            return;
+        }
+        try {
+            const res = await API.delete(`/alunos/conquistas-modelos/${modeloId}`);
+            UI.showToast(res.message || 'Modelo excluído!', 'success');
+            if (this.currentData && Array.isArray(this.currentData.conquistas_modelos_custom)) {
+                this.currentData.conquistas_modelos_custom = this.currentData.conquistas_modelos_custom.filter(m => Number(m.id) !== Number(modeloId));
+            }
+            this.renderConquistaPresetsAndCustom();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao excluir modelo.', 'error');
+        }
+    },
+
     applyConquistaPreset(code) {
-        const presets = Array.isArray(this.currentData?.conquistas_presets) ? this.currentData.conquistas_presets : [];
-        const preset = presets.find(p => p.codigo === code);
+        const { builtin, custom } = this.getConquistaAllPresets();
+        const preset = [...builtin, ...custom].find(p => p.codigo === code);
         if (!preset) return;
 
         document.getElementById('conquista-prof-preset-code').value = preset.codigo || '';
@@ -1902,7 +2060,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-icone').value = preset.icone || '🥊';
         document.getElementById('conquista-prof-cor').value = preset.cor_hex || '#f59e0b';
 
-        document.querySelectorAll('#conquista-prof-presets .conquista-preset-chip').forEach((chip) => {
+        document.querySelectorAll('#conquista-prof-presets .conquista-preset-chip, #conquista-prof-custom-presets .conquista-preset-chip').forEach((chip) => {
             chip.classList.toggle('active', chip.getAttribute('data-preset-code') === code);
         });
     },
@@ -1910,6 +2068,8 @@ const AlunoDetalhesModule = {
     async submitConquistaProfessor(e) {
         e.preventDefault();
         const alunoId = Number(document.getElementById('conquista-prof-aluno-id')?.value || this.currentAlunoId);
+        const editAwardId = document.getElementById('conquista-prof-edit-id')?.value;
+        const editModeloId = document.getElementById('conquista-prof-modelo-edit-id')?.value;
         const btn = document.getElementById('btn-salvar-conquista-prof');
         const originalText = btn ? btn.textContent : 'Salvar Conquista';
         if (btn) {
@@ -1917,23 +2077,54 @@ const AlunoDetalhesModule = {
             btn.textContent = 'Salvando...';
         }
 
+        const payloadBase = {
+            titulo: document.getElementById('conquista-prof-titulo')?.value || '',
+            descricao: document.getElementById('conquista-prof-descricao')?.value || '',
+            categoria: document.getElementById('conquista-prof-categoria')?.value || 'Lutas',
+            icone: document.getElementById('conquista-prof-icone')?.value || '🥊',
+            cor_hex: document.getElementById('conquista-prof-cor')?.value || '#f59e0b'
+        };
+
         try {
-            const res = await API.post(`/alunos/${alunoId}/conquistas-professor`, {
+            if (this.conquistaModalMode === 'create_model' || this.conquistaModalMode === 'edit_model') {
+                const res = editModeloId
+                    ? await API.put(`/alunos/conquistas-modelos/${editModeloId}`, payloadBase)
+                    : await API.post('/alunos/conquistas-modelos', payloadBase);
+
+                if (this.currentData) {
+                    const list = Array.isArray(this.currentData.conquistas_modelos_custom)
+                        ? this.currentData.conquistas_modelos_custom
+                        : [];
+                    if (editModeloId) {
+                        this.currentData.conquistas_modelos_custom = list.map(m => Number(m.id) === Number(editModeloId) ? res.data : m);
+                    } else if (res.data) {
+                        this.currentData.conquistas_modelos_custom = [res.data, ...list];
+                    }
+                }
+                UI.showToast(res.message || 'Modelo salvo com sucesso!', 'success');
+                this.renderConquistaPresetsAndCustom();
+                this.setConquistaModalMode('grant');
+                if (res.data) this.applyConquistaPreset(res.data.codigo);
+                return;
+            }
+
+            const awardPayload = {
+                ...payloadBase,
                 codigo_preset: document.getElementById('conquista-prof-preset-code')?.value || null,
-                titulo: document.getElementById('conquista-prof-titulo')?.value || '',
-                descricao: document.getElementById('conquista-prof-descricao')?.value || '',
-                categoria: document.getElementById('conquista-prof-categoria')?.value || 'Lutas',
-                icone: document.getElementById('conquista-prof-icone')?.value || '🥊',
                 data_conquista: document.getElementById('conquista-prof-data')?.value || '',
-                cor_hex: document.getElementById('conquista-prof-cor')?.value || '#f59e0b'
-            });
+                salvar_modelo: Boolean(document.getElementById('conquista-prof-salvar-modelo')?.checked)
+            };
+
+            const res = editAwardId
+                ? await API.put(`/alunos/${alunoId}/conquistas-professor/${editAwardId}`, awardPayload)
+                : await API.post(`/alunos/${alunoId}/conquistas-professor`, awardPayload);
 
             UI.closeModal('modal-conquista-professor');
-            UI.showToast(res.message || 'Conquista adicionada!', 'success');
+            UI.showToast(res.message || 'Conquista salva!', 'success');
             await this.openDossier(alunoId);
             this.switchTab('desempenho');
         } catch (err) {
-            UI.showToast(err.message || 'Erro ao adicionar conquista.', 'error');
+            UI.showToast(err.message || 'Erro ao salvar conquista.', 'error');
         } finally {
             if (btn) {
                 btn.disabled = false;

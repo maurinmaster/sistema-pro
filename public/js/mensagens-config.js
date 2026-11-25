@@ -335,7 +335,11 @@ const MensagensConfigModule = {
             data: '12/12/2026',
             horario: '17:00',
             local: 'PRO COMBATE',
-            motivo: 'Viagem na data do evento'
+            motivo: 'Viagem na data do evento',
+            conquista: '🥊 Primeira Luta',
+            categoria: 'Lutas',
+            descricao: 'Realizou sua primeira luta oficial representando a equipe.',
+            professor: 'Prof. Mauro'
         };
 
         let text = String(template || '');

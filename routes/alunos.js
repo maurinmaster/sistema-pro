@@ -337,6 +337,110 @@ router.post('/lixeira/esvaziar', authenticateToken, authorizeRoles('admin'), asy
     }
 });
 
+// GET /api/alunos/conquistas-modelos - Lista modelos personalizados de conquistas (Admin/Professor)
+router.get('/conquistas-modelos', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const [rows] = await pool.query(`
+            SELECT id, titulo, descricao, icone, categoria, cor_hex, criado_por, created_at
+            FROM conquistas_modelos_custom
+            ORDER BY id DESC
+        `);
+        res.json({
+            success: true,
+            data: rows.map(r => conquistasService.normalizeCustomTemplateRow(r))
+        });
+    } catch (err) {
+        console.error('Erro ao listar modelos personalizados de conquistas:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao listar modelos de conquistas.' });
+    }
+});
+
+// POST /api/alunos/conquistas-modelos - Cria um novo modelo personalizado reutilizável
+router.post('/conquistas-modelos', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const validation = conquistasService.validateCustomTemplatePayload(req.body || {});
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const d = validation.data;
+        const criadoPor = req.user && req.user.id ? Number(req.user.id) : null;
+
+        const [result] = await pool.query(`
+            INSERT INTO conquistas_modelos_custom (titulo, descricao, icone, categoria, cor_hex, criado_por)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [d.titulo, d.descricao, d.icone, d.categoria, d.cor_hex, criadoPor]);
+
+        res.status(201).json({
+            success: true,
+            data: conquistasService.normalizeCustomTemplateRow({ id: result.insertId, ...d }),
+            message: 'Modelo personalizado de conquista criado com sucesso!'
+        });
+    } catch (err) {
+        console.error('Erro ao criar modelo personalizado de conquista:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao criar modelo de conquista.' });
+    }
+});
+
+// PUT /api/alunos/conquistas-modelos/:modeloId - Edita modelo personalizado
+router.put('/conquistas-modelos/:modeloId', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const modeloId = parseInt(req.params.modeloId, 10);
+        if (isNaN(modeloId) || modeloId <= 0) {
+            return res.status(400).json({ success: false, error: 'ID do modelo inválido.' });
+        }
+
+        const validation = conquistasService.validateCustomTemplatePayload(req.body || {});
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const d = validation.data;
+        const [result] = await pool.query(`
+            UPDATE conquistas_modelos_custom
+            SET titulo = ?, descricao = ?, icone = ?, categoria = ?, cor_hex = ?
+            WHERE id = ?
+        `, [d.titulo, d.descricao, d.icone, d.categoria, d.cor_hex, modeloId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Modelo de conquista não encontrado.' });
+        }
+
+        res.json({
+            success: true,
+            data: conquistasService.normalizeCustomTemplateRow({ id: modeloId, ...d }),
+            message: 'Modelo personalizado atualizado com sucesso!'
+        });
+    } catch (err) {
+        console.error('Erro ao atualizar modelo personalizado de conquista:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao atualizar modelo de conquista.' });
+    }
+});
+
+// DELETE /api/alunos/conquistas-modelos/:modeloId - Exclui modelo personalizado
+router.delete('/conquistas-modelos/:modeloId', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const modeloId = parseInt(req.params.modeloId, 10);
+        if (isNaN(modeloId) || modeloId <= 0) {
+            return res.status(400).json({ success: false, error: 'ID do modelo inválido.' });
+        }
+
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const [result] = await pool.query('DELETE FROM conquistas_modelos_custom WHERE id = ?', [modeloId]);
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Modelo de conquista não encontrado.' });
+        }
+
+        res.json({ success: true, message: 'Modelo personalizado excluído com sucesso.' });
+    } catch (err) {
+        console.error('Erro ao excluir modelo personalizado de conquista:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao excluir modelo de conquista.' });
+    }
+});
+
 // GET /api/alunos/:id - Dossiê 360 do Aluno (todos autenticados)
 router.get('/:id', authenticateToken, async (req, res) => {
     try {
@@ -589,18 +693,27 @@ router.get('/:id', authenticateToken, async (req, res) => {
             targetAval ? targetAval.proxima_graduacao : null
         );
 
-        // 7. Conquistas de Luta / Honrarias concedidas pelo Professor
+        // 7. Conquistas de Luta / Honrarias concedidas pelo Professor + Modelos Customizados
         let conquistasProfessor = [];
+        let conquistasModelosCustom = [];
         try {
             await conquistasService.ensureProfessorAchievementsSchema(pool);
-            const [conqProfRows] = await pool.query(`
-                SELECT acm.*, ue.nome AS professor_nome
-                FROM aluno_conquistas_manuais acm
-                LEFT JOIN usuarios_equipe ue ON ue.id = acm.professor_id
-                WHERE acm.aluno_id = ?
-                ORDER BY acm.data_conquista DESC, acm.id DESC
-            `, [id]);
+            const [[conqProfRows], [modelosRows]] = await Promise.all([
+                pool.query(`
+                    SELECT acm.*, ue.nome AS professor_nome
+                    FROM aluno_conquistas_manuais acm
+                    LEFT JOIN usuarios_equipe ue ON ue.id = acm.professor_id
+                    WHERE acm.aluno_id = ?
+                    ORDER BY acm.data_conquista DESC, acm.id DESC
+                `, [id]),
+                pool.query(`
+                    SELECT id, titulo, descricao, icone, categoria, cor_hex, criado_por, created_at
+                    FROM conquistas_modelos_custom
+                    ORDER BY id DESC
+                `)
+            ]);
             conquistasProfessor = conqProfRows.map(r => conquistasService.normalizeProfessorAchievementRow(r));
+            conquistasModelosCustom = modelosRows.map(r => conquistasService.normalizeCustomTemplateRow(r));
         } catch (conqErr) {
             console.warn('Aviso ao consultar conquistas do professor no dossiê:', conqErr.message);
         }
@@ -621,6 +734,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
                 },
                 conquistas_professor: conquistasProfessor,
                 conquistas_presets: conquistasService.PROFESSOR_ACHIEVEMENT_PRESETS,
+                conquistas_modelos_custom: conquistasModelosCustom,
                 matricula: matriculas[0] || null,
                 matriculas_historico: matriculas,
                 faturas,
@@ -1165,6 +1279,24 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
         const parsed = evalRes.data;
         const professorId = req.user && req.user.id ? req.user.id : null;
 
+        // Verifica insígnias já desbloqueadas antes desta avaliação para notificar apenas novidades
+        let prevUnlockedBadgeIds = new Set();
+        try {
+            const [prevRpgRows] = await pool.query(`
+                SELECT modelo_avaliacao, apto_sparring, score_total, criterios_json
+                FROM aluno_avaliacoes_desempenho
+                WHERE aluno_id = ? AND modelo_avaliacao = 'rpg'
+                ORDER BY data_avaliacao DESC, id DESC
+                LIMIT 1
+            `, [alunoId]);
+            if (prevRpgRows.length > 0) {
+                const prevNorm = rpgEvaluationService.normalizeRpgRow(prevRpgRows[0]);
+                (prevNorm.badges_desbloqueadas || []).forEach(b => prevUnlockedBadgeIds.add(b.id));
+            }
+        } catch {
+            // não bloqueia registro
+        }
+
         const [result] = await pool.query(`
             INSERT INTO aluno_avaliacoes_desempenho (
                 aluno_id, professor_id, data_avaliacao, modelo_avaliacao, apto_sparring,
@@ -1242,6 +1374,33 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             ...parsed,
             observacoes: obsText
         });
+
+        // Dispara notificação de conquista caso alguma nova insígnia RPG tenha sido desbloqueada
+        const novasInsignias = (normalizedSaved.badges_desbloqueadas || []).filter(b => !prevUnlockedBadgeIds.has(b.id));
+        if (novasInsignias.length > 0) {
+            const nomesBadges = novasInsignias.map(b => `${b.icone || '🏅'} ${b.nome}`).join(', ');
+            const profNome = (req.user && req.user.nome) ? req.user.nome : 'Equipe PRO COMBATE';
+            Promise.resolve(
+                notificationConfigService.dispatchEvent('conquista_desbloqueada', {
+                    alunoId,
+                    variables: {
+                        conquista: nomesBadges,
+                        categoria: 'Insígnia RPG',
+                        descricao: novasInsignias.map(b => b.requisito).filter(Boolean).slice(0, 2).join(' | '),
+                        professor: profNome,
+                        data: dataFmt
+                    },
+                    detalhes: [
+                        { label: 'Novas Insígnias', value: nomesBadges },
+                        { label: 'Categoria', value: 'Insígnia RPG (Avaliação Técnica)' },
+                        { label: 'Avaliador', value: profNome },
+                        { label: 'Data', value: dataFmt }
+                    ]
+                })
+            ).catch((notifErr) => {
+                console.warn('[Conquistas] Aviso ao notificar nova insígnia RPG:', notifErr.message);
+            });
+        }
 
         res.status(201).json({
             success: true,
@@ -1331,14 +1490,103 @@ router.post('/:id/conquistas-professor', authenticateToken, authorizeRoles('admi
             LIMIT 1
         `, [result.insertId]);
 
+        let savedModel = null;
+        if (req.body?.salvar_modelo === true) {
+            try {
+                const [modRes] = await pool.query(`
+                    INSERT INTO conquistas_modelos_custom (titulo, descricao, icone, categoria, cor_hex, criado_por)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                `, [d.titulo, d.descricao, d.icone, d.categoria, d.cor_hex, professorId]);
+                savedModel = conquistasService.normalizeCustomTemplateRow({ id: modRes.insertId, ...d });
+            } catch (modErr) {
+                console.warn('[Conquistas] Aviso ao salvar modelo reutilizável:', modErr.message);
+            }
+        }
+
+        const normalizedConquista = conquistasService.normalizeProfessorAchievementRow(
+            insertedRows[0] || { id: result.insertId, aluno_id: alunoId, professor_nome: req.user?.nome, ...d }
+        );
+        const dataFmtConq = normalizedConquista.data_conquista
+            ? new Date(`${normalizedConquista.data_conquista}T12:00:00Z`).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+            : '';
+
+        Promise.resolve(
+            notificationConfigService.dispatchEvent('conquista_desbloqueada', {
+                alunoId,
+                variables: {
+                    conquista: `${normalizedConquista.icone} ${normalizedConquista.titulo}`,
+                    categoria: normalizedConquista.categoria,
+                    descricao: normalizedConquista.descricao,
+                    professor: normalizedConquista.professor_nome,
+                    data: dataFmtConq
+                },
+                detalhes: [
+                    { label: 'Conquista', value: `${normalizedConquista.icone} ${normalizedConquista.titulo}` },
+                    { label: 'Categoria', value: normalizedConquista.categoria },
+                    { label: 'Descrição', value: normalizedConquista.descricao },
+                    { label: 'Concedida por', value: normalizedConquista.professor_nome },
+                    { label: 'Data', value: dataFmtConq }
+                ]
+            })
+        ).catch((notifErr) => {
+            console.warn('[Conquistas] Aviso ao notificar nova conquista:', notifErr.message);
+        });
+
         res.status(201).json({
             success: true,
-            data: conquistasService.normalizeProfessorAchievementRow(insertedRows[0] || { id: result.insertId, aluno_id: alunoId, ...d }),
+            data: normalizedConquista,
+            modelo_salvo: savedModel,
             message: 'Conquista de luta adicionada ao perfil do atleta!'
         });
     } catch (err) {
         console.error('Erro ao conceder conquista do professor:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao salvar conquista do atleta.' });
+    }
+});
+
+// PUT /api/alunos/:id/conquistas-professor/:conquistaId - Editar conquista concedida ao atleta
+router.put('/:id/conquistas-professor/:conquistaId', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const alunoId = parseInt(req.params.id, 10);
+        const conquistaId = parseInt(req.params.conquistaId, 10);
+        if (isNaN(alunoId) || alunoId <= 0 || isNaN(conquistaId) || conquistaId <= 0) {
+            return res.status(400).json({ success: false, error: 'Parâmetros inválidos.' });
+        }
+
+        const validation = conquistasService.validateProfessorAchievementPayload(req.body || {});
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        await conquistasService.ensureProfessorAchievementsSchema(pool);
+        const d = validation.data;
+
+        const [result] = await pool.query(`
+            UPDATE aluno_conquistas_manuais
+            SET codigo_preset = ?, titulo = ?, descricao = ?, icone = ?, categoria = ?, cor_hex = ?, data_conquista = ?
+            WHERE id = ? AND aluno_id = ?
+        `, [d.codigo_preset, d.titulo, d.descricao, d.icone, d.categoria, d.cor_hex, d.data_conquista, conquistaId, alunoId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Conquista não encontrada para este aluno.' });
+        }
+
+        const [rows] = await pool.query(`
+            SELECT acm.*, ue.nome AS professor_nome
+            FROM aluno_conquistas_manuais acm
+            LEFT JOIN usuarios_equipe ue ON ue.id = acm.professor_id
+            WHERE acm.id = ? AND acm.aluno_id = ?
+            LIMIT 1
+        `, [conquistaId, alunoId]);
+
+        res.json({
+            success: true,
+            data: conquistasService.normalizeProfessorAchievementRow(rows[0] || { id: conquistaId, aluno_id: alunoId, ...d }),
+            message: 'Conquista de luta atualizada com sucesso!'
+        });
+    } catch (err) {
+        console.error('Erro ao atualizar conquista do professor:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao atualizar conquista do atleta.' });
     }
 });
 

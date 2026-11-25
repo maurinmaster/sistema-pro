@@ -3340,6 +3340,67 @@ img.aluno-avatar-zoomable:hover {
     color: #ffffff;
 }
 
+.conquista-mode-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    color: #bae6fd;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.conquista-custom-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+.conquista-custom-chip-wrap {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    overflow: hidden;
+}
+
+.conquista-custom-chip-wrap .conquista-preset-chip.custom-apply {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+}
+
+.conquista-chip-action-btn {
+    background: transparent;
+    border: none;
+    border-left: 1px solid rgba(148, 163, 184, 0.2);
+    color: #94a3b8;
+    font-size: 11px;
+    padding: 5px 7px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.conquista-chip-action-btn.edit:hover {
+    background: rgba(56, 189, 248, 0.18);
+    color: #38bdf8;
+}
+
+.conquista-chip-action-btn.del:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
 
 
 

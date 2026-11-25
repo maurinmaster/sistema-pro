@@ -133,6 +133,24 @@ const EVENT_CATALOG = [
         }
     },
     {
+        key: 'conquista_desbloqueada',
+        categoria: 'Avaliações & Evolução',
+        titulo: 'Nova Conquista de Luta / Honraria',
+        descricao: 'Disparado automaticamente quando o aluno ganha uma conquista do professor (ex: Primeira Luta, 6 Lutas) ou desbloqueia nova insígnia RPG.',
+        supportsAluno: true,
+        supportsAdmin: true,
+        variaveis: ['{nome}', '{conquista}', '{categoria}', '{descricao}', '{professor}', '{data}', '{link}'],
+        defaults: {
+            aluno_whatsapp: true,
+            aluno_email: true,
+            admin_whatsapp: false,
+            admin_email: false,
+            incluir_link: true,
+            mensagem_aluno: '🏅 *PRO COMBATE — Nova Conquista Desbloqueada!*\n\nParabéns, *{nome}*!\nVocê acaba de conquistar:\n• *Conquista:* {conquista}\n• *Categoria:* {categoria}\n• *Feito:* {descricao}\n• *Concedida por:* {professor} em {data}\n\nConfira no seu quadro de conquistas do Portal do Aluno!',
+            mensagem_admin: '🏅 *Nova Conquista Registrada*\n\n• *Aluno:* {nome}\n• *Conquista:* {conquista} ({categoria})\n• *Professor:* {professor}'
+        }
+    },
+    {
         key: 'convite_exame',
         categoria: 'Exames de Graduação',
         titulo: 'Convite Oficial para Exame',
@@ -266,6 +284,13 @@ const MANUAL_PRESETS = [
         titulo: 'Convite Especial PRO COMBATE',
         incluir_link: true,
         mensagem: '🏆 *PRO COMBATE — Evento Especial*\n\nOlá, *{nome}*!\nTeremos um evento especial na academia e sua presença é muito importante. Acesse o portal para conferir todas as informações e garantir sua participação!\n\nConfira aqui: {link}'
+    },
+    {
+        id: 'parabens_conquista',
+        nome: 'Parabéns por Nova Conquista / Luta',
+        titulo: 'Nova Conquista no PRO COMBATE!',
+        incluir_link: true,
+        mensagem: '🥊 *PRO COMBATE — Parabéns pela Conquista, {nome}!*\n\nSeu esforço dentro e fora do ringue foi reconhecido! Confira sua nova conquista no seu Portal do Aluno:\n{link}'
     }
 ];
 

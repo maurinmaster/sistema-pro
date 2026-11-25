@@ -99,6 +99,21 @@ async function ensureProfessorAchievementsSchema(pool) {
                 CONSTRAINT fk_acm_prof FOREIGN KEY (professor_id) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
+
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS conquistas_modelos_custom (
+                id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                titulo VARCHAR(100) NOT NULL,
+                descricao VARCHAR(255) NOT NULL,
+                icone VARCHAR(20) NOT NULL DEFAULT '🥊',
+                categoria VARCHAR(40) NOT NULL DEFAULT 'Lutas',
+                cor_hex VARCHAR(10) NOT NULL DEFAULT '#f59e0b',
+                criado_por BIGINT UNSIGNED NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                CONSTRAINT fk_cmc_prof FOREIGN KEY (criado_por) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        `);
     })().catch((err) => {
         schemaPromise = null;
         throw err;
@@ -188,11 +203,37 @@ function normalizeProfessorAchievementRow(row = {}) {
     };
 }
 
+function validateCustomTemplatePayload(body = {}) {
+    const base = validateProfessorAchievementPayload(body);
+    if (!base.valid) return base;
+    const { titulo, descricao, icone, categoria, cor_hex } = base.data;
+    return {
+        valid: true,
+        data: { titulo, descricao, icone, categoria, cor_hex }
+    };
+}
+
+function normalizeCustomTemplateRow(row = {}) {
+    const idNum = Number(row.id) || null;
+    return {
+        id: idNum,
+        codigo: idNum ? `custom_${idNum}` : null,
+        titulo: String(row.titulo || '').trim(),
+        descricao: String(row.descricao || '').trim(),
+        icone: ALLOWED_ICONS.includes(String(row.icone || '').trim()) ? String(row.icone).trim() : '🥊',
+        categoria: ALLOWED_CATEGORIES.includes(String(row.categoria || '').trim()) ? String(row.categoria).trim() : 'Lutas',
+        cor_hex: /^#[0-9A-Fa-f]{6}$/.test(String(row.cor_hex || '').trim()) ? String(row.cor_hex).trim() : '#f59e0b',
+        custom: true
+    };
+}
+
 module.exports = {
     PROFESSOR_ACHIEVEMENT_PRESETS,
     ALLOWED_CATEGORIES,
     ALLOWED_ICONS,
     ensureProfessorAchievementsSchema,
     validateProfessorAchievementPayload,
-    normalizeProfessorAchievementRow
+    normalizeProfessorAchievementRow,
+    validateCustomTemplatePayload,
+    normalizeCustomTemplateRow
 };

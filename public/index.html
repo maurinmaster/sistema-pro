@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.3">
+    <link rel="stylesheet" href="/css/style.css?v=5.4">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.4">
 </head>
@@ -2320,15 +2320,15 @@
     <!-- MODAL: CONQUISTA DE LUTA / HONRARIA (PROFESSOR) -->
     <!-- ========================================== -->
     <div class="modal-overlay" id="modal-conquista-professor">
-        <div class="modal-box" style="max-width: 580px;">
+        <div class="modal-box" style="max-width: 620px;">
             <div class="modal-header">
                 <div>
                     <h3 style="font-size: 18px; color: #ffffff; display: flex; align-items: center; gap: 8px; margin: 0;">
                         <span>🥊</span>
-                        <span>Adicionar Conquista de Luta / Honraria</span>
+                        <span id="modal-conquista-prof-titulo">Adicionar Conquista de Luta / Honraria</span>
                     </h3>
                     <div id="conquista-prof-aluno-sub" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                        Conquistas concedidas pelo professor aparecem no Painel do Aluno
+                        Conquistas concedidas pelo professor aparecem no Painel do Aluno e notificam o atleta
                     </div>
                 </div>
                 <button type="button" class="modal-close" onclick="UI.closeModal('modal-conquista-professor')">&times;</button>
@@ -2337,12 +2337,35 @@
                 <div class="modal-body">
                     <input type="hidden" id="conquista-prof-aluno-id">
                     <input type="hidden" id="conquista-prof-preset-code">
+                    <input type="hidden" id="conquista-prof-edit-id">
+                    <input type="hidden" id="conquista-prof-modelo-edit-id">
 
-                    <div style="margin-bottom: 14px;">
-                        <label class="form-label" style="font-size: 12px; color: #fbbf24; font-weight: 700; display: block; margin-bottom: 6px;">
-                            ⚡ Atalhos Rápidos (1 clique para preencher):
-                        </label>
-                        <div class="conquista-preset-chips" id="conquista-prof-presets"></div>
+                    <div id="conquista-prof-mode-banner" class="conquista-mode-banner" style="display: none;">
+                        <span id="conquista-prof-mode-banner-text">Criando/editando modelo reutilizável</span>
+                        <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 10px; font-size: 11.5px;" onclick="AlunoDetalhesModule.cancelCustomModeloMode()">
+                            ← Voltar para aplicar ao aluno
+                        </button>
+                    </div>
+
+                    <div id="conquista-prof-atalhos-section">
+                        <div style="margin-bottom: 12px;">
+                            <label class="form-label" style="font-size: 12px; color: #fbbf24; font-weight: 700; display: block; margin-bottom: 6px;">
+                                ⚡ Atalhos Predefinidos (1 clique para preencher):
+                            </label>
+                            <div class="conquista-preset-chips" id="conquista-prof-presets"></div>
+                        </div>
+
+                        <div style="margin-bottom: 14px;">
+                            <div class="conquista-custom-head">
+                                <label class="form-label" style="font-size: 12px; color: #38bdf8; font-weight: 700; margin: 0;">
+                                    ✨ Minhas Conquistas Personalizadas (reutilizáveis):
+                                </label>
+                                <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 9px; font-size: 11px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);" onclick="AlunoDetalhesModule.startNewCustomConquistaModelo()">
+                                    + Criar Novo Modelo
+                                </button>
+                            </div>
+                            <div class="conquista-preset-chips" id="conquista-prof-custom-presets"></div>
+                        </div>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 12px;">
@@ -2387,7 +2410,7 @@
                     </div>
 
                     <div class="form-grid">
-                        <div class="form-group">
+                        <div class="form-group" id="conquista-prof-data-wrap">
                             <label for="conquista-prof-data">Data da Conquista <span class="required">*</span></label>
                             <input type="date" id="conquista-prof-data" class="form-input" required>
                         </div>
@@ -2403,6 +2426,11 @@
                             </select>
                         </div>
                     </div>
+
+                    <label id="conquista-prof-salvar-modelo-wrap" style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12.5px; color: #cbd5e1; margin-top: 12px;">
+                        <input type="checkbox" id="conquista-prof-salvar-modelo" style="width: 15px; height: 15px; accent-color: #38bdf8;">
+                        <span>Salvar também em "Minhas Conquistas Personalizadas" para reutilizar com outros alunos</span>
+                    </label>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-conquista-professor')">Cancelar</button>
@@ -3874,7 +3902,7 @@
     <script src="/js/ui.js?v=1.1"></script>
     <script src="/js/auth.js?v=1.4"></script>
     <script src="/js/rpg-avaliacao.js?v=2.2"></script>
-    <script src="/js/aluno-detalhes.js?v=2.1"></script>
+    <script src="/js/aluno-detalhes.js?v=2.2"></script>
     <script src="/js/alunos.js?v=5.8"></script>
     <script src="/js/dashboard.js?v=1.3"></script>
     <script src="/js/checkins.js"></script>
@@ -3883,7 +3911,7 @@
     <script src="/js/wiki.js?v=4.6"></script>
     <script src="/js/missoes.js?v=1.1"></script>
     <script src="/js/exames.js?v=4.3"></script>
-    <script src="/js/mensagens-config.js?v=1.3"></script>
+    <script src="/js/mensagens-config.js?v=1.4"></script>
     <script src="/js/equipe.js?v=1.1"></script>
     <script src="/js/app.js?v=4.2"></script>
 </body>

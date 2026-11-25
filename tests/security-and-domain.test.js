@@ -486,11 +486,13 @@ test('Configurações de Mensagens: Catálogo, Validação, Templates e Link do 
     const notificationConfigService = require('../services/notificationConfigService');
 
     const catalog = notificationConfigService.getCatalog();
-    assert.equal(catalog.length, 12);
+    assert.equal(catalog.length, 13);
+    assert.equal(catalog.some(ev => ev.key === 'conquista_desbloqueada'), true);
 
     const presets = notificationConfigService.getManualPresets();
-    assert.ok(presets.length >= 6);
+    assert.ok(presets.length >= 7);
     assert.equal(presets.some(p => p.id === 'link_portal'), true);
+    assert.equal(presets.some(p => p.id === 'parabens_conquista'), true);
 
     // Renderização com placeholder {link}
     const comPlaceholder = notificationConfigService.renderTemplate(
@@ -3096,6 +3098,33 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     assert.equal(detalhesJs.includes("AuthModule.can('manage_conquistas')"), true);
     assert.equal(detalhesJs.includes('manage_graduacoes'), false);
     assert.equal(detalhesJs.includes('manage_avaliacoes'), false);
+
+    // Modelos personalizados reutilizáveis
+    const badCustom = conquistasService.validateCustomTemplatePayload({ titulo: 'X', descricao: 'Desc ok' });
+    assert.equal(badCustom.valid, false);
+
+    const okCustom = conquistasService.validateCustomTemplatePayload({
+        titulo: '  Guerreiro de Torneio  ',
+        descricao: '  Participou do campeonato estadual representando a equipe.  ',
+        categoria: 'Campeonatos',
+        icone: '🥇',
+        cor_hex: '#FBbf24'
+    });
+    assert.equal(okCustom.valid, true);
+    assert.equal(okCustom.data.titulo, 'Guerreiro de Torneio');
+    assert.equal(okCustom.data.cor_hex, '#fbbf24');
+
+    const normCustom = conquistasService.normalizeCustomTemplateRow({
+        id: 12,
+        titulo: 'Guerreiro de Torneio',
+        descricao: 'Participou do campeonato estadual.',
+        icone: '🥇',
+        categoria: 'Campeonatos',
+        cor_hex: '#fbbf24'
+    });
+    assert.equal(normCustom.id, 12);
+    assert.equal(normCustom.codigo, 'custom_12');
+    assert.equal(normCustom.custom, true);
 });
 
 test.after(async () => {
