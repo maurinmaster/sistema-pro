@@ -20,6 +20,23 @@ const AlunoDetalhesModule = {
 
         this.bindContractEvents();
         this.bindAvaliacaoEvents();
+
+        const dossieAvatarEl = document.getElementById('dossie-avatar');
+        if (dossieAvatarEl) {
+            dossieAvatarEl.addEventListener('click', () => {
+                const aluno = this.currentData?.aluno;
+                if (!aluno) return;
+                const formattedNome = window.AlunosModule?.formatNomeDisplay
+                    ? AlunosModule.formatNomeDisplay(aluno.nome_completo)
+                    : (aluno.nome_completo || 'Aluno');
+                const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedNome)}&background=0284c7&color=fff&size=512`;
+                const fotoSegura = UI.getSafeImageUrl(aluno.foto_perfil_url, '');
+                UI.openPhotoLightbox(fotoSegura || fallbackAvatar, formattedNome, {
+                    isFallback: !fotoSegura,
+                    fallbackUrl: fallbackAvatar
+                });
+            });
+        }
     },
 
     bindAvaliacaoEvents() {
@@ -182,7 +199,8 @@ const AlunoDetalhesModule = {
         const avatarEl = document.getElementById('dossie-avatar');
         if (avatarEl) {
             const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedNome || 'Aluno')}&background=0284c7&color=fff`;
-            avatarEl.src = UI.sanitizeUrl(aluno.foto_perfil_url, fallbackAvatar);
+            avatarEl.src = UI.getSafeImageUrl(aluno.foto_perfil_url, fallbackAvatar);
+            avatarEl.title = `Clique para ampliar a foto de ${formattedNome || 'Aluno'}`;
         }
         document.getElementById('dossie-nome').textContent = formattedNome;
         document.getElementById('dossie-meta').innerHTML = `

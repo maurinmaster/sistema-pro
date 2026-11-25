@@ -67,10 +67,18 @@ const AlunosModule = {
             });
         }
 
-        // Clique na linha do aluno abre o Dossiê 360° (exceto botões/links de ação)
+        // Clique na linha do aluno abre o Dossiê 360° (exceto foto/botões/links de ação)
         const tbodyAlunos = document.getElementById('alunos-table-body');
         if (tbodyAlunos) {
             tbodyAlunos.addEventListener('click', (e) => {
+                const avatarZoomTrigger = e.target.closest('[data-avatar-zoom-id]');
+                if (avatarZoomTrigger) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.openAlunoPhotoZoom(Number(avatarZoomTrigger.getAttribute('data-avatar-zoom-id')));
+                    return;
+                }
+
                 const menuTrigger = e.target.closest('[data-action-menu-trigger="true"]');
                 if (menuTrigger) {
                     e.preventDefault();
@@ -86,6 +94,27 @@ const AlunosModule = {
                 if (alunoId && window.AlunoDetalhesModule) {
                     AlunoDetalhesModule.openDossier(alunoId);
                 }
+            });
+
+            tbodyAlunos.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                const avatarZoomTrigger = e.target.closest('[data-avatar-zoom-id]');
+                if (!avatarZoomTrigger) return;
+                e.preventDefault();
+                e.stopPropagation();
+                this.openAlunoPhotoZoom(Number(avatarZoomTrigger.getAttribute('data-avatar-zoom-id')));
+            });
+        }
+
+        const imgPreviewModal = document.getElementById('aluno-foto-preview');
+        if (imgPreviewModal) {
+            imgPreviewModal.style.cursor = 'zoom-in';
+            imgPreviewModal.title = 'Clique para ampliar a foto';
+            imgPreviewModal.addEventListener('click', () => {
+                const savedUrl = UI.getSafeImageUrl(document.getElementById('aluno-foto')?.value, '');
+                if (!savedUrl) return;
+                const nome = document.getElementById('aluno-nome')?.value?.trim() || 'Foto do Aluno';
+                UI.openPhotoLightbox(savedUrl, nome, { isFallback: false });
             });
         }
 
@@ -669,7 +698,12 @@ const AlunosModule = {
                     <tr id="aluno-row-${safeId}" class="aluno-row-clickable" data-aluno-id="${safeId}">
                         <td>
                             <div class="aluno-cell">
-                                <div class="aluno-avatar-wrap">
+                                <div class="aluno-avatar-wrap aluno-avatar-zoomable"
+                                     data-avatar-zoom-id="${safeId}"
+                                     role="button"
+                                     tabindex="0"
+                                     title="Clique para ampliar a foto de ${safeNome}"
+                                     aria-label="Ampliar foto de ${safeNome}">
                                     <img src="${safeAvatar}" 
                                          alt="${safeNome}" class="aluno-avatar" 
                                          onerror="this.src='${fallbackAvatar}'">
@@ -1510,6 +1544,20 @@ const AlunosModule = {
                 btn.textContent = 'Enviar Mensagem de Teste';
             }
         }
+    },
+
+    openAlunoPhotoZoom(alunoId) {
+        const aluno = (this.alunosList || []).find(a => Number(a.id) === Number(alunoId));
+        if (!aluno) return;
+
+        const formattedNome = this.formatNomeDisplay(aluno.nome_completo) || 'Aluno';
+        const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedNome)}&background=0284c7&color=fff&size=512`;
+        const fotoSegura = UI.getSafeImageUrl(aluno.foto_perfil_url, '');
+
+        UI.openPhotoLightbox(fotoSegura || fallbackAvatar, formattedNome, {
+            isFallback: !fotoSegura,
+            fallbackUrl: fallbackAvatar
+        });
     }
 };
 

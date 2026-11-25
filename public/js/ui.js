@@ -25,6 +25,23 @@ const UI = {
         return fallback;
     },
 
+    // Validação segura de URL para atribuição direta em propriedades DOM (img.src / a.href sem escapar '&')
+    getSafeImageUrl(url, fallback = '') {
+        if (!url || typeof url !== 'string') return fallback;
+        const trimmed = url.trim();
+        if (!trimmed || /[\s<>"'`\u0000-\u001F\u007F]/.test(trimmed)) {
+            return fallback;
+        }
+        if (
+            trimmed.startsWith('https://') ||
+            trimmed.startsWith('http://') ||
+            trimmed.startsWith('/uploads/')
+        ) {
+            return trimmed;
+        }
+        return fallback;
+    },
+
     // Validação de cores Hexadecimais para atributos style
     sanitizeColor(color, fallback = '#94a3b8') {
         if (!color || typeof color !== 'string') return fallback;
@@ -78,6 +95,85 @@ const UI = {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.remove('active');
+            if (!document.querySelector('.modal-overlay.active')) {
+                document.body.style.overflow = '';
+            }
+        }
+    },
+
+    _photoLightboxBound: false,
+
+    openPhotoLightbox(url, title = 'Foto do Aluno', options = {}) {
+        const modal = document.getElementById('modal-foto-zoom');
+        const imgEl = document.getElementById('foto-zoom-img');
+        const tituloEl = document.getElementById('foto-zoom-titulo');
+        const subEl = document.getElementById('foto-zoom-subtitulo');
+        const openTabEl = document.getElementById('foto-zoom-open-tab');
+        if (!modal || !imgEl) return;
+
+        const safeFallback = this.getSafeImageUrl(options.fallbackUrl, '');
+        const safeUrl = this.getSafeImageUrl(url, safeFallback);
+        if (!safeUrl) {
+            this.showToast('Nenhuma imagem válida disponível para ampliar.', 'warning');
+            return;
+        }
+
+        if (!this._photoLightboxBound) {
+            this._photoLightboxBound = true;
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.closePhotoLightbox();
+                }
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('active')) {
+                    this.closePhotoLightbox();
+                }
+            });
+        }
+
+        imgEl.onerror = safeFallback && safeUrl !== safeFallback
+            ? () => {
+                imgEl.onerror = null;
+                imgEl.src = safeFallback;
+                if (openTabEl) openTabEl.style.display = 'none';
+            }
+            : null;
+        imgEl.src = safeUrl;
+        imgEl.alt = title || 'Foto do aluno';
+
+        if (tituloEl) {
+            tituloEl.textContent = title || 'Foto do Aluno';
+        }
+        if (subEl) {
+            subEl.textContent = options.isFallback
+                ? 'Avatar padrão (aluno sem foto de perfil cadastrada)'
+                : 'Visualização ampliada da foto de perfil';
+        }
+        if (openTabEl) {
+            if (!options.isFallback) {
+                openTabEl.href = safeUrl;
+                openTabEl.style.display = 'inline-flex';
+            } else {
+                openTabEl.removeAttribute('href');
+                openTabEl.style.display = 'none';
+            }
+        }
+
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    },
+
+    closePhotoLightbox() {
+        const modal = document.getElementById('modal-foto-zoom');
+        const imgEl = document.getElementById('foto-zoom-img');
+        if (imgEl) {
+            imgEl.onerror = null;
+        }
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        if (!document.querySelector('.modal-overlay.active')) {
             document.body.style.overflow = '';
         }
     },

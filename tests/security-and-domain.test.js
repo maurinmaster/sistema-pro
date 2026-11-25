@@ -103,6 +103,17 @@ test('Segurança Frontend: UI.escapeHtml, UI.sanitizeUrl e UI.sanitizeColor', ()
     assert.equal(UI.sanitizeUrl('data:text/html,<script>alert(1)</script>', '/fallback.png'), '/fallback.png');
     assert.equal(UI.sanitizeUrl('/uploads/alunos/aluno-123.jpg', '/fallback.png'), '/uploads/alunos/aluno-123.jpg');
 
+    // URLs seguras para atribuição direta em DOM (img.src / a.href) preservando '&'
+    assert.equal(
+        UI.getSafeImageUrl('https://ui-avatars.com/api/?name=Ana&background=0284c7&color=fff', '/fallback.png'),
+        'https://ui-avatars.com/api/?name=Ana&background=0284c7&color=fff'
+    );
+    assert.equal(UI.getSafeImageUrl('/uploads/alunos/foto.webp', ''), '/uploads/alunos/foto.webp');
+    assert.equal(UI.getSafeImageUrl('javascript:alert(1)', '/fallback.png'), '/fallback.png');
+    assert.equal(UI.getSafeImageUrl('data:text/html,<script>', '/fallback.png'), '/fallback.png');
+    assert.equal(UI.getSafeImageUrl('https://exemplo.com/a b.jpg', '/fallback.png'), '/fallback.png');
+    assert.equal(UI.getSafeImageUrl('https://exemplo.com/<script>', '/fallback.png'), '/fallback.png');
+
     // Bloqueio de CSS injection em cores
     assert.equal(UI.sanitizeColor('red; background:url(javascript:alert(1))', '#000000'), '#000000');
     assert.equal(UI.sanitizeColor('#2563EB', '#000000'), '#2563EB');
