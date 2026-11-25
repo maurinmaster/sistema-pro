@@ -151,6 +151,8 @@ app.use('/api/mensagens-config', mensagensConfigRoutes);
 const missoesRoutes = require('./routes/missoes');
 app.use('/api/missoes', missoesRoutes.adminRouter);
 app.use('/api/aluno/missoes', missoesRoutes.alunoRouter);
+const equipeRoutes = require('./routes/equipe');
+app.use('/api/equipe', equipeRoutes);
 
 // Webhook unificado Asaas (processa pagamentos de Faturas e Exames em uma única URL)
 app.post('/api/webhook/asaas', async (req, res) => {

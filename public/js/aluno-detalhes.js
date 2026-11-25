@@ -391,7 +391,7 @@ const AlunoDetalhesModule = {
                                         </div>
                                         <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">${UI.escapeHtml(g.modalidade_nome)}</div>
                                         <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                                            Avaliador: <strong>${UI.escapeHtml(g.professor_avaliador || 'Mestre Carlos')}</strong>
+                                            Avaliador: <strong>${UI.escapeHtml(g.professor_avaliador || 'Não Informado')}</strong>
                                         </div>
                                         ${g.observacoes ? `<div style="font-size: 12px; margin-top: 6px; font-style: italic; color: var(--text-secondary); word-break: break-word;">${UI.escapeHtml(g.observacoes)}</div>` : ''}
                                     </div>

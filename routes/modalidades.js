@@ -105,8 +105,8 @@ router.get('/equipe/professores', authenticateToken, async (req, res) => {
         const [professores] = await pool.query(`
             SELECT id, nome, cargo 
             FROM usuarios_equipe 
-            WHERE ativo = 1 
-            ORDER BY nome ASC
+            WHERE ativo = 1 AND cargo IN ('professor', 'admin')
+            ORDER BY (cargo = 'professor') DESC, nome ASC
         `);
         res.json({ success: true, data: professores });
     } catch (err) {

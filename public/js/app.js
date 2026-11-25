@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.MissoesModule) await MissoesModule.init();
     if (window.ExamesModule) await ExamesModule.init();
     if (window.MensagensConfigModule) MensagensConfigModule.init();
+    if (window.EquipeModule) EquipeModule.init();
 
     // Roteamento de Menus / Tabs Principais
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
@@ -32,6 +33,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (targetSection === 'mensagens' && window.AuthModule && !AuthModule.can('manage_mensagens')) {
                 UI.showToast('Acesso restrito: apenas administradores podem configurar mensagens do sistema.', 'warning');
+                return;
+            }
+            if (targetSection === 'equipe' && window.AuthModule && !AuthModule.can('manage_equipe')) {
+                UI.showToast('Acesso restrito: apenas administradores podem gerenciar professores e equipe.', 'warning');
                 return;
             }
 
@@ -55,6 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 'financeiro': { title: 'Planos & Gestão Financeira', shortTitle: 'Financeiro', desc: 'Gestão comercial de planos de treino, mensalidades e faturamento' },
                 'wiki': { title: 'Biblioteca de Golpes & Movimentos (Wiki)', shortTitle: 'Wiki', desc: 'Caderno técnico com passo a passo ilustrado, fotos e descrições de execução' },
                 'missoes': { title: 'Quadro de Missões & Desafios', shortTitle: 'Missões', desc: 'Crie desafios para os atletas escolherem e valide entregas concluídas no tatame' },
+                'equipe': { title: 'Professores & Equipe', shortTitle: 'Professores', desc: 'Cadastro de professores avaliadores, administradores e recepção' },
                 'mensagens': { title: 'Configurações de Mensagens & Notificações', shortTitle: 'Mensagens', desc: 'Gerencie serviços automáticos, textos predefinidos, alertas para admin e envio do link do sistema' }
             };
 
@@ -87,6 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (targetSection === 'wiki' && window.WikiModule) WikiModule.loadGolpes();
             if (targetSection === 'missoes' && window.MissoesModule) MissoesModule.loadAll();
             if (targetSection === 'exames' && window.ExamesModule) ExamesModule.loadAll();
+            if (targetSection === 'equipe' && window.EquipeModule) EquipeModule.loadAll();
             if (targetSection === 'mensagens' && window.MensagensConfigModule) MensagensConfigModule.loadAll();
 
             // Em telas mobile, fecha o menu após navegar

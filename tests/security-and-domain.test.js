@@ -2750,6 +2750,100 @@ test('Regras de Domínio: Retrocesso de Graduação (Visão 360)', () => {
     assert.ok(planBlocked.error);
 });
 
+test('Regras de Domínio: Cadastro de Professores e Proteção de Administradores', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const equipeRoutes = require('../routes/equipe');
+
+    // 1. Validação de payload na criação
+    const okCreate = equipeRoutes.validateTeamMemberPayload({
+        nome: 'Prof. Ricardo Silva',
+        email: 'RICARDO@PROCOMBATE.COM',
+        cargo: 'professor',
+        telefone: '(75) 99999-1111',
+        senha: 'SenhaForte123'
+    }, { isCreate: true });
+    assert.equal(okCreate.valid, true);
+    assert.equal(okCreate.data.email, 'ricardo@procombate.com');
+    assert.equal(okCreate.data.cargo, 'professor');
+
+    const badEmail = equipeRoutes.validateTeamMemberPayload({
+        nome: 'Prof',
+        email: 'email-invalido',
+        cargo: 'professor',
+        senha: 'SenhaForte123'
+    }, { isCreate: true });
+    assert.equal(badEmail.valid, false);
+
+    const shortPass = equipeRoutes.validateTeamMemberPayload({
+        nome: 'Prof',
+        email: 'ok@procombate.com',
+        cargo: 'professor',
+        senha: '123'
+    }, { isCreate: true });
+    assert.equal(shortPass.valid, false);
+
+    const badRole = equipeRoutes.validateTeamMemberPayload({
+        nome: 'Prof',
+        email: 'ok@procombate.com',
+        cargo: 'superadmin',
+        senha: 'SenhaForte123'
+    }, { isCreate: true });
+    assert.equal(badRole.valid, false);
+
+    // 2. Edição permite omitir nova senha
+    const okEdit = equipeRoutes.validateTeamMemberPayload({
+        nome: 'Prof. Ricardo Atualizado',
+        email: 'ricardo@procombate.com',
+        cargo: 'professor',
+        ativo: true
+    }, { isCreate: false });
+    assert.equal(okEdit.valid, true);
+    assert.equal(okEdit.data.senha, null);
+
+    // 3. Proteções de administrador (auto-remoção e último admin ativo)
+    const selfDisable = equipeRoutes.checkAdminSafetyGuard({
+        targetId: 1,
+        actorId: 1,
+        targetCurrentCargo: 'admin',
+        targetCurrentAtivo: 1,
+        nextCargo: 'admin',
+        nextAtivo: 0,
+        activeAdminsCount: 2,
+        isDelete: false
+    });
+    assert.equal(selfDisable.allowed, false);
+
+    const lastAdminDemote = equipeRoutes.checkAdminSafetyGuard({
+        targetId: 2,
+        actorId: 1,
+        targetCurrentCargo: 'admin',
+        targetCurrentAtivo: 1,
+        nextCargo: 'professor',
+        nextAtivo: 1,
+        activeAdminsCount: 1,
+        isDelete: false
+    });
+    assert.equal(lastAdminDemote.allowed, false);
+
+    const deleteProfessor = equipeRoutes.checkAdminSafetyGuard({
+        targetId: 3,
+        actorId: 1,
+        targetCurrentCargo: 'professor',
+        targetCurrentAtivo: 1,
+        nextCargo: 'professor',
+        nextAtivo: 0,
+        activeAdminsCount: 1,
+        isDelete: true
+    });
+    assert.equal(deleteProfessor.allowed, true);
+
+    // 4. Fallback hardcoded "Mestre Carlos" removido do Dossiê 360°
+    const detalhesJs = fs.readFileSync(path.join(__dirname, '../public/js/aluno-detalhes.js'), 'utf8');
+    assert.equal(detalhesJs.includes('Mestre Carlos'), false, 'Fallback Mestre Carlos deve ser removido do dossiê');
+    assert.equal(detalhesJs.includes('Não Informado'), true, 'Fallback deve exibir Não Informado');
+});
+
 test.after(async () => {
     try {
         await pool.end();

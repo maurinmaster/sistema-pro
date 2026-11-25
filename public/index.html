@@ -109,6 +109,16 @@
                     <span>Quadro de Missões</span>
                     <span class="nav-badge" id="total-missoes-pendentes-count" style="display: none; background: #f59e0b; color: #090d16;">0</span>
                 </a>
+                <a class="nav-item" data-view="equipe" id="nav-equipe" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    <span>Professores &amp; Equipe</span>
+                    <span class="nav-badge" id="total-equipe-count" style="display: none; background: #38bdf8; color: #090d16;">0</span>
+                </a>
                 <a class="nav-item" data-view="mensagens" id="nav-mensagens" style="display: none;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -124,7 +134,7 @@
                     <div class="user-avatar">AD</div>
                     <div class="user-info" style="flex: 1; min-width: 0;">
                         <div class="user-name" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            Mestre Carlos</div>
+                            Administrador</div>
                         <div class="user-role">Administrador Geral</div>
                     </div>
                 </div>
@@ -1419,6 +1429,97 @@
                         </div>
                         <div id="lista-missoes-validacoes" style="display: flex; flex-direction: column; gap: 10px;">
                             <!-- Renderizado via MissoesModule -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- VIEW 9: PROFESSORES & EQUIPE (ADMIN) -->
+                <section class="view-section" id="view-equipe">
+                    <div class="section-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px;">
+                        <div>
+                            <h3 style="margin: 0; font-size: 20px; color: #ffffff;">Professores &amp; Equipe</h3>
+                            <p style="margin: 3px 0 0 0; font-size: 13px; color: var(--text-muted);">Gerencie professores avaliadores, administradores e recepção do centro de treinamento.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <button type="button" class="btn btn-secondary btn-icon-refresh" id="btn-recarregar-equipe" title="Atualizar lista" aria-label="Atualizar lista">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                    <polyline points="23 4 23 10 17 10" />
+                                    <polyline points="1 20 1 14 7 14" />
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                                </svg>
+                            </button>
+                            <button type="button" class="btn btn-primary" id="btn-novo-membro-equipe">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                <span>+ Novo Professor / Membro</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 20px;">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Professores Ativos</span>
+                                <div class="stat-icon" style="background: rgba(56, 189, 248, 0.12); color: #38bdf8;">
+                                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-equipe-professores" style="color: #38bdf8;">0</div>
+                            <div class="stat-meta">Disponíveis como avaliadores</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Membros Ativos</span>
+                                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+                                    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-equipe-ativos" style="color: #10b981;">0</div>
+                            <div class="stat-meta">Com acesso liberado</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <span class="stat-title">Cadastros Inativos</span>
+                                <div class="stat-icon" style="background: rgba(148, 163, 184, 0.12); color: #94a3b8;">
+                                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                                </div>
+                            </div>
+                            <div class="stat-value" id="kpi-equipe-inativos">0</div>
+                            <div class="stat-meta">Desativados temporariamente</div>
+                        </div>
+                    </div>
+
+                    <div class="exame-filter-bar" style="margin-bottom: 16px;">
+                        <input type="text" id="equipe-busca" class="form-input" placeholder="Buscar por nome, e-mail ou telefone..." style="flex: 1; min-width: 220px;">
+                        <select id="equipe-filtro-cargo" class="form-select" style="max-width: 190px;">
+                            <option value="todos">Todos os Cargos</option>
+                            <option value="professor">Professores</option>
+                            <option value="admin">Administradores</option>
+                            <option value="recepcao">Recepção</option>
+                        </select>
+                        <select id="equipe-filtro-status" class="form-select" style="max-width: 170px;">
+                            <option value="todos">Todos os Status</option>
+                            <option value="ativo">Ativos</option>
+                            <option value="inativo">Inativos</option>
+                        </select>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-responsive">
+                            <table class="data-table" id="tabela-equipe">
+                                <thead>
+                                    <tr>
+                                        <th>Professor / Membro</th>
+                                        <th>Cargo</th>
+                                        <th>Contato / WhatsApp</th>
+                                        <th>Avaliações</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabela-equipe-corpo">
+                                    <!-- Renderizado via EquipeModule -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </section>
@@ -3509,12 +3610,77 @@
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO / EDIÇÃO DE PROFESSOR / EQUIPE -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-equipe">
+        <div class="modal-box" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3 id="modal-equipe-titulo">Novo Professor / Membro da Equipe</h3>
+                <button class="modal-close" onclick="UI.closeModal('modal-equipe')">&times;</button>
+            </div>
+            <form id="form-equipe">
+                <div class="modal-body">
+                    <input type="hidden" id="equipe-id">
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="equipe-nome">Nome Completo <span class="required">*</span></label>
+                        <input type="text" id="equipe-nome" class="form-input" maxlength="120" required
+                            placeholder="Ex: Prof. Rodrigo Oliveira">
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 14px;">
+                        <div class="form-group">
+                            <label for="equipe-email">E-mail de Acesso <span class="required">*</span></label>
+                            <input type="email" id="equipe-email" class="form-input" maxlength="120" required
+                                placeholder="professor@procombate.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="equipe-cargo">Cargo / Permissão <span class="required">*</span></label>
+                            <select id="equipe-cargo" class="form-select" required>
+                                <option value="professor">Professor / Avaliador</option>
+                                <option value="admin">Administrador Geral</option>
+                                <option value="recepcao">Recepção / Atendimento</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="equipe-telefone">WhatsApp / Telefone</label>
+                        <input type="text" id="equipe-telefone" class="form-input" maxlength="20"
+                            placeholder="(11) 99999-9999">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="equipe-senha" id="equipe-senha-label">Senha de Acesso <span class="required">*</span></label>
+                        <div style="display: flex; gap: 8px;">
+                            <input type="text" id="equipe-senha" class="form-input" maxlength="128"
+                                placeholder="Mínimo 6 caracteres">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-gerar-senha-equipe" title="Gerar senha automática">
+                                Gerar
+                            </button>
+                        </div>
+                    </div>
+
+                    <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-main);">
+                        <input type="checkbox" id="equipe-ativo" checked style="width: 16px; height: 16px; accent-color: #10b981;">
+                        <span>Cadastro ativo (liberado para login e seleção como avaliador)</span>
+                    </label>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-equipe')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" id="btn-salvar-equipe">Salvar Cadastro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts da Aplicação (Vanilla JS) -->
     <script src="/js/api.js"></script>
     <script src="/js/ui.js"></script>
-    <script src="/js/auth.js?v=1.2"></script>
+    <script src="/js/auth.js?v=1.3"></script>
     <script src="/js/rpg-avaliacao.js?v=2.0"></script>
-    <script src="/js/aluno-detalhes.js?v=1.6"></script>
+    <script src="/js/aluno-detalhes.js?v=1.7"></script>
     <script src="/js/alunos.js?v=5.6"></script>
     <script src="/js/dashboard.js?v=1.2"></script>
     <script src="/js/checkins.js"></script>
@@ -3524,7 +3690,8 @@
     <script src="/js/missoes.js?v=1.0"></script>
     <script src="/js/exames.js?v=4.0"></script>
     <script src="/js/mensagens-config.js?v=1.3"></script>
-    <script src="/js/app.js?v=4.1"></script>
+    <script src="/js/equipe.js?v=1.0"></script>
+    <script src="/js/app.js?v=4.2"></script>
 </body>
 
 </html>

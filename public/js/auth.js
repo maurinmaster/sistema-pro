@@ -106,6 +106,7 @@ const AuthModule = {
                 CheckinsModule.loadRecentes();
             }
             if (window.GraduacoesModule) GraduacoesModule.loadCatalogo();
+            if (window.EquipeModule && u && u.cargo === 'admin') EquipeModule.loadAll();
         } catch (err) {
             if (alertBox) {
                 alertBox.textContent = err.message || 'Erro ao realizar login.';
@@ -195,7 +196,11 @@ const AuthModule = {
         const btnNovoAluno = document.getElementById('btn-novo-aluno');
         const navMensagens = document.getElementById('nav-mensagens');
         const navMissoes = document.getElementById('nav-missoes');
+        const navEquipe = document.getElementById('nav-equipe');
 
+        if (navEquipe) {
+            navEquipe.style.display = u.cargo === 'admin' ? 'flex' : 'none';
+        }
         if (navMensagens) {
             navMensagens.style.display = u.cargo === 'admin' ? 'flex' : 'none';
         }
@@ -211,6 +216,10 @@ const AuthModule = {
         if (u.cargo !== 'admin') {
             const viewMensagens = document.getElementById('view-mensagens');
             if (viewMensagens && viewMensagens.classList.contains('active')) {
+                document.getElementById('nav-dashboard')?.click();
+            }
+            const viewEquipe = document.getElementById('view-equipe');
+            if (viewEquipe && viewEquipe.classList.contains('active')) {
                 document.getElementById('nav-dashboard')?.click();
             }
         }
@@ -248,6 +257,8 @@ const AuthModule = {
             case 'manage_missoes':
                 return ['admin', 'professor'].includes(cargo);
             case 'manage_mensagens':
+                return cargo === 'admin';
+            case 'manage_equipe':
                 return cargo === 'admin';
             case 'checkin':
                 return ['admin', 'recepcao', 'professor'].includes(cargo);

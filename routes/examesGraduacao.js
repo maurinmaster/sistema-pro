@@ -1356,13 +1356,14 @@ router.post('/eventos/:id/concluir-promocoes', authenticateToken, authorizeRoles
 
                 await conn.query(`
                     INSERT INTO aluno_graduacoes (
-                        aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, observacoes, atual
-                    ) VALUES (?, ?, ?, ?, ?, 1)
+                        aluno_id, modalidade_id, graduacao_nivel_id, data_graduacao, professor_avaliador_id, observacoes, atual
+                    ) VALUES (?, ?, ?, ?, ?, ?, 1)
                 `, [
                     conv.aluno_id,
                     conv.modalidade_id,
                     conv.graduacao_pretendida_id,
                     dataGraduacao,
+                    usuarioId,
                     `Promovido no exame: ${evento.titulo}`
                 ]);
 
