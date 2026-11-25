@@ -85,7 +85,7 @@ const PainelAlunoApp = {
 
     initPwaInstall() {
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=7').catch(() => {});
+            navigator.serviceWorker.register('/sw.js?v=7').catch(() => { });
         }
 
         const banners = Array.from(document.querySelectorAll('[data-pwa-banner]'));
@@ -957,7 +957,7 @@ const PainelAlunoApp = {
 
         const isF = String(aluno.genero || '').toUpperCase() === 'F';
         const tom = aluno.avatar_tom || 'branca';
-        const modeloFile = isF 
+        const modeloFile = isF
             ? (tom === 'negra' ? 'mulher-negra.png' : 'mulher-branca.png')
             : (tom === 'negra' ? 'homem-negro.png' : 'homem-branco.png');
         const cabeloFile = aluno.avatar_cabelo || (isF ? 'cabelo-mulher-1.png' : 'cabelo-homem-1.png');
@@ -1246,12 +1246,12 @@ const PainelAlunoApp = {
                 <select id="portal-rpg-compare-select" class="portal-rpg-select">
                     <option value="none" ${this.portalRpgCompareId === 'none' ? 'selected' : ''}>Sem comparação</option>
                     ${candidates.map((c) => {
-                        const cDate = c.data_avaliacao ? new Date(c.data_avaliacao).toLocaleDateString('pt-BR') : `#${c.id}`;
-                        const cScore = Math.round(Number(c.score_total || 0));
-                        const cRank = this.escapeHtml(c.rank_combate || 'D');
-                        const selected = anterior && String(anterior.id) === String(c.id) ? 'selected' : '';
-                        return `<option value="${Number(c.id)}" ${selected}>${this.escapeHtml(cDate)} • ${cScore}/100 (Rank ${cRank})</option>`;
-                    }).join('')}
+            const cDate = c.data_avaliacao ? new Date(c.data_avaliacao).toLocaleDateString('pt-BR') : `#${c.id}`;
+            const cScore = Math.round(Number(c.score_total || 0));
+            const cRank = this.escapeHtml(c.rank_combate || 'D');
+            const selected = anterior && String(anterior.id) === String(c.id) ? 'selected' : '';
+            return `<option value="${Number(c.id)}" ${selected}>${this.escapeHtml(cDate)} • ${cScore}/100 (Rank ${cRank})</option>`;
+        }).join('')}
                 </select>
             </div>
         ` : '';
@@ -1273,26 +1273,26 @@ const PainelAlunoApp = {
                 <summary class="rpg-criteria-summary">Ver notas dos 20 critérios</summary>
                 <div style="margin-top: 10px; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
                     ${ui.PILLARS.map((pillar) => {
-                        const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
-                        const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
-                        return `
+            const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
+            const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
+            return `
                             <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.18); border-top: 2px solid ${pillarColor}; border-radius: 12px; padding: 10px 12px;">
                                 <div style="font-size: 12.5px; font-weight: 800; color: ${pillarColor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
                                 ${items.map((c) => {
-                                    const maxScale = ui.CRITERIA_MAX || 10;
-                                    const capSpar = ui.SPARRING_CAP || 6;
-                                    const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
-                                    const lockTxt = !aptoSparring && c.isSparring ? ` (teto ${capSpar})` : '';
-                                    return `
+                const maxScale = ui.CRITERIA_MAX || 10;
+                const capSpar = ui.SPARRING_CAP || 6;
+                const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
+                const lockTxt = !aptoSparring && c.isSparring ? ` (teto ${capSpar})` : '';
+                return `
                                         <div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; color:#cbd5e1; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
                                             <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:12px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
                                             <strong style="color:#f8fafc; white-space:nowrap;">${val}/${maxScale}${this.escapeHtml(lockTxt)}</strong>
                                         </div>
                                     `;
-                                }).join('')}
+            }).join('')}
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
             </details>
         ` : '';
@@ -1698,12 +1698,12 @@ const PainelAlunoApp = {
                 <select id="modal-qa-rpg-compare-select" class="portal-rpg-select">
                     <option value="none" ${this.portalRpgCompareId === 'none' ? 'selected' : ''}>Sem comparação</option>
                     ${candidates.map((c) => {
-                        const cDate = c.data_avaliacao ? new Date(c.data_avaliacao).toLocaleDateString('pt-BR') : `#${c.id}`;
-                        const cScore = Math.round(Number(c.score_total || 0));
-                        const cRank = this.escapeHtml(c.rank_combate || 'D');
-                        const selected = anterior && String(anterior.id) === String(c.id) ? 'selected' : '';
-                        return `<option value="${Number(c.id)}" ${selected}>${this.escapeHtml(cDate)} • ${cScore}/100 (Rank ${cRank})</option>`;
-                    }).join('')}
+            const cDate = c.data_avaliacao ? new Date(c.data_avaliacao).toLocaleDateString('pt-BR') : `#${c.id}`;
+            const cScore = Math.round(Number(c.score_total || 0));
+            const cRank = this.escapeHtml(c.rank_combate || 'D');
+            const selected = anterior && String(anterior.id) === String(c.id) ? 'selected' : '';
+            return `<option value="${Number(c.id)}" ${selected}>${this.escapeHtml(cDate)} • ${cScore}/100 (Rank ${cRank})</option>`;
+        }).join('')}
                 </select>
             </div>
         ` : '';
@@ -1719,26 +1719,26 @@ const PainelAlunoApp = {
                 <h4 class="qa-modal-section-title">Notas dos 20 Critérios</h4>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px;">
                     ${ui.PILLARS.map((pillar) => {
-                        const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
-                        const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
-                        return `
+            const items = ui.CRITERIA.filter((c) => c.pilar === pillar.id);
+            const pillarColor = this.sanitizeColor(pillar.cor, '#38bdf8');
+            return `
                             <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.18); border-top: 2px solid ${pillarColor}; border-radius: 12px; padding: 10px 12px;">
                                 <div style="font-size: 12.5px; font-weight: 800; color: ${pillarColor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
                                 ${items.map((c) => {
-                                    const maxScale = ui.CRITERIA_MAX || 10;
-                                    const capSpar = ui.SPARRING_CAP || 6;
-                                    const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
-                                    const lockTxt = !aptoSparring && c.isSparring ? ` (teto ${capSpar})` : '';
-                                    return `
+                const maxScale = ui.CRITERIA_MAX || 10;
+                const capSpar = ui.SPARRING_CAP || 6;
+                const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
+                const lockTxt = !aptoSparring && c.isSparring ? ` (teto ${capSpar})` : '';
+                return `
                                         <div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; color:#cbd5e1; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
                                             <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:12px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
                                             <strong style="color:#f8fafc; white-space:nowrap;">${val}/${maxScale}${this.escapeHtml(lockTxt)}</strong>
                                         </div>
                                     `;
-                                }).join('')}
+            }).join('')}
                             </div>
                         `;
-                    }).join('')}
+        }).join('')}
                 </div>
             </div>
         ` : '';
@@ -1777,6 +1777,13 @@ const PainelAlunoApp = {
         });
     },
 
+    isConquistaImageIcon(icone) {
+        if (typeof icone !== 'string') return false;
+        const trimmed = icone.trim();
+        if (!trimmed || trimmed.includes('..') || trimmed.length > 255) return false;
+        return /^\/uploads\/(conquistas|alunos|wiki)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
+    },
+
     renderModalQaConquistas() {
         const body = document.getElementById('modal-qa-conquistas-body');
         if (!body) return;
@@ -1795,19 +1802,23 @@ const PainelAlunoApp = {
                 </div>
                 ${conquistasProf.length === 0 ? `
                     <p class="qa-modal-empty-msg" style="font-size: 13px;">
-                        Conquistas especiais registradas pelo seu professor (como Primeira Luta, 6 Lutas ou Sequência de Vitórias) aparecerão em destaque aqui.
+                        Conquistas especiais registradas pelo seu professor aparecerão em destaque aqui.
                     </p>
                 ` : `
                     <div class="portal-prof-conquistas-grid">
                         ${conquistasProf.map((cp) => {
-                            const accent = this.sanitizeColor(cp.cor_hex, '#f59e0b');
-                            const dataFmt = cp.data_conquista
-                                ? new Date(`${cp.data_conquista}T12:00:00Z`).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
-                                : '';
-                            return `
+            const accent = this.sanitizeColor(cp.cor_hex, '#f59e0b');
+            const dataFmt = cp.data_conquista
+                ? new Date(`${cp.data_conquista}T12:00:00Z`).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+                : '';
+            const safeIconUrl = this.isConquistaImageIcon(cp.icone) ? this.sanitizeUrl(cp.icone) : '';
+            const iconHtml = safeIconUrl
+                ? `<img src="${safeIconUrl}" alt="${this.escapeHtml(cp.titulo || 'Conquista')}" class="portal-prof-conquista-icon-img" loading="lazy">`
+                : `<span>${this.escapeHtml(cp.icone || '🥊')}</span>`;
+            return `
                                 <div class="portal-prof-conquista-card" style="border-color: ${accent}66; background: ${accent}14;">
                                     <div class="portal-prof-conquista-icon" style="background: ${accent}24; border-color: ${accent}55;">
-                                        <span>${this.escapeHtml(cp.icone || '🥊')}</span>
+                                        ${iconHtml}
                                     </div>
                                     <div class="portal-prof-conquista-body">
                                         <div class="portal-prof-conquista-top">
@@ -1822,7 +1833,7 @@ const PainelAlunoApp = {
                                     </div>
                                 </div>
                             `;
-                        }).join('')}
+        }).join('')}
                     </div>
                 `}
             </div>
@@ -2060,8 +2071,8 @@ const PainelAlunoApp = {
                     ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
                     : diaNum;
 
-                const diaTitle = isAtivo 
-                    ? `Treino Concluído em ${d.data}` 
+                const diaTitle = isAtivo
+                    ? `Treino Concluído em ${d.data}`
                     : (isHoje ? `Hoje (${d.data}) - Treine para manter o fogo!` : `${d.data}`);
 
                 return `
@@ -2117,12 +2128,12 @@ const PainelAlunoApp = {
         }
 
         if (counterText) counterText.textContent = `${dominados} de ${total} ${total === 1 ? 'técnica dominada' : 'técnicas dominadas'}`;
-        
+
         if (percentPill) {
             percentPill.textContent = `${pct}%`;
             percentPill.classList.toggle('apto', isApto);
         }
-        
+
         if (progressBar) {
             progressBar.style.width = `${pct}%`;
             progressBar.classList.toggle('apto', isApto);
@@ -2723,7 +2734,7 @@ const PainelAlunoApp = {
             glovesContainer.innerHTML = glovesList.map(g => {
                 const isSelected = g.id === this.customizerState.luva;
                 const isLocked = !g.desbloqueada;
-                const lockBadge = isLocked 
+                const lockBadge = isLocked
                     ? `<span class="glove-lock-badge">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         Faltam ${g.faltam_checkins} treinos
@@ -2817,7 +2828,7 @@ const PainelAlunoApp = {
         if (!this.customizerState) return;
         const { isFeminino, tom, cabelo, luva, titulo } = this.customizerState;
 
-        const bodyFile = isFeminino 
+        const bodyFile = isFeminino
             ? (tom === 'negra' ? 'mulher-negra.png' : 'mulher-branca.png')
             : (tom === 'negra' ? 'homem-negro.png' : 'homem-branco.png');
 
@@ -2892,7 +2903,7 @@ const PainelAlunoApp = {
 
             // Atualiza imediatamente a visualização do avatar no dashboard
             const isF = this.customizerState.isFeminino;
-            const bodyFile = isF 
+            const bodyFile = isF
                 ? (tom === 'negra' ? 'mulher-negra.png' : 'mulher-branca.png')
                 : (tom === 'negra' ? 'homem-negro.png' : 'homem-branco.png');
 
@@ -3478,6 +3489,13 @@ const PainelAlunoApp = {
         ctx.fillText(`${unlocked.length} de ${totalConquistasCard} desbloqueadas`, W - 104, 1188);
 
         const listToShow = unlocked.slice(0, 6);
+        const iconImgs = await Promise.all(
+            listToShow.map((c) => {
+                if (!this.isConquistaImageIcon(c.icone)) return Promise.resolve(null);
+                const safeSrc = this.sanitizeUrl(c.icone);
+                return safeSrc ? this.loadImageSafe(safeSrc) : Promise.resolve(null);
+            })
+        );
         if (listToShow.length === 0) {
             ctx.textAlign = 'center';
             ctx.fillStyle = '#cbd5e1';
@@ -3500,10 +3518,23 @@ const PainelAlunoApp = {
                 ctx.strokeStyle = 'rgba(245, 158, 11, 0.35)';
                 ctx.stroke();
 
-                ctx.textAlign = 'left';
-                ctx.font = '42px sans-serif';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(c.icone || '🏆', bx + 22, by + 88);
+                const iconImg = iconImgs[idx];
+                if (iconImg) {
+                    const ix = bx + 20;
+                    const iy = by + 50;
+                    const isize = 48;
+                    ctx.save();
+                    this.drawRoundedRect(ctx, ix, iy, isize, isize, 10);
+                    ctx.clip();
+                    ctx.drawImage(iconImg, ix, iy, isize, isize);
+                    ctx.restore();
+                } else {
+                    const emojiText = this.isConquistaImageIcon(c.icone) ? '🏅' : (c.icone || '🏆');
+                    ctx.textAlign = 'left';
+                    ctx.font = '42px sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(emojiText, bx + 22, by + 88);
+                }
 
                 ctx.font = '700 24px Plus Jakarta Sans, sans-serif';
                 ctx.fillStyle = '#f8fafc';
@@ -3645,8 +3676,8 @@ const PainelAlunoApp = {
         if (!prajiedContainer) return;
 
         // Configura classe e atributos para diferenciar Homem vs Mulher
-        const isF = isFeminino !== undefined 
-            ? Boolean(isFeminino) 
+        const isF = isFeminino !== undefined
+            ? Boolean(isFeminino)
             : String(this.alunoData?.aluno?.genero || '').toUpperCase() === 'F';
         const genderClass = isF ? 'prajied-mulher' : 'prajied-homem';
         const genderAttr = isF ? 'F' : 'M';
@@ -3656,8 +3687,8 @@ const PainelAlunoApp = {
         if (modeloFile) prajiedContainer.setAttribute('data-model', modeloFile);
 
         // Identifica se a graduação atual ou associada é de Muay Thai
-        const mt = graduacao?.muay_thai || 
-                   (graduacao?.atual?.modalidade?.toLowerCase().includes('muay') ? graduacao.atual : null);
+        const mt = graduacao?.muay_thai ||
+            (graduacao?.atual?.modalidade?.toLowerCase().includes('muay') ? graduacao.atual : null);
 
         if (!mt) {
             prajiedContainer.style.display = 'none';
@@ -3906,17 +3937,17 @@ const PainelAlunoApp = {
         container.innerHTML = `
             <div class="evolucao-rpg-list">
                 ${historico.map((item, idx) => {
-                    const prev = historico[idx + 1] || null;
-                    const deltas = prev ? ui.computeDeltas(item, prev) : null;
-                    const score = Math.round(Number(item.score_total || 0));
-                    const apto = item.apto_sparring !== false && item.apto_sparring !== 0;
-                    const arquetipo = item.arquetipo || ui.computeArchetype(item.pilares, score);
-                    const dataStr = item.data_avaliacao ? new Date(item.data_avaliacao).toLocaleDateString('pt-BR') : 'Recente';
-                    const avaliador = this.escapeHtml(item.avaliador_nome || 'Instrutor');
-                    const obsHtml = item.observacoes_instrutor
-                        ? `<div class="portal-rpg-note"><strong style="color:#7dd3fc;">Feedback:</strong> ${this.escapeHtml(item.observacoes_instrutor)}</div>`
-                        : '';
-                    return `
+            const prev = historico[idx + 1] || null;
+            const deltas = prev ? ui.computeDeltas(item, prev) : null;
+            const score = Math.round(Number(item.score_total || 0));
+            const apto = item.apto_sparring !== false && item.apto_sparring !== 0;
+            const arquetipo = item.arquetipo || ui.computeArchetype(item.pilares, score);
+            const dataStr = item.data_avaliacao ? new Date(item.data_avaliacao).toLocaleDateString('pt-BR') : 'Recente';
+            const avaliador = this.escapeHtml(item.avaliador_nome || 'Instrutor');
+            const obsHtml = item.observacoes_instrutor
+                ? `<div class="portal-rpg-note"><strong style="color:#7dd3fc;">Feedback:</strong> ${this.escapeHtml(item.observacoes_instrutor)}</div>`
+                : '';
+            return `
                         <article class="evolucao-rpg-history-card">
                             <div class="rpg-accordion-head-top">
                                 <div class="rpg-accordion-rank-group">
@@ -3938,7 +3969,7 @@ const PainelAlunoApp = {
                             ${obsHtml}
                         </article>
                     `;
-                }).join('')}
+        }).join('')}
             </div>
         `;
     },
@@ -4750,9 +4781,9 @@ const PainelAlunoApp = {
                         ${isFiltrado ? 'Nenhuma técnica encontrada para os filtros selecionados' : 'Nenhuma técnica cadastrada para esta graduação'}
                     </h3>
                     <p class="curriculum-empty-desc">
-                        ${isFiltrado 
-                            ? 'Experimente alterar o termo de busca, selecionar outra categoria ou alternar para outra faixa.'
-                            : 'A equipe técnica ainda está vinculando os movimentos para esta faixa. Você pode consultar as faixas anteriores ou todo o catálogo técnico.'}
+                        ${isFiltrado
+                    ? 'Experimente alterar o termo de busca, selecionar outra categoria ou alternar para outra faixa.'
+                    : 'A equipe técnica ainda está vinculando os movimentos para esta faixa. Você pode consultar as faixas anteriores ou todo o catálogo técnico.'}
                     </p>
                     <div style="margin-top: 16px; display: flex; justify-content: center; gap: 10px;">
                         <button type="button" class="btn-empty-reset" onclick="PainelAlunoApp.selecionarFaixaWikiSpa('todas'); document.querySelectorAll('#wiki-spa-category-pills .curriculum-pill').forEach(b => b.classList.toggle('active', b.dataset.category === 'todos')); PainelAlunoApp.wikiSpaFiltroCategoria='todos'; PainelAlunoApp.renderWikiSpaGrid();">
@@ -5397,7 +5428,7 @@ const PainelAlunoApp = {
             const bodyPayload = { motivo };
             if (queryAlunoId) bodyPayload.aluno_id = parseInt(queryAlunoId, 10);
 
-            let endpoint = conviteId 
+            let endpoint = conviteId
                 ? `/api/aluno/exames/${conviteId}/recusar`
                 : (exameId ? `/api/aluno/exames/${exameId}/recusar-evento` : null);
 
@@ -6334,7 +6365,7 @@ const PainelAlunoApp = {
 
         const isManual = item.origem_pagamento === 'manual';
         const valorFmt = (item.valor_pago || item.valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-        const dataPagamentoFmt = item.data_pagamento 
+        const dataPagamentoFmt = item.data_pagamento
             ? new Date(item.data_pagamento).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
             : 'Data confirmada em sistema';
 

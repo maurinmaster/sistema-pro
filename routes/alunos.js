@@ -7,7 +7,7 @@ const multer = require('multer');
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const { validateMinorGuardian, hasValidImageSignature } = require('../services/domainRules');
-const { persistUploadedFile, removeUploadedFile } = require('../services/uploadStorage');
+const { persistUploadedFile, removeUploadedFile, detectImageMimeFromFile } = require('../services/uploadStorage');
 const MatriculaService = require('../services/matriculaService');
 const emailService = require('../services/emailService');
 const whatsappService = require('../services/whatsappService');
@@ -86,6 +86,80 @@ router.post('/upload-foto', authenticateToken, authorizeRoles('admin', 'recepcao
         } catch (err) {
             console.error('Erro no upload de foto:', err);
             res.status(500).json({ success: false, error: 'Falha no processamento da imagem.' });
+        }
+    });
+});
+
+// Configuração do Multer para ícones personalizados de conquistas (admin e professor)
+const conquistasUploadDir = path.join(__dirname, '../public/uploads/conquistas');
+if (!fs.existsSync(conquistasUploadDir)) {
+    fs.mkdirSync(conquistasUploadDir, { recursive: true });
+}
+
+const conquistaIconStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, conquistasUploadDir);
+    },
+    filename: (req, file, cb) => {
+        const allowedExts = ['.png', '.jpg', '.jpeg', '.webp', '.gif'];
+        const ext = path.extname(file.originalname || '').toLowerCase();
+        const safeExt = allowedExts.includes(ext) ? ext : '.png';
+        const cleanName = `icone-${Date.now()}-${Math.round(Math.random() * 1E6)}${safeExt}`;
+        cb(null, cleanName);
+    }
+});
+
+const uploadConquistaIcone = multer({
+    storage: conquistaIconStorage,
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB máx
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /^image\/(jpeg|jpg|png|webp|gif)$/;
+        const allowedExts = /\.(jpeg|jpg|png|webp|gif)$/;
+        const extname = allowedExts.test(path.extname(file.originalname || '').toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype || '');
+        if (extname && mimetype) {
+            return cb(null, true);
+        }
+        cb(new Error('Apenas imagens PNG, JPG, WEBP ou GIF são permitidas para o ícone.'));
+    }
+});
+
+// POST /api/alunos/conquistas-upload-icone - Upload de ícone personalizado de conquista (admin e professor)
+router.post('/conquistas-upload-icone', authenticateToken, authorizeRoles('admin', 'professor'), (req, res) => {
+    uploadConquistaIcone.single('icone')(req, res, async (uploadErr) => {
+        if (uploadErr) {
+            return res.status(400).json({
+                success: false,
+                error: uploadErr.code === 'LIMIT_FILE_SIZE'
+                    ? 'O ícone excede o limite máximo de 2MB.'
+                    : (uploadErr.message || 'Erro no envio do ícone.')
+            });
+        }
+
+        try {
+            if (!req.file) {
+                return res.status(400).json({ success: false, error: 'Nenhum arquivo enviado.' });
+            }
+
+            const realMime = detectImageMimeFromFile(req.file.path);
+            if (!realMime) {
+                try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+                return res.status(400).json({
+                    success: false,
+                    error: 'Arquivo inválido: envie uma imagem PNG, JPG, WEBP ou GIF legítima.'
+                });
+            }
+
+            const fileUrl = `/uploads/conquistas/${req.file.filename}`;
+            await persistUploadedFile(fileUrl, req.file.path);
+            res.json({
+                success: true,
+                url: fileUrl,
+                message: 'Ícone enviado com sucesso!'
+            });
+        } catch (err) {
+            console.error('Erro no upload de ícone de conquista:', err);
+            res.status(500).json({ success: false, error: 'Falha no processamento do ícone.' });
         }
     });
 });
@@ -1509,19 +1583,22 @@ router.post('/:id/conquistas-professor', authenticateToken, authorizeRoles('admi
         const dataFmtConq = normalizedConquista.data_conquista
             ? new Date(`${normalizedConquista.data_conquista}T12:00:00Z`).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
             : '';
+        const conquistaIconText = conquistasService.isImageIconUrl(normalizedConquista.icone)
+            ? '🏅'
+            : normalizedConquista.icone;
 
         Promise.resolve(
             notificationConfigService.dispatchEvent('conquista_desbloqueada', {
                 alunoId,
                 variables: {
-                    conquista: `${normalizedConquista.icone} ${normalizedConquista.titulo}`,
+                    conquista: `${conquistaIconText} ${normalizedConquista.titulo}`,
                     categoria: normalizedConquista.categoria,
                     descricao: normalizedConquista.descricao,
                     professor: normalizedConquista.professor_nome,
                     data: dataFmtConq
                 },
                 detalhes: [
-                    { label: 'Conquista', value: `${normalizedConquista.icone} ${normalizedConquista.titulo}` },
+                    { label: 'Conquista', value: `${conquistaIconText} ${normalizedConquista.titulo}` },
                     { label: 'Categoria', value: normalizedConquista.categoria },
                     { label: 'Descrição', value: normalizedConquista.descricao },
                     { label: 'Concedida por', value: normalizedConquista.professor_nome },

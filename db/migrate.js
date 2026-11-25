@@ -442,7 +442,7 @@ async function runMigrations() {
                 codigo_preset VARCHAR(60) NULL,
                 titulo VARCHAR(100) NOT NULL,
                 descricao VARCHAR(255) NOT NULL,
-                icone VARCHAR(20) NOT NULL DEFAULT '🥊',
+                icone VARCHAR(255) NOT NULL DEFAULT '🥊',
                 categoria VARCHAR(40) NOT NULL DEFAULT 'Lutas',
                 cor_hex VARCHAR(10) NOT NULL DEFAULT '#f59e0b',
                 data_conquista DATE NOT NULL,
@@ -459,7 +459,7 @@ async function runMigrations() {
                 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 titulo VARCHAR(100) NOT NULL,
                 descricao VARCHAR(255) NOT NULL,
-                icone VARCHAR(20) NOT NULL DEFAULT '🥊',
+                icone VARCHAR(255) NOT NULL DEFAULT '🥊',
                 categoria VARCHAR(40) NOT NULL DEFAULT 'Lutas',
                 cor_hex VARCHAR(10) NOT NULL DEFAULT '#f59e0b',
                 criado_por BIGINT UNSIGNED NULL,
@@ -468,6 +468,17 @@ async function runMigrations() {
                 CONSTRAINT fk_cmc_prof FOREIGN KEY (criado_por) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
+
+        try {
+            await pool.query("ALTER TABLE aluno_conquistas_manuais MODIFY COLUMN icone VARCHAR(255) NOT NULL DEFAULT '🥊'");
+        } catch (err) {
+            if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+        }
+        try {
+            await pool.query("ALTER TABLE conquistas_modelos_custom MODIFY COLUMN icone VARCHAR(255) NOT NULL DEFAULT '🥊'");
+        } catch (err) {
+            if (err.code !== 'ER_BAD_FIELD_ERROR') throw err;
+        }
 
         // 10. Histórico de Dados Físicos para Comparativo de Evolução
         await pool.query(`

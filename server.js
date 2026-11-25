@@ -80,10 +80,10 @@ app.get('/favicon.ico', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'assets', 'icons', 'icon-192.png'));
 });
 
-// Serve uploads dinâmicos (wiki/alunos) com restauração automática de diretório compartilhado / MySQL
+// Serve uploads dinâmicos (wiki/alunos/conquistas) com restauração automática de diretório compartilhado / MySQL
 app.get('/uploads/:folder/:filename', async (req, res, next) => {
     const folder = String(req.params.folder || '').toLowerCase();
-    if (folder !== 'wiki' && folder !== 'alunos') {
+    if (folder !== 'wiki' && folder !== 'alunos' && folder !== 'conquistas') {
         return next();
     }
 

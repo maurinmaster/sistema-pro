@@ -3125,6 +3125,26 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     assert.equal(normCustom.id, 12);
     assert.equal(normCustom.codigo, 'custom_12');
     assert.equal(normCustom.custom, true);
+
+    // Ícones editáveis (emojis livres e upload de imagem) + proteção contra XSS/traversal
+    assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/icone-170000.png'), true);
+    assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/icone-170000.webp'), true);
+    assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/icone-170000.svg'), false);
+    assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/../evil.png'), false);
+    assert.equal(conquistasService.isImageIconUrl('https://evil.com/icon.png'), false);
+
+    assert.equal(conquistasService.sanitizeAchievementIcon('/uploads/conquistas/icone-170000.png'), '/uploads/conquistas/icone-170000.png');
+    assert.equal(conquistasService.sanitizeAchievementIcon('🐉'), '🐉');
+    assert.equal(conquistasService.sanitizeAchievementIcon('javascript:alert(1)'), '🥊');
+    assert.equal(conquistasService.sanitizeAchievementIcon('<img src=x>'), '🥊');
+
+    const { parseUploadUrl } = require('../services/uploadStorage');
+    assert.deepEqual(parseUploadUrl('/uploads/conquistas/icone-12345.png'), {
+        folder: 'conquistas',
+        filename: 'icone-12345.png',
+        urlPath: '/uploads/conquistas/icone-12345.png'
+    });
+    assert.equal(parseUploadUrl('/uploads/conquistas/../secret.png'), null);
 });
 
 test.after(async () => {

@@ -8,7 +8,7 @@ const path = require('path');
 const os = require('os');
 const pool = require('../db/connection');
 
-const ALLOWED_FOLDERS = new Set(['wiki', 'alunos']);
+const ALLOWED_FOLDERS = new Set(['wiki', 'alunos', 'conquistas']);
 const SAFE_FILENAME_REGEX = /^[a-zA-Z0-9._-]+$/;
 const MAX_DB_FILE_BYTES = 16 * 1024 * 1024; // 16MB
 
@@ -20,12 +20,12 @@ const PARENT_4 = path.resolve(__dirname, '..', '..', '..', '..');
 const IS_HOSTINGER_HBUILDS = path.basename(PARENT_3).toLowerCase() === 'hbuilds';
 
 /**
- * Valida e normaliza URL pública no formato /uploads/<wiki|alunos>/<arquivo>
+ * Valida e normaliza URL pública no formato /uploads/<wiki|alunos|conquistas>/<arquivo>
  */
 function parseUploadUrl(urlPath) {
     if (!urlPath || typeof urlPath !== 'string') return null;
     const clean = urlPath.split('?')[0].split('#')[0].trim();
-    const match = clean.match(/^\/uploads\/(wiki|alunos)\/([a-zA-Z0-9._-]+)$/);
+    const match = clean.match(/^\/uploads\/(wiki|alunos|conquistas)\/([a-zA-Z0-9._-]+)$/);
     if (!match) return null;
 
     const folder = match[1];

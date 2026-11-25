@@ -84,6 +84,34 @@ const AlunoDetalhesModule = {
                 this.applyConquistaPreset(chip.getAttribute('data-preset-code'));
             });
         }
+
+        document.getElementById('btn-upload-conquista-icone')?.addEventListener('click', () => {
+            document.getElementById('conquista-prof-icone-file')?.click();
+        });
+
+        document.getElementById('conquista-prof-icone-file')?.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                this.uploadConquistaIconFile(file);
+            }
+            e.target.value = '';
+        });
+
+        document.getElementById('btn-remove-conquista-icone')?.addEventListener('click', () => {
+            this.setConquistaIconValue('🥊');
+        });
+
+        document.getElementById('conquista-prof-icone-texto')?.addEventListener('input', (e) => {
+            const raw = String(e.target.value || '').trim();
+            this.setConquistaIconValue(raw || '🥊', { fromTextInput: true });
+        });
+
+        document.getElementById('conquista-prof-emoji-picker')?.addEventListener('click', (e) => {
+            const btnEmoji = e.target.closest('.conquista-emoji-btn[data-emoji]');
+            if (!btnEmoji) return;
+            const emoji = btnEmoji.getAttribute('data-emoji') || '🥊';
+            this.setConquistaIconValue(emoji);
+        });
     },
 
     bindContractEvents() {
@@ -871,7 +899,7 @@ const AlunoDetalhesModule = {
                             return `
                                 <div class="conquista-prof-card" style="border-color: ${accent}55; background: ${accent}10;">
                                     <div class="conquista-prof-icon" style="background: ${accent}22; border-color: ${accent}55;">
-                                        <span>${UI.escapeHtml(cp.icone || '🥊')}</span>
+                                        ${this.renderConquistaIconHtml(cp.icone, cp.titulo, 'conquista-prof-icon-img')}
                                     </div>
                                     <div class="conquista-prof-body">
                                         <div class="conquista-prof-top">
@@ -1854,6 +1882,91 @@ const AlunoDetalhesModule = {
 
     conquistaModalMode: 'grant', // 'grant' | 'edit_award' | 'create_model' | 'edit_model'
 
+    isConquistaImageIcon(icone) {
+        if (typeof icone !== 'string') return false;
+        const trimmed = icone.trim();
+        if (!trimmed || trimmed.includes('..') || trimmed.length > 255) return false;
+        return /^\/uploads\/(conquistas|alunos|wiki)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
+    },
+
+    renderConquistaIconHtml(icone, altText = 'Ícone da conquista', imgClass = 'conquista-icone-img') {
+        if (this.isConquistaImageIcon(icone)) {
+            const safeUrl = UI.getSafeImageUrl(icone, '');
+            if (safeUrl) {
+                return `<img src="${safeUrl}" alt="${UI.escapeHtml(altText || 'Conquista')}" class="${UI.escapeHtml(imgClass)}" loading="lazy">`;
+            }
+        }
+        return `<span>${UI.escapeHtml(icone || '🥊')}</span>`;
+    },
+
+    setConquistaIconValue(val, opts = {}) {
+        const cleanVal = String(val || '').trim() || '🥊';
+        const hiddenInput = document.getElementById('conquista-prof-icone');
+        const textInput = document.getElementById('conquista-prof-icone-texto');
+        const previewBox = document.getElementById('conquista-prof-icone-preview');
+        const removeBtn = document.getElementById('btn-remove-conquista-icone');
+        const isImg = this.isConquistaImageIcon(cleanVal);
+
+        if (hiddenInput) hiddenInput.value = cleanVal;
+        if (previewBox) {
+            previewBox.innerHTML = this.renderConquistaIconHtml(cleanVal, 'Pré-visualização do ícone', 'conquista-icone-img');
+        }
+        if (removeBtn) {
+            removeBtn.style.display = isImg ? 'inline-flex' : 'none';
+        }
+        if (textInput && !opts.fromTextInput) {
+            textInput.value = isImg ? '' : cleanVal;
+        }
+        document.querySelectorAll('#conquista-prof-emoji-picker .conquista-emoji-btn').forEach((btn) => {
+            btn.classList.toggle('active', !isImg && btn.getAttribute('data-emoji') === cleanVal);
+        });
+    },
+
+    async uploadConquistaIconFile(file) {
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            UI.showToast('Formato inválido. Use PNG, JPG, WEBP ou GIF.', 'warning');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            UI.showToast('A imagem do ícone deve ter no máximo 2MB.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btn-upload-conquista-icone');
+        const origHtml = btn ? btn.innerHTML : '📤 Enviar Imagem';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('icone', file);
+
+            const token = typeof API !== 'undefined' && API.getToken ? API.getToken() : localStorage.getItem('procombate_token');
+            const res = await fetch('/api/alunos/conquistas-upload-icone', {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: formData
+            });
+            const data = await res.json();
+            if (!res.ok || !data.success || !data.url) {
+                throw new Error(data.error || 'Falha ao enviar ícone.');
+            }
+
+            this.setConquistaIconValue(data.url);
+            UI.showToast(data.message || 'Ícone enviado com sucesso!', 'success');
+        } catch (err) {
+            UI.showToast(err.message || 'Erro no upload do ícone.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    },
+
     getConquistaAllPresets() {
         const defaults = [
             { codigo: 'primeira_luta', titulo: 'Primeira Luta', icone: '🥊', categoria: 'Lutas', cor_hex: '#f59e0b', descricao: 'Realizou sua primeira luta oficial representando a equipe.' },
@@ -1877,7 +1990,7 @@ const AlunoDetalhesModule = {
                 const cor = UI.sanitizeColor(p.cor_hex, '#f59e0b');
                 return `
                     <button type="button" class="conquista-preset-chip" data-preset-code="${UI.escapeHtml(p.codigo)}" style="border-color: ${cor}55;">
-                        <span>${UI.escapeHtml(p.icone || '🥊')}</span>
+                        ${this.renderConquistaIconHtml(p.icone, p.titulo, 'conquista-chip-icone-img')}
                         <span>${UI.escapeHtml(p.titulo)}</span>
                     </button>
                 `;
@@ -1895,7 +2008,7 @@ const AlunoDetalhesModule = {
                     return `
                         <div class="conquista-custom-chip-wrap" style="border-color: ${cor}55;">
                             <button type="button" class="conquista-preset-chip custom-apply" onclick="AlunoDetalhesModule.applyConquistaPreset('${UI.escapeHtml(m.codigo)}')" title="${UI.escapeHtml(m.descricao || m.titulo)}">
-                                <span>${UI.escapeHtml(m.icone || '🥊')}</span>
+                                ${this.renderConquistaIconHtml(m.icone, m.titulo, 'conquista-chip-icone-img')}
                                 <span>${UI.escapeHtml(m.titulo)}</span>
                             </button>
                             <button type="button" class="conquista-chip-action-btn edit" onclick="AlunoDetalhesModule.startEditCustomConquistaModelo(${mid})" title="Editar modelo">✏️</button>
@@ -1960,6 +2073,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-edit-id').value = '';
         document.getElementById('conquista-prof-modelo-edit-id').value = '';
         document.getElementById('conquista-prof-data').value = new Date().toISOString().split('T')[0];
+        this.setConquistaIconValue('🥊');
 
         const sub = document.getElementById('conquista-prof-aluno-sub');
         if (sub) {
@@ -1988,7 +2102,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = item.titulo || '';
         document.getElementById('conquista-prof-descricao').value = item.descricao || '';
         document.getElementById('conquista-prof-categoria').value = item.categoria || 'Lutas';
-        document.getElementById('conquista-prof-icone').value = item.icone || '🥊';
+        this.setConquistaIconValue(item.icone || '🥊');
         document.getElementById('conquista-prof-cor').value = item.cor_hex || '#f59e0b';
         document.getElementById('conquista-prof-data').value = item.data_conquista || new Date().toISOString().split('T')[0];
 
@@ -2006,7 +2120,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = '';
         document.getElementById('conquista-prof-descricao').value = '';
         document.getElementById('conquista-prof-categoria').value = 'Lutas';
-        document.getElementById('conquista-prof-icone').value = '🥊';
+        this.setConquistaIconValue('🥊');
         document.getElementById('conquista-prof-cor').value = '#f59e0b';
         this.setConquistaModalMode('create_model');
     },
@@ -2022,7 +2136,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = mod.titulo || '';
         document.getElementById('conquista-prof-descricao').value = mod.descricao || '';
         document.getElementById('conquista-prof-categoria').value = mod.categoria || 'Lutas';
-        document.getElementById('conquista-prof-icone').value = mod.icone || '🥊';
+        this.setConquistaIconValue(mod.icone || '🥊');
         document.getElementById('conquista-prof-cor').value = mod.cor_hex || '#f59e0b';
         this.setConquistaModalMode('edit_model');
     },
@@ -2057,7 +2171,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = preset.titulo || '';
         document.getElementById('conquista-prof-descricao').value = preset.descricao || '';
         document.getElementById('conquista-prof-categoria').value = preset.categoria || 'Lutas';
-        document.getElementById('conquista-prof-icone').value = preset.icone || '🥊';
+        this.setConquistaIconValue(preset.icone || '🥊');
         document.getElementById('conquista-prof-cor').value = preset.cor_hex || '#f59e0b';
 
         document.querySelectorAll('#conquista-prof-presets .conquista-preset-chip, #conquista-prof-custom-presets .conquista-preset-chip').forEach((chip) => {

@@ -73,6 +73,40 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
 
 const ALLOWED_CATEGORIES = ['Lutas', 'Vitórias', 'Campeonatos', 'Mérito no Tatame'];
 const ALLOWED_ICONS = ['🥊', '🏆', '👑', '🔥', '⚡', '🥇', '💥', '⚔️', '🛡️', '⭐', '🥋', '🏅'];
+const SAFE_UPLOAD_ICON_REGEX = /^\/uploads\/(conquistas|alunos|wiki)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i;
+
+/**
+ * Verifica se o ícone informado aponta para um caminho local seguro de imagem enviada por upload.
+ */
+function isImageIconUrl(icone) {
+    if (typeof icone !== 'string') return false;
+    const trimmed = icone.trim();
+    if (!trimmed || trimmed.includes('..') || trimmed.length > 255) return false;
+    return SAFE_UPLOAD_ICON_REGEX.test(trimmed);
+}
+
+/**
+ * Higieniza o ícone da conquista aceitando imagem de upload segura, preset ou emoji/símbolo curto editável.
+ */
+function sanitizeAchievementIcon(rawIcon, fallback = '🥊') {
+    if (rawIcon === undefined || rawIcon === null) return fallback;
+    const str = String(rawIcon).trim();
+    if (!str) return fallback;
+
+    if (isImageIconUrl(str)) {
+        return str;
+    }
+
+    if (ALLOWED_ICONS.includes(str)) {
+        return str;
+    }
+
+    const cleaned = str.replace(/[\u0000-\u001F\u007F]/g, '').trim();
+    if (!cleaned || cleaned.length > 16) return fallback;
+    if (/[<>"'`/\\:;&={}()[\]]/.test(cleaned)) return fallback;
+
+    return cleaned;
+}
 
 let schemaPromise = null;
 
@@ -89,7 +123,7 @@ async function ensureProfessorAchievementsSchema(pool) {
                 codigo_preset VARCHAR(60) NULL,
                 titulo VARCHAR(100) NOT NULL,
                 descricao VARCHAR(255) NOT NULL,
-                icone VARCHAR(20) NOT NULL DEFAULT '🥊',
+                icone VARCHAR(255) NOT NULL DEFAULT '🥊',
                 categoria VARCHAR(40) NOT NULL DEFAULT 'Lutas',
                 cor_hex VARCHAR(10) NOT NULL DEFAULT '#f59e0b',
                 data_conquista DATE NOT NULL,
@@ -105,7 +139,7 @@ async function ensureProfessorAchievementsSchema(pool) {
                 id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
                 titulo VARCHAR(100) NOT NULL,
                 descricao VARCHAR(255) NOT NULL,
-                icone VARCHAR(20) NOT NULL DEFAULT '🥊',
+                icone VARCHAR(255) NOT NULL DEFAULT '🥊',
                 categoria VARCHAR(40) NOT NULL DEFAULT 'Lutas',
                 cor_hex VARCHAR(10) NOT NULL DEFAULT '#f59e0b',
                 criado_por BIGINT UNSIGNED NULL,
@@ -114,6 +148,14 @@ async function ensureProfessorAchievementsSchema(pool) {
                 CONSTRAINT fk_cmc_prof FOREIGN KEY (criado_por) REFERENCES usuarios_equipe(id) ON DELETE SET NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         `);
+
+        // Garante expansão da coluna icone em bancos existentes para suportar caminhos de upload
+        await pool.query(
+            "ALTER TABLE aluno_conquistas_manuais MODIFY COLUMN icone VARCHAR(255) NOT NULL DEFAULT '🥊'"
+        ).catch(() => {});
+        await pool.query(
+            "ALTER TABLE conquistas_modelos_custom MODIFY COLUMN icone VARCHAR(255) NOT NULL DEFAULT '🥊'"
+        ).catch(() => {});
     })().catch((err) => {
         schemaPromise = null;
         throw err;
@@ -142,8 +184,7 @@ function validateProfessorAchievementPayload(body = {}) {
     const rawCat = String(body.categoria || '').trim();
     const categoria = ALLOWED_CATEGORIES.includes(rawCat) ? rawCat : 'Lutas';
 
-    const rawIcon = String(body.icone || '').trim();
-    const icone = ALLOWED_ICONS.includes(rawIcon) ? rawIcon : '🥊';
+    const icone = sanitizeAchievementIcon(body.icone, '🥊');
 
     const rawColor = String(body.cor_hex || '').trim();
     const corHex = /^#[0-9A-Fa-f]{6}$/.test(rawColor) ? rawColor.toLowerCase() : '#f59e0b';
@@ -193,7 +234,7 @@ function normalizeProfessorAchievementRow(row = {}) {
         codigo_preset: row.codigo_preset || null,
         titulo: String(row.titulo || '').trim(),
         descricao: String(row.descricao || '').trim(),
-        icone: ALLOWED_ICONS.includes(String(row.icone || '').trim()) ? String(row.icone).trim() : '🥊',
+        icone: sanitizeAchievementIcon(row.icone, '🥊'),
         categoria: ALLOWED_CATEGORIES.includes(String(row.categoria || '').trim()) ? String(row.categoria).trim() : 'Lutas',
         cor_hex: /^#[0-9A-Fa-f]{6}$/.test(String(row.cor_hex || '').trim()) ? String(row.cor_hex).trim() : '#f59e0b',
         data_conquista: formatDateIso(row.data_conquista),
@@ -220,7 +261,7 @@ function normalizeCustomTemplateRow(row = {}) {
         codigo: idNum ? `custom_${idNum}` : null,
         titulo: String(row.titulo || '').trim(),
         descricao: String(row.descricao || '').trim(),
-        icone: ALLOWED_ICONS.includes(String(row.icone || '').trim()) ? String(row.icone).trim() : '🥊',
+        icone: sanitizeAchievementIcon(row.icone, '🥊'),
         categoria: ALLOWED_CATEGORIES.includes(String(row.categoria || '').trim()) ? String(row.categoria).trim() : 'Lutas',
         cor_hex: /^#[0-9A-Fa-f]{6}$/.test(String(row.cor_hex || '').trim()) ? String(row.cor_hex).trim() : '#f59e0b',
         custom: true
@@ -231,6 +272,8 @@ module.exports = {
     PROFESSOR_ACHIEVEMENT_PRESETS,
     ALLOWED_CATEGORIES,
     ALLOWED_ICONS,
+    isImageIconUrl,
+    sanitizeAchievementIcon,
     ensureProfessorAchievementsSchema,
     validateProfessorAchievementPayload,
     normalizeProfessorAchievementRow,
