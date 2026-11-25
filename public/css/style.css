@@ -2380,8 +2380,8 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
 }
 
 .rpg-badge-icon {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 10px;
     border: 1px solid rgba(148, 163, 184, 0.28);
     background: rgba(148, 163, 184, 0.1);
@@ -2390,6 +2390,20 @@ input[type="month"].select-filter::-webkit-calendar-picker-indicator {
     justify-content: center;
     font-size: 18px;
     flex-shrink: 0;
+    overflow: hidden;
+    padding: 2px;
+}
+
+.rpg-badge-icon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: 6px;
+}
+
+.rpg-badge-card.locked .rpg-badge-icon-img {
+    filter: grayscale(100%) opacity(0.5);
 }
 
 .rpg-badge-body {
@@ -3256,8 +3270,8 @@ img.aluno-avatar-zoomable:hover {
 }
 
 .conquista-prof-icon {
-    width: 42px;
-    height: 42px;
+    width: 46px;
+    height: 46px;
     border-radius: 10px;
     border: 1px solid rgba(245, 158, 11, 0.4);
     display: flex;
@@ -3266,19 +3280,20 @@ img.aluno-avatar-zoomable:hover {
     font-size: 20px;
     flex-shrink: 0;
     overflow: hidden;
+    padding: 2px;
 }
 
 .conquista-prof-icon-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
 }
 
 .conquista-chip-icone-img {
-    width: 16px;
-    height: 16px;
-    object-fit: cover;
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
     border-radius: 4px;
     display: inline-block;
     vertical-align: middle;
@@ -3445,8 +3460,9 @@ img.aluno-avatar-zoomable:hover {
 .conquista-icone-img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     display: block;
+    padding: 3px;
 }
 
 .conquista-icone-controls {
@@ -3483,9 +3499,11 @@ img.aluno-avatar-zoomable:hover {
 }
 
 .conquista-emoji-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 42px;
+    height: 42px;
+    padding: 3px;
+    overflow: hidden;
+    border-radius: 9px;
     border: 1px solid rgba(148, 163, 184, 0.22);
     background: rgba(15, 23, 42, 0.8);
     font-size: 16px;
@@ -3495,6 +3513,14 @@ img.aluno-avatar-zoomable:hover {
     justify-content: center;
     cursor: pointer;
     transition: transform 0.1s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+.conquista-picker-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    border-radius: 6px;
 }
 
 .conquista-emoji-btn:hover {

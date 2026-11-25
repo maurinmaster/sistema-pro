@@ -317,7 +317,7 @@ const RPG_BADGES_CATALOG = [
     {
         id: 'muralha',
         nome: 'Muralha',
-        icone: '🛡️',
+        icone: '/assets/icones-conquistas/guerreiro-1.webp',
         cor: '#38bdf8',
         criterios_ids: ['defesas', 'manutencao_guarda_fadiga'],
         requisito: 'Atingir nota 10/10 em Defesas e 10/10 em Manutenção de guarda sob fadiga',
@@ -326,7 +326,7 @@ const RPG_BADGES_CATALOG = [
     {
         id: 'sniper',
         nome: 'Sniper',
-        icone: '🎯',
+        icone: '/assets/icones-conquistas/guerreiro-2.webp',
         cor: '#a855f7',
         criterios_ids: ['precisao', 'contra_ataques'],
         requisito: 'Atingir nota 10/10 em Precisão e 10/10 em Contra-ataques',
@@ -335,7 +335,7 @@ const RPG_BADGES_CATALOG = [
     {
         id: 'pulmao_de_aco',
         nome: 'Pulmão de Aço',
-        icone: '🫁',
+        icone: '/assets/icones-conquistas/guerreiro-3.webp',
         cor: '#ef4444',
         criterios_ids: ['resistencia_cardiovascular', 'recuperacao_entre_rounds'],
         requisito: 'Atingir nota 10/10 em Resistência cardiovascular (Gás) e 10/10 em Recuperação entre rounds',
@@ -344,7 +344,7 @@ const RPG_BADGES_CATALOG = [
     {
         id: 'parceiro_confianca',
         nome: 'Parceiro de Confiança',
-        icone: '🤝',
+        icone: '/assets/icones-conquistas/aperto-de-maos.webp',
         cor: '#10b981',
         criterios_ids: ['controle_forca_golpes', 'controle_emocional_sparring'],
         requisito: 'Estar Apto para Sparring e atingir 10/10 em Controle de força nos golpes e 10/10 em Controle emocional no sparring',
@@ -353,7 +353,7 @@ const RPG_BADGES_CATALOG = [
     {
         id: 'rei_do_clinch',
         nome: 'Rei do Clinch',
-        icone: '👑',
+        icone: '/assets/icones-conquistas/luvas-douradas.webp',
         cor: '#f59e0b',
         criterios_ids: ['dominio_clinch_tatico', 'saidas_clinch', 'forca_isometrica_clinch'],
         requisito: 'Atingir nota 10/10 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
@@ -362,7 +362,7 @@ const RPG_BADGES_CATALOG = [
     {
         id: 'intocavel',
         nome: 'Intocável',
-        icone: '⚡',
+        icone: '/assets/icones-conquistas/lutador-5-estrelas.webp',
         cor: '#22c55e',
         criterios_ids: ['jogo_pernas_footwork', 'tempo_reacao'],
         requisito: 'Atingir nota 10/10 em Jogo de pernas (Footwork e Ângulos) e 10/10 em Tempo de reação',

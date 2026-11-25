@@ -4,12 +4,50 @@
  * (ex: Primeira Luta, 6 Lutas Oficiais, 6 Vitórias Consecutivas) com exibição no Dossiê 360° e Portal do Aluno.
  */
 
+const DEFAULT_ACHIEVEMENT_ICON = '/assets/icones-conquistas/luvas-vermelhas.webp';
+
+const ACHIEVEMENT_ICON_GALLERY = [
+    { url: '/assets/icones-conquistas/luvas-vermelhas.webp', label: 'Luvas Vermelhas' },
+    { url: '/assets/icones-conquistas/luvas-prata.webp', label: 'Luvas Prata' },
+    { url: '/assets/icones-conquistas/luvas-douradas.webp', label: 'Luvas Douradas' },
+    { url: '/assets/icones-conquistas/lutador-3-estrelas.webp', label: 'Lutador 3 Estrelas' },
+    { url: '/assets/icones-conquistas/lutador-5-estrelas.webp', label: 'Lutador 5 Estrelas' },
+    { url: '/assets/icones-conquistas/lutador-6-estrelas.webp', label: 'Lutador 6 Estrelas' },
+    { url: '/assets/icones-conquistas/trofeu-prata.webp', label: 'Troféu Prata' },
+    { url: '/assets/icones-conquistas/trofeu-dourado.webp', label: 'Troféu Dourado' },
+    { url: '/assets/icones-conquistas/guerreiro-1.webp', label: 'Guerreiro 1' },
+    { url: '/assets/icones-conquistas/guerreiro-2.webp', label: 'Guerreiro 2' },
+    { url: '/assets/icones-conquistas/guerreiro-3.webp', label: 'Guerreiro 3' },
+    { url: '/assets/icones-conquistas/aperto-de-maos.webp', label: 'Aperto de Mãos' }
+];
+
+const LEGACY_EMOJI_ICON_MAP = {
+    '🥊': '/assets/icones-conquistas/luvas-vermelhas.webp',
+    '🔥': '/assets/icones-conquistas/lutador-3-estrelas.webp',
+    '⚔️': '/assets/icones-conquistas/lutador-6-estrelas.webp',
+    '⚔': '/assets/icones-conquistas/lutador-6-estrelas.webp',
+    '🏆': '/assets/icones-conquistas/trofeu-dourado.webp',
+    '⚡': '/assets/icones-conquistas/luvas-prata.webp',
+    '👑': '/assets/icones-conquistas/luvas-douradas.webp',
+    '💥': '/assets/icones-conquistas/lutador-5-estrelas.webp',
+    '🥇': '/assets/icones-conquistas/trofeu-dourado.webp',
+    '🥈': '/assets/icones-conquistas/trofeu-prata.webp',
+    '🛡️': '/assets/icones-conquistas/guerreiro-1.webp',
+    '🛡': '/assets/icones-conquistas/guerreiro-1.webp',
+    '🎯': '/assets/icones-conquistas/guerreiro-2.webp',
+    '🫁': '/assets/icones-conquistas/guerreiro-3.webp',
+    '🤝': '/assets/icones-conquistas/aperto-de-maos.webp',
+    '⭐': '/assets/icones-conquistas/lutador-5-estrelas.webp',
+    '🥋': '/assets/icones-conquistas/guerreiro-1.webp',
+    '🏅': '/assets/icones-conquistas/trofeu-prata.webp'
+};
+
 const PROFESSOR_ACHIEVEMENT_PRESETS = [
     {
         codigo: 'primeira_luta',
         titulo: 'Primeira Luta',
         descricao: 'Realizou sua primeira luta oficial representando a equipe.',
-        icone: '🥊',
+        icone: '/assets/icones-conquistas/luvas-vermelhas.webp',
         categoria: 'Lutas',
         cor_hex: '#f59e0b'
     },
@@ -17,7 +55,7 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'tres_lutas',
         titulo: '3 Lutas Oficiais',
         descricao: 'Completou 3 lutas oficiais acumulando experiência no ringue.',
-        icone: '🔥',
+        icone: '/assets/icones-conquistas/lutador-3-estrelas.webp',
         categoria: 'Lutas',
         cor_hex: '#f97316'
     },
@@ -25,7 +63,7 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'seis_lutas',
         titulo: '6 Lutas Oficiais',
         descricao: 'Alcançou a marca de 6 lutas oficiais no cartel.',
-        icone: '⚔️',
+        icone: '/assets/icones-conquistas/lutador-6-estrelas.webp',
         categoria: 'Lutas',
         cor_hex: '#ef4444'
     },
@@ -33,7 +71,7 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'dez_lutas',
         titulo: '10 Lutas Oficiais',
         descricao: 'Veterano de ringue com 10 lutas oficiais disputadas.',
-        icone: '🏆',
+        icone: '/assets/icones-conquistas/trofeu-prata.webp',
         categoria: 'Lutas',
         cor_hex: '#eab308'
     },
@@ -41,7 +79,7 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'tres_vitorias_seguidas',
         titulo: '3 Vitórias Consecutivas',
         descricao: 'Conquistou uma sequência invicta de 3 vitórias seguidas.',
-        icone: '⚡',
+        icone: '/assets/icones-conquistas/luvas-prata.webp',
         categoria: 'Vitórias',
         cor_hex: '#10b981'
     },
@@ -49,7 +87,7 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'seis_vitorias_seguidas',
         titulo: '6 Vitórias Consecutivas',
         descricao: 'Sequência dominante de 6 vitórias consecutivas no ringue.',
-        icone: '👑',
+        icone: '/assets/icones-conquistas/luvas-douradas.webp',
         categoria: 'Vitórias',
         cor_hex: '#a855f7'
     },
@@ -57,7 +95,7 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'vitoria_nocaute',
         titulo: 'Vitória por Nocaute / TKO',
         descricao: 'Venceu combate oficial por nocaute ou nocaute técnico.',
-        icone: '💥',
+        icone: '/assets/icones-conquistas/lutador-5-estrelas.webp',
         categoria: 'Vitórias',
         cor_hex: '#ef4444'
     },
@@ -65,18 +103,27 @@ const PROFESSOR_ACHIEVEMENT_PRESETS = [
         codigo: 'campeao_torneio',
         titulo: 'Campeão de Campeonato',
         descricao: 'Subiu no topo do pódio conquistando título em competição oficial.',
-        icone: '🥇',
+        icone: '/assets/icones-conquistas/trofeu-dourado.webp',
         categoria: 'Campeonatos',
         cor_hex: '#fbbf24'
     }
 ];
 
 const ALLOWED_CATEGORIES = ['Lutas', 'Vitórias', 'Campeonatos', 'Mérito no Tatame'];
-const ALLOWED_ICONS = ['🥊', '🏆', '👑', '🔥', '⚡', '🥇', '💥', '⚔️', '🛡️', '⭐', '🥋', '🏅'];
-const SAFE_UPLOAD_ICON_REGEX = /^\/uploads\/(conquistas|alunos|wiki)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i;
+const ALLOWED_ICONS = ACHIEVEMENT_ICON_GALLERY.map((item) => item.url);
+const SAFE_UPLOAD_ICON_REGEX = /^\/(uploads\/(conquistas|alunos|wiki)|assets\/icones-conquistas)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i;
 
 /**
- * Verifica se o ícone informado aponta para um caminho local seguro de imagem enviada por upload.
+ * Converte emojis antigos de conquista para o respectivo ícone gráfico em /assets/icones-conquistas.
+ */
+function mapLegacyEmojiIcon(rawIcon) {
+    if (typeof rawIcon !== 'string') return '';
+    const trimmed = rawIcon.trim();
+    return LEGACY_EMOJI_ICON_MAP[trimmed] || '';
+}
+
+/**
+ * Verifica se o ícone informado aponta para um caminho local seguro de imagem (upload ou galeria oficial).
  */
 function isImageIconUrl(icone) {
     if (typeof icone !== 'string') return false;
@@ -86,18 +133,19 @@ function isImageIconUrl(icone) {
 }
 
 /**
- * Higieniza o ícone da conquista aceitando imagem de upload segura, preset ou emoji/símbolo curto editável.
+ * Higieniza o ícone da conquista aceitando imagem da galeria oficial/upload, convertendo emojis legados ou permitindo símbolo curto seguro.
  */
-function sanitizeAchievementIcon(rawIcon, fallback = '🥊') {
+function sanitizeAchievementIcon(rawIcon, fallback = DEFAULT_ACHIEVEMENT_ICON) {
     if (rawIcon === undefined || rawIcon === null) return fallback;
     const str = String(rawIcon).trim();
     if (!str) return fallback;
 
-    if (isImageIconUrl(str)) {
-        return str;
+    const mappedLegacy = mapLegacyEmojiIcon(str);
+    if (mappedLegacy) {
+        return mappedLegacy;
     }
 
-    if (ALLOWED_ICONS.includes(str)) {
+    if (isImageIconUrl(str)) {
         return str;
     }
 
@@ -184,7 +232,7 @@ function validateProfessorAchievementPayload(body = {}) {
     const rawCat = String(body.categoria || '').trim();
     const categoria = ALLOWED_CATEGORIES.includes(rawCat) ? rawCat : 'Lutas';
 
-    const icone = sanitizeAchievementIcon(body.icone, '🥊');
+    const icone = sanitizeAchievementIcon(body.icone, DEFAULT_ACHIEVEMENT_ICON);
 
     const rawColor = String(body.cor_hex || '').trim();
     const corHex = /^#[0-9A-Fa-f]{6}$/.test(rawColor) ? rawColor.toLowerCase() : '#f59e0b';
@@ -234,7 +282,7 @@ function normalizeProfessorAchievementRow(row = {}) {
         codigo_preset: row.codigo_preset || null,
         titulo: String(row.titulo || '').trim(),
         descricao: String(row.descricao || '').trim(),
-        icone: sanitizeAchievementIcon(row.icone, '🥊'),
+        icone: sanitizeAchievementIcon(row.icone, DEFAULT_ACHIEVEMENT_ICON),
         categoria: ALLOWED_CATEGORIES.includes(String(row.categoria || '').trim()) ? String(row.categoria).trim() : 'Lutas',
         cor_hex: /^#[0-9A-Fa-f]{6}$/.test(String(row.cor_hex || '').trim()) ? String(row.cor_hex).trim() : '#f59e0b',
         data_conquista: formatDateIso(row.data_conquista),
@@ -261,7 +309,7 @@ function normalizeCustomTemplateRow(row = {}) {
         codigo: idNum ? `custom_${idNum}` : null,
         titulo: String(row.titulo || '').trim(),
         descricao: String(row.descricao || '').trim(),
-        icone: sanitizeAchievementIcon(row.icone, '🥊'),
+        icone: sanitizeAchievementIcon(row.icone, DEFAULT_ACHIEVEMENT_ICON),
         categoria: ALLOWED_CATEGORIES.includes(String(row.categoria || '').trim()) ? String(row.categoria).trim() : 'Lutas',
         cor_hex: /^#[0-9A-Fa-f]{6}$/.test(String(row.cor_hex || '').trim()) ? String(row.cor_hex).trim() : '#f59e0b',
         custom: true
@@ -269,9 +317,13 @@ function normalizeCustomTemplateRow(row = {}) {
 }
 
 module.exports = {
+    DEFAULT_ACHIEVEMENT_ICON,
+    ACHIEVEMENT_ICON_GALLERY,
+    LEGACY_EMOJI_ICON_MAP,
     PROFESSOR_ACHIEVEMENT_PRESETS,
     ALLOWED_CATEGORIES,
     ALLOWED_ICONS,
+    mapLegacyEmojiIcon,
     isImageIconUrl,
     sanitizeAchievementIcon,
     ensureProfessorAchievementsSchema,

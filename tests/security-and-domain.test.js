@@ -3068,7 +3068,7 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     assert.equal(okNormalized.valid, true);
     assert.equal(okNormalized.data.titulo, '6 Vitórias Consecutivas');
     assert.equal(okNormalized.data.categoria, 'Lutas');
-    assert.equal(okNormalized.data.icone, '🥊');
+    assert.equal(okNormalized.data.icone, '/assets/icones-conquistas/luvas-vermelhas.webp');
     assert.equal(okNormalized.data.cor_hex, '#f59e0b');
     assert.equal(okNormalized.data.data_conquista, '2026-11-25');
 
@@ -3084,6 +3084,7 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
         professor_nome: null
     });
     assert.equal(rowNorm.id, 7);
+    assert.equal(rowNorm.icone, '/assets/icones-conquistas/luvas-vermelhas.webp');
     assert.equal(rowNorm.data_conquista, '2026-11-24');
     assert.equal(rowNorm.professor_nome, 'Não Informado');
     assert.equal(rowNorm.origem, 'professor');
@@ -3112,6 +3113,7 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     });
     assert.equal(okCustom.valid, true);
     assert.equal(okCustom.data.titulo, 'Guerreiro de Torneio');
+    assert.equal(okCustom.data.icone, '/assets/icones-conquistas/trofeu-dourado.webp');
     assert.equal(okCustom.data.cor_hex, '#fbbf24');
 
     const normCustom = conquistasService.normalizeCustomTemplateRow({
@@ -3124,19 +3126,28 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     });
     assert.equal(normCustom.id, 12);
     assert.equal(normCustom.codigo, 'custom_12');
+    assert.equal(normCustom.icone, '/assets/icones-conquistas/trofeu-dourado.webp');
     assert.equal(normCustom.custom, true);
 
-    // Ícones editáveis (emojis livres e upload de imagem) + proteção contra XSS/traversal
+    // Ícones oficiais (.webp em assets/icones-conquistas), upload personalizado e proteção contra XSS/traversal
+    assert.equal(presets.every(p => p.icone.startsWith('/assets/icones-conquistas/') && p.icone.endsWith('.webp')), true);
+    const rpgService = require('../services/rpgEvaluationService');
+    assert.equal(rpgService.RPG_BADGES_CATALOG.every(b => b.icone.startsWith('/assets/icones-conquistas/') && b.icone.endsWith('.webp')), true);
+
+    assert.equal(conquistasService.isImageIconUrl('/assets/icones-conquistas/trofeu-dourado.webp'), true);
     assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/icone-170000.png'), true);
     assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/icone-170000.webp'), true);
     assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/icone-170000.svg'), false);
     assert.equal(conquistasService.isImageIconUrl('/uploads/conquistas/../evil.png'), false);
     assert.equal(conquistasService.isImageIconUrl('https://evil.com/icon.png'), false);
 
+    assert.equal(conquistasService.sanitizeAchievementIcon('/assets/icones-conquistas/luvas-douradas.webp'), '/assets/icones-conquistas/luvas-douradas.webp');
     assert.equal(conquistasService.sanitizeAchievementIcon('/uploads/conquistas/icone-170000.png'), '/uploads/conquistas/icone-170000.png');
+    assert.equal(conquistasService.sanitizeAchievementIcon('🥊'), '/assets/icones-conquistas/luvas-vermelhas.webp');
+    assert.equal(conquistasService.sanitizeAchievementIcon('🏆'), '/assets/icones-conquistas/trofeu-dourado.webp');
     assert.equal(conquistasService.sanitizeAchievementIcon('🐉'), '🐉');
-    assert.equal(conquistasService.sanitizeAchievementIcon('javascript:alert(1)'), '🥊');
-    assert.equal(conquistasService.sanitizeAchievementIcon('<img src=x>'), '🥊');
+    assert.equal(conquistasService.sanitizeAchievementIcon('javascript:alert(1)'), '/assets/icones-conquistas/luvas-vermelhas.webp');
+    assert.equal(conquistasService.sanitizeAchievementIcon('<img src=x>'), '/assets/icones-conquistas/luvas-vermelhas.webp');
 
     const { parseUploadUrl } = require('../services/uploadStorage');
     assert.deepEqual(parseUploadUrl('/uploads/conquistas/icone-12345.png'), {

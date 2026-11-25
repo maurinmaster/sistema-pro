@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.5">
+    <link rel="stylesheet" href="/css/style.css?v=5.6">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.4">
 </head>
@@ -2404,16 +2404,16 @@
                     </div>
 
                     <div class="form-group" style="margin-bottom: 12px;">
-                        <label for="conquista-prof-icone-texto">Ícone / Troféu (Emoji livre ou Imagem por Upload)</label>
-                        <input type="hidden" id="conquista-prof-icone" value="🥊">
+                        <label for="conquista-prof-icone-texto">Ícone da Conquista (Galeria Oficial ou Upload de Imagem)</label>
+                        <input type="hidden" id="conquista-prof-icone" value="/assets/icones-conquistas/luvas-vermelhas.webp">
                         <div class="conquista-icone-editor">
                             <div class="conquista-icone-preview-box" id="conquista-prof-icone-preview" title="Pré-visualização do ícone">
-                                <span>🥊</span>
+                                <img src="/assets/icones-conquistas/luvas-vermelhas.webp" alt="Pré-visualização do ícone" class="conquista-icone-img">
                             </div>
                             <div class="conquista-icone-controls">
                                 <div class="conquista-icone-input-row">
                                     <input type="text" id="conquista-prof-icone-texto" class="form-input" maxlength="16"
-                                        value="🥊" placeholder="Digite ou cole um emoji (ex: 🥊, 🐉)">
+                                        value="" placeholder="Opcional: digite um símbolo ou escolha abaixo">
                                     <input type="file" id="conquista-prof-icone-file"
                                         accept="image/png,image/jpeg,image/webp,image/gif" style="display: none;">
                                     <button type="button" class="btn btn-secondary btn-sm" id="btn-upload-conquista-icone"
@@ -2426,21 +2426,45 @@
                                     </button>
                                 </div>
                                 <div class="conquista-icone-hint">
-                                    Envie PNG, JPG, WEBP ou GIF (máx. 2MB), digite um emoji ou selecione abaixo:
+                                    Escolha um ícone oficial abaixo ou envie PNG, JPG, WEBP ou GIF (máx. 2MB):
                                 </div>
                                 <div class="conquista-emoji-picker" id="conquista-prof-emoji-picker">
-                                    <button type="button" class="conquista-emoji-btn active" data-emoji="🥊" title="Luvas">🥊</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="🔥" title="Fogo">🔥</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="⚔️" title="Combate">⚔️</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="🏆" title="Troféu">🏆</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="⚡" title="Raio">⚡</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="👑" title="Coroa">👑</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="💥" title="Nocaute">💥</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="🥇" title="Medalha de Ouro">🥇</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="🛡️" title="Escudo">🛡️</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="⭐" title="Estrela">⭐</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="🥋" title="Tatame">🥋</button>
-                                    <button type="button" class="conquista-emoji-btn" data-emoji="🏅" title="Honraria">🏅</button>
+                                    <button type="button" class="conquista-emoji-btn active" data-icon="/assets/icones-conquistas/luvas-vermelhas.webp" title="Luvas Vermelhas (Primeira Luta)">
+                                        <img src="/assets/icones-conquistas/luvas-vermelhas.webp" alt="Luvas Vermelhas" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/luvas-prata.webp" title="Luvas Prata">
+                                        <img src="/assets/icones-conquistas/luvas-prata.webp" alt="Luvas Prata" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/luvas-douradas.webp" title="Luvas Douradas">
+                                        <img src="/assets/icones-conquistas/luvas-douradas.webp" alt="Luvas Douradas" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/lutador-3-estrelas.webp" title="Lutador 3 Estrelas">
+                                        <img src="/assets/icones-conquistas/lutador-3-estrelas.webp" alt="Lutador 3 Estrelas" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/lutador-5-estrelas.webp" title="Lutador 5 Estrelas">
+                                        <img src="/assets/icones-conquistas/lutador-5-estrelas.webp" alt="Lutador 5 Estrelas" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/lutador-6-estrelas.webp" title="Lutador 6 Estrelas">
+                                        <img src="/assets/icones-conquistas/lutador-6-estrelas.webp" alt="Lutador 6 Estrelas" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/trofeu-prata.webp" title="Troféu Prata">
+                                        <img src="/assets/icones-conquistas/trofeu-prata.webp" alt="Troféu Prata" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/trofeu-dourado.webp" title="Troféu Dourado">
+                                        <img src="/assets/icones-conquistas/trofeu-dourado.webp" alt="Troféu Dourado" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/guerreiro-1.webp" title="Guerreiro 1 (Muralha)">
+                                        <img src="/assets/icones-conquistas/guerreiro-1.webp" alt="Guerreiro 1" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/guerreiro-2.webp" title="Guerreiro 2 (Sniper)">
+                                        <img src="/assets/icones-conquistas/guerreiro-2.webp" alt="Guerreiro 2" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/guerreiro-3.webp" title="Guerreiro 3 (Pulmão de Aço)">
+                                        <img src="/assets/icones-conquistas/guerreiro-3.webp" alt="Guerreiro 3" class="conquista-picker-img" loading="lazy">
+                                    </button>
+                                    <button type="button" class="conquista-emoji-btn" data-icon="/assets/icones-conquistas/aperto-de-maos.webp" title="Aperto de Mãos (Parceiro de Confiança)">
+                                        <img src="/assets/icones-conquistas/aperto-de-maos.webp" alt="Aperto de Mãos" class="conquista-picker-img" loading="lazy">
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -3925,8 +3949,8 @@
     <script src="/js/api.js"></script>
     <script src="/js/ui.js?v=1.1"></script>
     <script src="/js/auth.js?v=1.4"></script>
-    <script src="/js/rpg-avaliacao.js?v=2.2"></script>
-    <script src="/js/aluno-detalhes.js?v=2.3"></script>
+    <script src="/js/rpg-avaliacao.js?v=2.3"></script>
+    <script src="/js/aluno-detalhes.js?v=2.4"></script>
     <script src="/js/alunos.js?v=5.8"></script>
     <script src="/js/dashboard.js?v=1.3"></script>
     <script src="/js/checkins.js"></script>

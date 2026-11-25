@@ -821,7 +821,7 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
         `);
 
         // 7. Conquistas e Badges
-        const [conquistas] = await pool.query(`
+        const [conquistasRows] = await pool.query(`
             SELECT c.id, c.codigo, c.titulo, c.descricao, c.icone, c.categoria,
                    (ac.id IS NOT NULL) AS desbloqueada,
                    ac.data_desbloqueio
@@ -829,6 +829,10 @@ router.get('/meu-painel', optionalAuth, async (req, res) => {
             LEFT JOIN aluno_conquistas ac ON ac.conquista_id = c.id AND ac.aluno_id = ?
             ORDER BY c.id ASC
         `, [alunoId]);
+        const conquistas = conquistasRows.map((c) => ({
+            ...c,
+            icone: conquistasService.sanitizeAchievementIcon(c.icone)
+        }));
 
         // 7b. Conquistas de Luta & Honrarias concedidas pelo Professor
         let conquistasProfessor = [];

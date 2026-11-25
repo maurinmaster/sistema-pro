@@ -98,19 +98,19 @@ const AlunoDetalhesModule = {
         });
 
         document.getElementById('btn-remove-conquista-icone')?.addEventListener('click', () => {
-            this.setConquistaIconValue('🥊');
+            this.setConquistaIconValue(this.DEFAULT_CONQUISTA_ICON);
         });
 
         document.getElementById('conquista-prof-icone-texto')?.addEventListener('input', (e) => {
             const raw = String(e.target.value || '').trim();
-            this.setConquistaIconValue(raw || '🥊', { fromTextInput: true });
+            this.setConquistaIconValue(raw || this.DEFAULT_CONQUISTA_ICON, { fromTextInput: true });
         });
 
         document.getElementById('conquista-prof-emoji-picker')?.addEventListener('click', (e) => {
-            const btnEmoji = e.target.closest('.conquista-emoji-btn[data-emoji]');
-            if (!btnEmoji) return;
-            const emoji = btnEmoji.getAttribute('data-emoji') || '🥊';
-            this.setConquistaIconValue(emoji);
+            const btnIcon = e.target.closest('.conquista-emoji-btn');
+            if (!btnIcon) return;
+            const iconVal = btnIcon.getAttribute('data-icon') || btnIcon.getAttribute('data-emoji') || this.DEFAULT_CONQUISTA_ICON;
+            this.setConquistaIconValue(iconVal);
         });
     },
 
@@ -1881,44 +1881,48 @@ const AlunoDetalhesModule = {
     },
 
     conquistaModalMode: 'grant', // 'grant' | 'edit_award' | 'create_model' | 'edit_model'
+    DEFAULT_CONQUISTA_ICON: '/assets/icones-conquistas/luvas-vermelhas.webp',
 
     isConquistaImageIcon(icone) {
         if (typeof icone !== 'string') return false;
         const trimmed = icone.trim();
         if (!trimmed || trimmed.includes('..') || trimmed.length > 255) return false;
-        return /^\/uploads\/(conquistas|alunos|wiki)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
+        return /^\/(uploads\/(conquistas|alunos|wiki)|assets\/icones-conquistas)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
     },
 
     renderConquistaIconHtml(icone, altText = 'Ícone da conquista', imgClass = 'conquista-icone-img') {
-        if (this.isConquistaImageIcon(icone)) {
-            const safeUrl = UI.getSafeImageUrl(icone, '');
+        const val = String(icone || '').trim() || this.DEFAULT_CONQUISTA_ICON;
+        if (this.isConquistaImageIcon(val)) {
+            const safeUrl = UI.getSafeImageUrl(val, '');
             if (safeUrl) {
                 return `<img src="${safeUrl}" alt="${UI.escapeHtml(altText || 'Conquista')}" class="${UI.escapeHtml(imgClass)}" loading="lazy">`;
             }
         }
-        return `<span>${UI.escapeHtml(icone || '🥊')}</span>`;
+        return `<span>${UI.escapeHtml(val)}</span>`;
     },
 
     setConquistaIconValue(val, opts = {}) {
-        const cleanVal = String(val || '').trim() || '🥊';
+        const cleanVal = String(val || '').trim() || this.DEFAULT_CONQUISTA_ICON;
         const hiddenInput = document.getElementById('conquista-prof-icone');
         const textInput = document.getElementById('conquista-prof-icone-texto');
         const previewBox = document.getElementById('conquista-prof-icone-preview');
         const removeBtn = document.getElementById('btn-remove-conquista-icone');
         const isImg = this.isConquistaImageIcon(cleanVal);
+        const isUploadedImg = isImg && cleanVal.startsWith('/uploads/');
 
         if (hiddenInput) hiddenInput.value = cleanVal;
         if (previewBox) {
             previewBox.innerHTML = this.renderConquistaIconHtml(cleanVal, 'Pré-visualização do ícone', 'conquista-icone-img');
         }
         if (removeBtn) {
-            removeBtn.style.display = isImg ? 'inline-flex' : 'none';
+            removeBtn.style.display = isUploadedImg ? 'inline-flex' : 'none';
         }
         if (textInput && !opts.fromTextInput) {
             textInput.value = isImg ? '' : cleanVal;
         }
         document.querySelectorAll('#conquista-prof-emoji-picker .conquista-emoji-btn').forEach((btn) => {
-            btn.classList.toggle('active', !isImg && btn.getAttribute('data-emoji') === cleanVal);
+            const btnVal = btn.getAttribute('data-icon') || btn.getAttribute('data-emoji') || '';
+            btn.classList.toggle('active', cleanVal === btnVal);
         });
     },
 
@@ -1969,9 +1973,9 @@ const AlunoDetalhesModule = {
 
     getConquistaAllPresets() {
         const defaults = [
-            { codigo: 'primeira_luta', titulo: 'Primeira Luta', icone: '🥊', categoria: 'Lutas', cor_hex: '#f59e0b', descricao: 'Realizou sua primeira luta oficial representando a equipe.' },
-            { codigo: 'seis_lutas', titulo: '6 Lutas Oficiais', icone: '⚔️', categoria: 'Lutas', cor_hex: '#ef4444', descricao: 'Alcançou a marca de 6 lutas oficiais no cartel.' },
-            { codigo: 'seis_vitorias_seguidas', titulo: '6 Vitórias Consecutivas', icone: '👑', categoria: 'Vitórias', cor_hex: '#a855f7', descricao: 'Sequência dominante de 6 vitórias consecutivas no ringue.' }
+            { codigo: 'primeira_luta', titulo: 'Primeira Luta', icone: '/assets/icones-conquistas/luvas-vermelhas.webp', categoria: 'Lutas', cor_hex: '#f59e0b', descricao: 'Realizou sua primeira luta oficial representando a equipe.' },
+            { codigo: 'seis_lutas', titulo: '6 Lutas Oficiais', icone: '/assets/icones-conquistas/lutador-6-estrelas.webp', categoria: 'Lutas', cor_hex: '#ef4444', descricao: 'Alcançou a marca de 6 lutas oficiais no cartel.' },
+            { codigo: 'seis_vitorias_seguidas', titulo: '6 Vitórias Consecutivas', icone: '/assets/icones-conquistas/luvas-douradas.webp', categoria: 'Vitórias', cor_hex: '#a855f7', descricao: 'Sequência dominante de 6 vitórias consecutivas no ringue.' }
         ];
         const builtin = Array.isArray(this.currentData?.conquistas_presets) && this.currentData.conquistas_presets.length > 0
             ? this.currentData.conquistas_presets
@@ -2073,7 +2077,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-edit-id').value = '';
         document.getElementById('conquista-prof-modelo-edit-id').value = '';
         document.getElementById('conquista-prof-data').value = new Date().toISOString().split('T')[0];
-        this.setConquistaIconValue('🥊');
+        this.setConquistaIconValue(this.DEFAULT_CONQUISTA_ICON);
 
         const sub = document.getElementById('conquista-prof-aluno-sub');
         if (sub) {
@@ -2102,7 +2106,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = item.titulo || '';
         document.getElementById('conquista-prof-descricao').value = item.descricao || '';
         document.getElementById('conquista-prof-categoria').value = item.categoria || 'Lutas';
-        this.setConquistaIconValue(item.icone || '🥊');
+        this.setConquistaIconValue(item.icone || this.DEFAULT_CONQUISTA_ICON);
         document.getElementById('conquista-prof-cor').value = item.cor_hex || '#f59e0b';
         document.getElementById('conquista-prof-data').value = item.data_conquista || new Date().toISOString().split('T')[0];
 
@@ -2120,7 +2124,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = '';
         document.getElementById('conquista-prof-descricao').value = '';
         document.getElementById('conquista-prof-categoria').value = 'Lutas';
-        this.setConquistaIconValue('🥊');
+        this.setConquistaIconValue(this.DEFAULT_CONQUISTA_ICON);
         document.getElementById('conquista-prof-cor').value = '#f59e0b';
         this.setConquistaModalMode('create_model');
     },
@@ -2136,7 +2140,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = mod.titulo || '';
         document.getElementById('conquista-prof-descricao').value = mod.descricao || '';
         document.getElementById('conquista-prof-categoria').value = mod.categoria || 'Lutas';
-        this.setConquistaIconValue(mod.icone || '🥊');
+        this.setConquistaIconValue(mod.icone || this.DEFAULT_CONQUISTA_ICON);
         document.getElementById('conquista-prof-cor').value = mod.cor_hex || '#f59e0b';
         this.setConquistaModalMode('edit_model');
     },
@@ -2171,7 +2175,7 @@ const AlunoDetalhesModule = {
         document.getElementById('conquista-prof-titulo').value = preset.titulo || '';
         document.getElementById('conquista-prof-descricao').value = preset.descricao || '';
         document.getElementById('conquista-prof-categoria').value = preset.categoria || 'Lutas';
-        this.setConquistaIconValue(preset.icone || '🥊');
+        this.setConquistaIconValue(preset.icone || this.DEFAULT_CONQUISTA_ICON);
         document.getElementById('conquista-prof-cor').value = preset.cor_hex || '#f59e0b';
 
         document.querySelectorAll('#conquista-prof-presets .conquista-preset-chip, #conquista-prof-custom-presets .conquista-preset-chip').forEach((chip) => {
@@ -2195,7 +2199,7 @@ const AlunoDetalhesModule = {
             titulo: document.getElementById('conquista-prof-titulo')?.value || '',
             descricao: document.getElementById('conquista-prof-descricao')?.value || '',
             categoria: document.getElementById('conquista-prof-categoria')?.value || 'Lutas',
-            icone: document.getElementById('conquista-prof-icone')?.value || '🥊',
+            icone: document.getElementById('conquista-prof-icone')?.value || this.DEFAULT_CONQUISTA_ICON,
             cor_hex: document.getElementById('conquista-prof-cor')?.value || '#f59e0b'
         };
 

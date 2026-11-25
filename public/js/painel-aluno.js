@@ -1781,7 +1781,7 @@ const PainelAlunoApp = {
         if (typeof icone !== 'string') return false;
         const trimmed = icone.trim();
         if (!trimmed || trimmed.includes('..') || trimmed.length > 255) return false;
-        return /^\/uploads\/(conquistas|alunos|wiki)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
+        return /^\/(uploads\/(conquistas|alunos|wiki)|assets\/icones-conquistas)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
     },
 
     renderModalQaConquistas() {
@@ -1814,7 +1814,7 @@ const PainelAlunoApp = {
             const safeIconUrl = this.isConquistaImageIcon(cp.icone) ? this.sanitizeUrl(cp.icone) : '';
             const iconHtml = safeIconUrl
                 ? `<img src="${safeIconUrl}" alt="${this.escapeHtml(cp.titulo || 'Conquista')}" class="portal-prof-conquista-icon-img" loading="lazy">`
-                : `<span>${this.escapeHtml(cp.icone || '🥊')}</span>`;
+                : `<span>${this.escapeHtml(cp.icone || '🏅')}</span>`;
             return `
                                 <div class="portal-prof-conquista-card" style="border-color: ${accent}66; background: ${accent}14;">
                                     <div class="portal-prof-conquista-icon" style="background: ${accent}24; border-color: ${accent}55;">

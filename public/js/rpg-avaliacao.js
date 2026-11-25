@@ -64,42 +64,49 @@
 
     const BADGES_CATALOG = [
         {
-            id: 'muralha', nome: 'Muralha', icone: '🛡️', cor: '#38bdf8',
+            id: 'muralha', nome: 'Muralha', icone: '/assets/icones-conquistas/guerreiro-1.webp', cor: '#38bdf8',
             criterios_ids: ['defesas', 'manutencao_guarda_fadiga'],
             requisito: 'Atingir nota 10/10 em Defesas e 10/10 em Manutenção de guarda sob fadiga',
             check: (c) => Number(c.defesas) === 10 && Number(c.manutencao_guarda_fadiga) === 10
         },
         {
-            id: 'sniper', nome: 'Sniper', icone: '🎯', cor: '#a855f7',
+            id: 'sniper', nome: 'Sniper', icone: '/assets/icones-conquistas/guerreiro-2.webp', cor: '#a855f7',
             criterios_ids: ['precisao', 'contra_ataques'],
             requisito: 'Atingir nota 10/10 em Precisão e 10/10 em Contra-ataques',
             check: (c) => Number(c.precisao) === 10 && Number(c.contra_ataques) === 10
         },
         {
-            id: 'pulmao_de_aco', nome: 'Pulmão de Aço', icone: '🫁', cor: '#ef4444',
+            id: 'pulmao_de_aco', nome: 'Pulmão de Aço', icone: '/assets/icones-conquistas/guerreiro-3.webp', cor: '#ef4444',
             criterios_ids: ['resistencia_cardiovascular', 'recuperacao_entre_rounds'],
             requisito: 'Atingir nota 10/10 em Resistência cardiovascular (Gás) e 10/10 em Recuperação entre rounds',
             check: (c) => Number(c.resistencia_cardiovascular) === 10 && Number(c.recuperacao_entre_rounds) === 10
         },
         {
-            id: 'parceiro_confianca', nome: 'Parceiro de Confiança', icone: '🤝', cor: '#10b981',
+            id: 'parceiro_confianca', nome: 'Parceiro de Confiança', icone: '/assets/icones-conquistas/aperto-de-maos.webp', cor: '#10b981',
             criterios_ids: ['controle_forca_golpes', 'controle_emocional_sparring'],
             requisito: 'Estar Apto para Sparring e atingir 10/10 em Controle de força nos golpes e 10/10 em Controle emocional no sparring',
             check: (c, aptoSparring) => aptoSparring !== false && Number(c.controle_forca_golpes) === 10 && Number(c.controle_emocional_sparring) === 10
         },
         {
-            id: 'rei_do_clinch', nome: 'Rei do Clinch', icone: '👑', cor: '#f59e0b',
+            id: 'rei_do_clinch', nome: 'Rei do Clinch', icone: '/assets/icones-conquistas/luvas-douradas.webp', cor: '#f59e0b',
             criterios_ids: ['dominio_clinch_tatico', 'saidas_clinch', 'forca_isometrica_clinch'],
             requisito: 'Atingir nota 10/10 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
             check: (c) => Number(c.dominio_clinch_tatico) === 10 && Number(c.saidas_clinch) === 10 && Number(c.forca_isometrica_clinch) === 10
         },
         {
-            id: 'intocavel', nome: 'Intocável', icone: '⚡', cor: '#22c55e',
+            id: 'intocavel', nome: 'Intocável', icone: '/assets/icones-conquistas/lutador-5-estrelas.webp', cor: '#22c55e',
             criterios_ids: ['jogo_pernas_footwork', 'tempo_reacao'],
             requisito: 'Atingir nota 10/10 em Jogo de pernas (Footwork e Ângulos) e 10/10 em Tempo de reação',
             check: (c) => Number(c.jogo_pernas_footwork) === 10 && Number(c.tempo_reacao) === 10
         }
     ];
+
+    function isImageIconUrl(icone) {
+        if (typeof icone !== 'string') return false;
+        const trimmed = icone.trim();
+        if (!trimmed || trimmed.includes('..') || trimmed.length > 255) return false;
+        return /^\/(uploads\/(conquistas|alunos|wiki)|assets\/icones-conquistas)\/[a-zA-Z0-9._-]+\.(png|jpe?g|webp|gif)$/i.test(trimmed);
+    }
 
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -450,7 +457,10 @@
                                  style="${unlocked ? `border-color: ${color}66; background: ${color}12;` : ''}"
                                  title="${escapeHtml(tooltip)}">
                                 <div class="rpg-badge-icon" style="${unlocked ? `background: ${color}24; border-color: ${color}66;` : ''}">
-                                    <span>${escapeHtml(b.icone || '🏅')}</span>
+                                    ${isImageIconUrl(b.icone)
+                                        ? `<img src="${escapeHtml(b.icone)}" alt="${escapeHtml(b.nome)}" class="rpg-badge-icon-img" loading="lazy">`
+                                        : `<span>${escapeHtml(b.icone || '🏅')}</span>`
+                                    }
                                 </div>
                                 <div class="rpg-badge-body">
                                     <div class="rpg-badge-top">
@@ -796,9 +806,12 @@
             ? new Date(atual.data_avaliacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
             : new Date().toLocaleDateString('pt-BR');
 
-        const [logoImg, fotoImg] = await Promise.all([
+        const [logoImg, fotoImg, badgeIconImgs] = await Promise.all([
             loadSafeImage('/assets/icons/logo.png'),
-            loadSafeImage(options.fotoUrl || null)
+            loadSafeImage(options.fotoUrl || null),
+            Promise.all(
+                unlockedBadges.slice(0, 6).map((b) => (isImageIconUrl(b.icone) ? loadSafeImage(b.icone) : Promise.resolve(null)))
+            )
         ]);
 
         // 1. Background profundo estilizado
@@ -1134,10 +1147,28 @@
                 ctx.fill();
                 ctx.stroke();
 
-                ctx.textAlign = 'left';
-                ctx.font = '700 23px "Plus Jakarta Sans", sans-serif';
-                ctx.fillStyle = '#ffffff';
-                ctx.fillText(`${b.icone || '🏅'}  ${b.nome}`, bx + 18, by + 35);
+                const badgeImg = badgeIconImgs[i];
+                if (badgeImg) {
+                    const ix = bx + 12;
+                    const iy = by + 10;
+                    const isize = 34;
+                    ctx.save();
+                    drawRoundedRect(ctx, ix, iy, isize, isize, 8);
+                    ctx.clip();
+                    ctx.drawImage(badgeImg, ix, iy, isize, isize);
+                    ctx.restore();
+
+                    ctx.textAlign = 'left';
+                    ctx.font = '700 22px "Plus Jakarta Sans", sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(String(b.nome || ''), bx + 56, by + 35);
+                } else {
+                    const badgeIconTxt = isImageIconUrl(b.icone) ? '🏅' : (b.icone || '🏅');
+                    ctx.textAlign = 'left';
+                    ctx.font = '700 23px "Plus Jakarta Sans", sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillText(`${badgeIconTxt}  ${b.nome}`, bx + 18, by + 35);
+                }
             });
         }
 
