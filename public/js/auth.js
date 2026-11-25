@@ -256,6 +256,8 @@ const AuthModule = {
                 return ['admin', 'professor'].includes(cargo);
             case 'manage_missoes':
                 return ['admin', 'professor'].includes(cargo);
+            case 'manage_conquistas':
+                return ['admin', 'professor'].includes(cargo);
             case 'manage_mensagens':
                 return cargo === 'admin';
             case 'manage_equipe':

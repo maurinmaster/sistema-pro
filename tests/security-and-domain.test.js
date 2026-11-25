@@ -3086,6 +3086,16 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     assert.equal(rowNorm.professor_nome, 'Não Informado');
     assert.equal(rowNorm.origem, 'professor');
     assert.equal(rowNorm.desbloqueada, true);
+
+    // Regressão de permissão frontend: AuthModule.can deve suportar manage_conquistas sem referências inexistentes
+    const fs = require('fs');
+    const path = require('path');
+    const authJs = fs.readFileSync(path.join(__dirname, '../public/js/auth.js'), 'utf8');
+    const detalhesJs = fs.readFileSync(path.join(__dirname, '../public/js/aluno-detalhes.js'), 'utf8');
+    assert.equal(authJs.includes("case 'manage_conquistas':"), true);
+    assert.equal(detalhesJs.includes("AuthModule.can('manage_conquistas')"), true);
+    assert.equal(detalhesJs.includes('manage_graduacoes'), false);
+    assert.equal(detalhesJs.includes('manage_avaliacoes'), false);
 });
 
 test.after(async () => {

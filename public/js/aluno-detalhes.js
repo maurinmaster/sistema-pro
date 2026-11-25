@@ -254,6 +254,12 @@ const AlunoDetalhesModule = {
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l2 2"/></svg>
                     <span>Resetar Senha</span>
                 </button>
+                ${(!window.AuthModule || AuthModule.can('manage_conquistas') || AuthModule.can('promote_faixas')) ? `
+                    <button type="button" class="btn btn-secondary btn-sm" style="color: #fbbf24; border-color: rgba(245, 158, 11, 0.45);"
+                        onclick="AlunoDetalhesModule.openModalConquistaProfessor(${safeAlunoId})">
+                        <span>🥊 + Conquista de Luta</span>
+                    </button>
+                ` : ''}
                 ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
                     <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.35);"
                         onclick="UI.closeModal('modal-dossie'); AlunosModule.deleteAluno(${safeAlunoId}, '${encodedAlunoNome}')">
@@ -839,7 +845,7 @@ const AlunoDetalhesModule = {
         };
 
         const conquistasProf = Array.isArray(data.conquistas_professor) ? data.conquistas_professor : [];
-        const canGrantConquista = !window.AuthModule || AuthModule.can('manage_graduacoes') || AuthModule.can('manage_avaliacoes');
+        const canGrantConquista = !window.AuthModule || AuthModule.can('manage_conquistas') || AuthModule.can('promote_faixas');
         const conquistasProfHtml = `
             <div class="conquistas-prof-section">
                 <div class="conquistas-prof-head">
