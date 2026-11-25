@@ -398,6 +398,7 @@ router.get('/eventos/:id', authenticateToken, authorizeRoles('admin', 'recepcao'
             alertas_count: convites.filter(c => c.faixa_divergente || c.aluno_inativo_ou_excluido).length,
             promovidos: convites.filter(c => Boolean(c.promovido_em)).length
         };
+        evento.contagem_faixas_compra = examEligibilityService.summarizeIntendedBeltsForPurchase(convites);
 
         res.json({ success: true, data: evento });
     } catch (err) {

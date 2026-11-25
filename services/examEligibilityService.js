@@ -600,11 +600,99 @@ async function loadExamEligibilityBatch(pool, { modalidadeId = null, alunoIds = 
     });
 }
 
+/**
+ * Agrupa e contabiliza as faixas/prajieds pretendidos de um evento para facilitar
+ * o levantamento de compras (exclui convites recusados e alunos removidos).
+ *
+ * @param {Array<object>} convites
+ * @returns {{ faixas: Array<object>, totais: object }}
+ */
+function summarizeIntendedBeltsForPurchase(convites = []) {
+    const emptyTotais = {
+        pagos: 0,
+        aceitos: 0,
+        convidados: 0,
+        total_pagos_e_aceitos: 0,
+        total_ativos: 0,
+        ignorados_recusados_ou_excluidos: 0,
+        com_divergencia: 0
+    };
+
+    if (!Array.isArray(convites) || convites.length === 0) {
+        return { faixas: [], totais: emptyTotais };
+    }
+
+    const groups = new Map();
+    const totais = { ...emptyTotais };
+
+    for (const c of convites) {
+        if (!c) continue;
+        const status = String(c.convite_status ?? c.status ?? '').trim().toLowerCase();
+        const isExcluido = Boolean(c.aluno_excluido || c.aluno_deleted_at);
+
+        if (status === 'recusado' || isExcluido) {
+            totais.ignorados_recusados_ou_excluidos++;
+            continue;
+        }
+
+        const gradId = c.graduacao_pretendida_id ? Number(c.graduacao_pretendida_id) : null;
+        const gradNome = String(c.graduacao_pretendida_nome || 'Graduação não informada').trim();
+        const key = gradId ? `id:${gradId}` : `nome:${gradNome.toLowerCase()}`;
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                graduacao_id: gradId,
+                nome: gradNome,
+                cor_primaria: c.pretendida_cor_primaria || c.cor_primaria || '#94a3b8',
+                cor_secundaria: c.pretendida_cor_secundaria || c.cor_secundaria || null,
+                ordem: Number.isFinite(Number(c.pretendida_ordem)) ? Number(c.pretendida_ordem) : 999,
+                pagos: 0,
+                aceitos: 0,
+                convidados: 0,
+                total_pagos_e_aceitos: 0,
+                total_ativos: 0,
+                com_divergencia: 0
+            });
+        }
+
+        const item = groups.get(key);
+        if (status === 'pago') {
+            item.pagos++;
+            totais.pagos++;
+        } else if (status === 'aceito') {
+            item.aceitos++;
+            totais.aceitos++;
+        } else {
+            item.convidados++;
+            totais.convidados++;
+        }
+
+        item.total_pagos_e_aceitos = item.pagos + item.aceitos;
+        item.total_ativos = item.pagos + item.aceitos + item.convidados;
+        totais.total_ativos++;
+
+        if (c.faixa_divergente) {
+            item.com_divergencia++;
+            totais.com_divergencia++;
+        }
+    }
+
+    totais.total_pagos_e_aceitos = totais.pagos + totais.aceitos;
+
+    const faixas = Array.from(groups.values()).sort((a, b) => {
+        if (a.ordem !== b.ordem) return a.ordem - b.ordem;
+        return a.nome.localeCompare(b.nome, 'pt-BR');
+    });
+
+    return { faixas, totais };
+}
+
 module.exports = {
     findNextLevel,
     findPreviousLevel,
     resolveGraduationRollbackPlan,
     detectInviteBeltConflict,
     evaluateStudentExamEligibility,
-    loadExamEligibilityBatch
+    loadExamEligibilityBatch,
+    summarizeIntendedBeltsForPurchase
 };

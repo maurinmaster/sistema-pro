@@ -20,6 +20,7 @@ const ExamesModule = {
     buscaAptos: '',
     buscaConvites: '',
     filtroStatusConvite: 'todos',
+    faixasCompraScope: 'todos_ativos', // 'pagos' | 'pagos_aceitos' | 'todos_ativos'
     resultadosExecucao: {}, // { [conviteId]: 'aprovado' | 'reprovado' | 'ausente' }
 
     async init() {
@@ -96,6 +97,20 @@ const ExamesModule = {
         });
         document.getElementById('btn-salvar-promocoes-exame')?.addEventListener('click', () => {
             this.submeterPromocoes();
+        });
+
+        // Contagem de Faixas para Compras
+        document.getElementById('compra-faixas-scope-pills')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-purchase-scope]');
+            if (!btn) return;
+            this.faixasCompraScope = btn.getAttribute('data-purchase-scope') || 'todos_ativos';
+            document.querySelectorAll('#compra-faixas-scope-pills .exame-status-pill').forEach((p) => {
+                p.classList.toggle('active', p === btn);
+            });
+            this.renderCardCompraFaixas();
+        });
+        document.getElementById('btn-copiar-lista-faixas')?.addEventListener('click', () => {
+            this.copiarListaCompraFaixas();
         });
 
         // Recarregar & Conciliar Asaas
@@ -396,6 +411,7 @@ const ExamesModule = {
             if (localEl) localEl.textContent = evento.local_evento || 'Tatame Principal - Pro Combate';
             if (descEl) descEl.textContent = evento.descricao || 'Sem orientações complementares cadastradas.';
 
+            this.renderCardCompraFaixas();
             this.renderListaConvites();
             this.renderTabelaExecucao();
             this.updateEventScopedKpis();
@@ -408,6 +424,190 @@ const ExamesModule = {
             }
         } catch (err) {
             console.error('Erro ao carregar detalhes do evento:', err);
+        }
+    },
+
+    getContagemFaixasCompra() {
+        const backendResumo = this.eventoDetalhesAtual?.contagem_faixas_compra;
+        if (backendResumo && Array.isArray(backendResumo.faixas)) {
+            return backendResumo;
+        }
+        const convites = this.eventoDetalhesAtual?.convites || [];
+        const groups = new Map();
+        const totais = {
+            pagos: 0,
+            aceitos: 0,
+            convidados: 0,
+            total_pagos_e_aceitos: 0,
+            total_ativos: 0,
+            ignorados_recusados_ou_excluidos: 0,
+            com_divergencia: 0
+        };
+        convites.forEach((c) => {
+            if (c.convite_status === 'recusado' || c.aluno_excluido || c.aluno_deleted_at) {
+                totais.ignorados_recusados_ou_excluidos++;
+                return;
+            }
+            const key = c.graduacao_pretendida_id ? `id:${c.graduacao_pretendida_id}` : `nome:${c.graduacao_pretendida_nome || ''}`;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    graduacao_id: c.graduacao_pretendida_id || null,
+                    nome: c.graduacao_pretendida_nome || 'Graduação não informada',
+                    cor_primaria: c.pretendida_cor_primaria || '#94a3b8',
+                    cor_secundaria: c.pretendida_cor_secundaria || null,
+                    ordem: Number(c.pretendida_ordem) || 999,
+                    pagos: 0,
+                    aceitos: 0,
+                    convidados: 0,
+                    total_pagos_e_aceitos: 0,
+                    total_ativos: 0,
+                    com_divergencia: 0
+                });
+            }
+            const item = groups.get(key);
+            if (c.convite_status === 'pago') { item.pagos++; totais.pagos++; }
+            else if (c.convite_status === 'aceito') { item.aceitos++; totais.aceitos++; }
+            else { item.convidados++; totais.convidados++; }
+            item.total_pagos_e_aceitos = item.pagos + item.aceitos;
+            item.total_ativos = item.pagos + item.aceitos + item.convidados;
+            totais.total_ativos++;
+            if (c.faixa_divergente) { item.com_divergencia++; totais.com_divergencia++; }
+        });
+        totais.total_pagos_e_aceitos = totais.pagos + totais.aceitos;
+        const faixas = Array.from(groups.values()).sort((a, b) => (a.ordem - b.ordem) || a.nome.localeCompare(b.nome, 'pt-BR'));
+        return { faixas, totais };
+    },
+
+    getQuantidadeByScope(faixaItem) {
+        if (this.faixasCompraScope === 'pagos') return Number(faixaItem.pagos || 0);
+        if (this.faixasCompraScope === 'pagos_aceitos') return Number(faixaItem.total_pagos_e_aceitos || 0);
+        return Number(faixaItem.total_ativos || 0);
+    },
+
+    renderCardCompraFaixas() {
+        const card = document.getElementById('card-compra-faixas-exame');
+        const grid = document.getElementById('compra-faixas-grid');
+        const resumoEl = document.getElementById('compra-faixas-resumo-texto');
+        const alertaEl = document.getElementById('compra-faixas-alerta-divergencia');
+        if (!card || !grid) return;
+
+        if (!this.eventoDetalhesAtual) {
+            card.style.display = 'none';
+            return;
+        }
+
+        card.style.display = 'block';
+        const resumo = this.getContagemFaixasCompra();
+        const faixas = (resumo.faixas || []).map(f => ({
+            ...f,
+            qty: this.getQuantidadeByScope(f)
+        })).filter(f => f.qty > 0);
+
+        const totalUnidades = faixas.reduce((acc, f) => acc + f.qty, 0);
+        const ignorados = Number(resumo.totais?.ignorados_recusados_ou_excluidos || 0);
+        const scopeDescMap = {
+            pagos: 'somente inscrições pagas',
+            pagos_aceitos: 'pagos + aguardando pagamento',
+            todos_ativos: 'todos os convocados ativos'
+        };
+        const scopeDesc = scopeDescMap[this.faixasCompraScope] || 'convocados ativos';
+
+        if (resumoEl) {
+            const ignTexto = ignorados > 0
+                ? ` • ${ignorados} recusado(s)/removido(s) desconsiderado(s)`
+                : '';
+            resumoEl.textContent = `Total para compra (${scopeDesc}): ${totalUnidades} faixa(s) em ${faixas.length} graduação(ões)${ignTexto}`;
+        }
+
+        if (alertaEl) {
+            const divCount = Number(resumo.totais?.com_divergencia || 0);
+            if (divCount > 0) {
+                alertaEl.style.display = 'flex';
+                alertaEl.innerHTML = `
+                    <div>
+                        <strong>⚠️ Atenção antes de comprar:</strong> Há <strong>${divCount}</strong> convite(s) com faixa pretendida divergente. Revise em <strong>2. Convocados &amp; Financeiro</strong> para evitar compra errada.
+                    </div>
+                `;
+            } else {
+                alertaEl.style.display = 'none';
+                alertaEl.innerHTML = '';
+            }
+        }
+
+        if (faixas.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1 / -1; text-align: center; padding: 16px; color: var(--text-muted); font-size: 12.5px;">
+                    Nenhuma faixa pretendida contabilizada para o filtro "${UI.escapeHtml(scopeDesc)}".
+                </div>
+            `;
+            return;
+        }
+
+        grid.innerHTML = faixas.map(f => {
+            const pendentes = Number(f.aceitos || 0) + Number(f.convidados || 0);
+            const divTag = Number(f.com_divergencia || 0) > 0
+                ? `<span style="color: #fbbf24;">• ${Number(f.com_divergencia)} diverg.</span>`
+                : '';
+            return `
+                <div class="exame-purchase-item">
+                    <div class="exame-purchase-top">
+                        ${UI.renderBeltBadge(f.nome, f.cor_primaria, f.cor_secundaria)}
+                        <span class="exame-purchase-qty">${f.qty} un.</span>
+                    </div>
+                    <div class="exame-purchase-breakdown">
+                        <span>✅ ${Number(f.pagos || 0)} pagas</span>
+                        <span>⏳ ${pendentes} pend.</span>
+                        ${divTag}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    },
+
+    async copiarListaCompraFaixas() {
+        if (!this.eventoDetalhesAtual) return;
+        const resumo = this.getContagemFaixasCompra();
+        const faixas = (resumo.faixas || []).map(f => ({
+            ...f,
+            qty: this.getQuantidadeByScope(f)
+        })).filter(f => f.qty > 0);
+
+        if (faixas.length === 0) {
+            UI.showToast('Não há faixas para copiar neste filtro.', 'warning');
+            return;
+        }
+
+        const scopeLabel = this.faixasCompraScope === 'pagos'
+            ? 'Somente Pagos'
+            : (this.faixasCompraScope === 'pagos_aceitos' ? 'Pagos + Aguard. Pgto' : 'Todos Convocados Ativos');
+        const total = faixas.reduce((acc, f) => acc + f.qty, 0);
+        const dataFmt = this.formatarData(this.eventoDetalhesAtual.data_evento);
+        const linhas = [
+            `Lista de Compra de Faixas - ${this.eventoDetalhesAtual.titulo} (${dataFmt})`,
+            `Filtro: ${scopeLabel}`,
+            '',
+            ...faixas.map(f => `• ${f.nome}: ${f.qty} un. (${f.pagos} pagas, ${f.aceitos + f.convidados} pendentes)`),
+            '',
+            `Total Geral: ${total} unidade(s)`
+        ];
+        const texto = linhas.join('\n');
+
+        try {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(texto);
+            } else {
+                const ta = document.createElement('textarea');
+                ta.value = texto;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+            UI.showToast('Lista de compras copiada para a área de transferência!', 'success');
+        } catch (err) {
+            UI.showToast('Não foi possível copiar automaticamente: ' + err.message, 'error');
         }
     },
 

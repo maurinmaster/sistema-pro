@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=4.8">
+    <link rel="stylesheet" href="/css/style.css?v=4.9">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.3">
 </head>
@@ -957,6 +957,36 @@
                                     <span class="exame-hub-mini-label" style="color: #34d399;">Taxa de Inscrição</span>
                                     <span class="exame-hub-mini-value taxa" id="detalhe-evento-taxa">R$ 0,00</span>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- Card: Contagem de Faixas / Prajieds Pretendidos para Compras -->
+                        <div class="exame-purchase-card" id="card-compra-faixas-exame" style="display: none;">
+                            <div class="exame-purchase-header">
+                                <div>
+                                    <h4 style="margin: 0; font-size: 14.5px; font-weight: 800; color: #f8fafc;">
+                                        🛍️ Contagem de Faixas / Prajieds Pretendidos (Compras)
+                                    </h4>
+                                    <div id="compra-faixas-resumo-texto" style="font-size: 12px; color: var(--text-muted); margin-top: 3px;">
+                                        Calculando faixas necessárias...
+                                    </div>
+                                </div>
+                                <div class="exame-purchase-controls">
+                                    <div class="exame-status-pills" id="compra-faixas-scope-pills">
+                                        <button type="button" class="exame-status-pill" data-purchase-scope="pagos">Somente Pagos</button>
+                                        <button type="button" class="exame-status-pill" data-purchase-scope="pagos_aceitos">Pagos + Aguard. Pgto</button>
+                                        <button type="button" class="exame-status-pill active" data-purchase-scope="todos_ativos">Todos Convocados</button>
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-sm" id="btn-copiar-lista-faixas" style="font-size: 11.5px;">
+                                        📋 Copiar Lista p/ Compra
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="compra-faixas-alerta-divergencia" class="exame-alert-banner" style="display: none; margin-bottom: 10px;"></div>
+
+                            <div class="exame-purchase-grid" id="compra-faixas-grid">
+                                <!-- Renderizado via ExamesModule.renderCardCompraFaixas -->
                             </div>
                         </div>
 
@@ -3688,7 +3718,7 @@
     <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.5"></script>
     <script src="/js/missoes.js?v=1.0"></script>
-    <script src="/js/exames.js?v=4.0"></script>
+    <script src="/js/exames.js?v=4.1"></script>
     <script src="/js/mensagens-config.js?v=1.3"></script>
     <script src="/js/equipe.js?v=1.0"></script>
     <script src="/js/app.js?v=4.2"></script>

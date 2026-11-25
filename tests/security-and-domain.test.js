@@ -2844,6 +2844,65 @@ test('Regras de Domínio: Cadastro de Professores e Proteção de Administradore
     assert.equal(detalhesJs.includes('Não Informado'), true, 'Fallback deve exibir Não Informado');
 });
 
+test('Regras de Domínio: Contagem de Faixas Pretendidas para Compras', () => {
+    const examEligibilityService = require('../services/examEligibilityService');
+
+    const resumo = examEligibilityService.summarizeIntendedBeltsForPurchase([
+        {
+            convite_status: 'pago',
+            graduacao_pretendida_id: 2,
+            graduacao_pretendida_nome: 'Prajied Amarelo',
+            pretendida_cor_primaria: '#eab308',
+            pretendida_ordem: 2
+        },
+        {
+            convite_status: 'aceito',
+            graduacao_pretendida_id: 2,
+            graduacao_pretendida_nome: 'Prajied Amarelo',
+            pretendida_cor_primaria: '#eab308',
+            pretendida_ordem: 2
+        },
+        {
+            convite_status: 'convidado',
+            graduacao_pretendida_id: 3,
+            graduacao_pretendida_nome: 'Prajied Amarelo e Branco',
+            pretendida_cor_primaria: '#eab308',
+            pretendida_cor_secundaria: '#ffffff',
+            pretendida_ordem: 3,
+            faixa_divergente: true
+        },
+        {
+            convite_status: 'recusado',
+            graduacao_pretendida_id: 2,
+            graduacao_pretendida_nome: 'Prajied Amarelo',
+            pretendida_ordem: 2
+        },
+        {
+            convite_status: 'pago',
+            aluno_excluido: true,
+            graduacao_pretendida_id: 4,
+            graduacao_pretendida_nome: 'Prajied Verde',
+            pretendida_ordem: 4
+        }
+    ]);
+
+    assert.equal(resumo.totais.pagos, 1);
+    assert.equal(resumo.totais.aceitos, 1);
+    assert.equal(resumo.totais.convidados, 1);
+    assert.equal(resumo.totais.total_pagos_e_aceitos, 2);
+    assert.equal(resumo.totais.total_ativos, 3);
+    assert.equal(resumo.totais.ignorados_recusados_ou_excluidos, 2);
+    assert.equal(resumo.totais.com_divergencia, 1);
+
+    assert.equal(resumo.faixas.length, 2);
+    assert.equal(resumo.faixas[0].nome, 'Prajied Amarelo');
+    assert.equal(resumo.faixas[0].pagos, 1);
+    assert.equal(resumo.faixas[0].aceitos, 1);
+    assert.equal(resumo.faixas[0].total_pagos_e_aceitos, 2);
+    assert.equal(resumo.faixas[1].nome, 'Prajied Amarelo e Branco');
+    assert.equal(resumo.faixas[1].cor_secundaria, '#ffffff');
+});
+
 test.after(async () => {
     try {
         await pool.end();
