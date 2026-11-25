@@ -3,6 +3,9 @@
  * Compartilhada entre Admin (Dossiê 360°) e Portal do Aluno.
  */
 (function (global) {
+    const CRITERIA_MAX = 10;
+    const SPARRING_CAP = 6;
+
     const PILLARS = [
         { id: 'inteligencia', nome: 'Inteligência', sigla: 'INT', subtitulo: 'Leitura tática e controle mental', cor: '#38bdf8' },
         { id: 'destreza', nome: 'Destreza', sigla: 'DES', subtitulo: 'Técnica pura, precisão e postura', cor: '#a855f7' },
@@ -17,7 +20,7 @@
         {
             numero: 2, id: 'controle_distancia', pilar: 'inteligencia', nome: 'Controle de distância', isSparring: false,
             minLabel: 'Não domina', maxLabel: 'Domínio total: longa, média e curta',
-            landmarks: { 0: '0: Não domina', 3: '3: 1 distância', 4: '4: 2 distâncias', 5: '5: Longa, média e curta' }
+            landmarks: { 0: '0: Não domina', 6: '6: 1 distância', 8: '8: 2 distâncias', 10: '10: Longa, média e curta' }
         },
         { numero: 3, id: 'contra_ataques', pilar: 'inteligencia', nome: 'Contra-ataques', isSparring: false, minLabel: 'Nulo ou reativo sem critério', maxLabel: 'Lê o golpe e responde na janela exata' },
         { numero: 4, id: 'dominio_clinch_tatico', pilar: 'inteligencia', nome: 'Domínio do clinch (Tático)', isSparring: false, minLabel: 'Perdido na curta distância', maxLabel: 'Sabe travar, desequilibrar e pontuar' },
@@ -63,38 +66,38 @@
         {
             id: 'muralha', nome: 'Muralha', icone: '🛡️', cor: '#38bdf8',
             criterios_ids: ['defesas', 'manutencao_guarda_fadiga'],
-            requisito: 'Atingir nota 5/5 em Defesas e 5/5 em Manutenção de guarda sob fadiga',
-            check: (c) => Number(c.defesas) === 5 && Number(c.manutencao_guarda_fadiga) === 5
+            requisito: 'Atingir nota 10/10 em Defesas e 10/10 em Manutenção de guarda sob fadiga',
+            check: (c) => Number(c.defesas) === 10 && Number(c.manutencao_guarda_fadiga) === 10
         },
         {
             id: 'sniper', nome: 'Sniper', icone: '🎯', cor: '#a855f7',
             criterios_ids: ['precisao', 'contra_ataques'],
-            requisito: 'Atingir nota 5/5 em Precisão e 5/5 em Contra-ataques',
-            check: (c) => Number(c.precisao) === 5 && Number(c.contra_ataques) === 5
+            requisito: 'Atingir nota 10/10 em Precisão e 10/10 em Contra-ataques',
+            check: (c) => Number(c.precisao) === 10 && Number(c.contra_ataques) === 10
         },
         {
             id: 'pulmao_de_aco', nome: 'Pulmão de Aço', icone: '🫁', cor: '#ef4444',
             criterios_ids: ['resistencia_cardiovascular', 'recuperacao_entre_rounds'],
-            requisito: 'Atingir nota 5/5 em Resistência cardiovascular (Gás) e 5/5 em Recuperação entre rounds',
-            check: (c) => Number(c.resistencia_cardiovascular) === 5 && Number(c.recuperacao_entre_rounds) === 5
+            requisito: 'Atingir nota 10/10 em Resistência cardiovascular (Gás) e 10/10 em Recuperação entre rounds',
+            check: (c) => Number(c.resistencia_cardiovascular) === 10 && Number(c.recuperacao_entre_rounds) === 10
         },
         {
             id: 'parceiro_confianca', nome: 'Parceiro de Confiança', icone: '🤝', cor: '#10b981',
             criterios_ids: ['controle_forca_golpes', 'controle_emocional_sparring'],
-            requisito: 'Estar Apto para Sparring e atingir 5/5 em Controle de força nos golpes e 5/5 em Controle emocional no sparring',
-            check: (c, aptoSparring) => aptoSparring !== false && Number(c.controle_forca_golpes) === 5 && Number(c.controle_emocional_sparring) === 5
+            requisito: 'Estar Apto para Sparring e atingir 10/10 em Controle de força nos golpes e 10/10 em Controle emocional no sparring',
+            check: (c, aptoSparring) => aptoSparring !== false && Number(c.controle_forca_golpes) === 10 && Number(c.controle_emocional_sparring) === 10
         },
         {
             id: 'rei_do_clinch', nome: 'Rei do Clinch', icone: '👑', cor: '#f59e0b',
             criterios_ids: ['dominio_clinch_tatico', 'saidas_clinch', 'forca_isometrica_clinch'],
-            requisito: 'Atingir nota 5/5 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
-            check: (c) => Number(c.dominio_clinch_tatico) === 5 && Number(c.saidas_clinch) === 5 && Number(c.forca_isometrica_clinch) === 5
+            requisito: 'Atingir nota 10/10 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
+            check: (c) => Number(c.dominio_clinch_tatico) === 10 && Number(c.saidas_clinch) === 10 && Number(c.forca_isometrica_clinch) === 10
         },
         {
             id: 'intocavel', nome: 'Intocável', icone: '⚡', cor: '#22c55e',
             criterios_ids: ['jogo_pernas_footwork', 'tempo_reacao'],
-            requisito: 'Atingir nota 5/5 em Jogo de pernas (Footwork e Ângulos) e 5/5 em Tempo de reação',
-            check: (c) => Number(c.jogo_pernas_footwork) === 5 && Number(c.tempo_reacao) === 5
+            requisito: 'Atingir nota 10/10 em Jogo de pernas (Footwork e Ângulos) e 10/10 em Tempo de reação',
+            check: (c) => Number(c.jogo_pernas_footwork) === 10 && Number(c.tempo_reacao) === 10
         }
     ];
 
@@ -125,7 +128,7 @@
     }
 
     function calculateTotals(criteriosMap = {}, aptoSparring = true) {
-        const pilares = {
+        const pilaresRaw = {
             inteligencia: 0,
             destreza: 0,
             agilidade: 0,
@@ -137,10 +140,18 @@
         for (const c of CRITERIA) {
             let val = parseInt(criteriosMap[c.id], 10);
             if (isNaN(val) || val < 0) val = 0;
-            if (val > 5) val = 5;
-            if (sparLocked && c.isSparring && val > 3) val = 3;
-            pilares[c.pilar] += val;
+            if (val > CRITERIA_MAX) val = CRITERIA_MAX;
+            if (sparLocked && c.isSparring && val > SPARRING_CAP) val = SPARRING_CAP;
+            pilaresRaw[c.pilar] += val;
         }
+
+        const pilares = {
+            inteligencia: Math.round(pilaresRaw.inteligencia / 2),
+            destreza: Math.round(pilaresRaw.destreza / 2),
+            agilidade: Math.round(pilaresRaw.agilidade / 2),
+            forca: Math.round(pilaresRaw.forca / 2),
+            vitalidade: Math.round(pilaresRaw.vitalidade / 2)
+        };
 
         const total = pilares.inteligencia + pilares.destreza + pilares.agilidade + pilares.forca + pilares.vitalidade;
         return {
@@ -212,7 +223,7 @@
         if (!criteriosMap || typeof criteriosMap !== 'object' || Array.isArray(criteriosMap)) return null;
         const ranked = CRITERIA.map((c) => {
             const pObj = PILLARS.find(p => p.id === c.pilar);
-            const nota = Math.max(0, Math.min(5, Number(criteriosMap[c.id] ?? 0) || 0));
+            const nota = Math.max(0, Math.min(CRITERIA_MAX, Number(criteriosMap[c.id] ?? 0) || 0));
             const pilarScore = Number(pilares?.[c.pilar] ?? 0) || 0;
             return {
                 id: c.id,
@@ -229,9 +240,9 @@
         const foco = ranked.slice(0, 2);
         if (foco.length < 2) return null;
         const [c1, c2] = foco;
-        const mensagem = (c1.nota === 5 && c2.nota === 5)
+        const mensagem = (c1.nota === CRITERIA_MAX && c2.nota === CRITERIA_MAX)
             ? 'Domínio máximo em todos os 20 critérios técnicos! Foco em consistência de combate.'
-            : `Melhorar ${c1.nome} (${c1.nota}/5) e ${c2.nome} (${c2.nota}/5) para a próxima avaliação.`;
+            : `Melhorar ${c1.nome} (${c1.nota}/${CRITERIA_MAX}) e ${c2.nome} (${c2.nota}/${CRITERIA_MAX}) para a próxima avaliação.`;
         return { titulo: 'Foco de Treino / Missão Atual', criterios: foco, mensagem };
     }
 
@@ -384,7 +395,7 @@
         if (aptoSparring) {
             return `<span class="rpg-sparring-pill apto">✓ Apto para Sparring</span>`;
         }
-        return `<span class="rpg-sparring-pill restrito" title="Critérios de sparring limitados ao teto máximo de 3 pontos">⚠ Simulado Controlado (Teto 3)</span>`;
+        return `<span class="rpg-sparring-pill restrito" title="Critérios de sparring limitados ao teto máximo de ${SPARRING_CAP} pontos">⚠ Simulado Controlado (Teto ${SPARRING_CAP})</span>`;
     }
 
     function renderFocusMissionCardHtml(foco) {
@@ -407,7 +418,7 @@
                                         <span>${escapeHtml(c.pilar_nome || c.pilar)}</span>
                                     </div>
                                 </div>
-                                <span class="rpg-focus-score">${Number(c.nota)}/5</span>
+                                <span class="rpg-focus-score">${Number(c.nota)}/${CRITERIA_MAX}</span>
                             </div>
                         `;
                     }).join('')}
@@ -662,14 +673,14 @@
                             <div class="rpg-breakdown-list">
                                 ${items.map((c) => {
                                     const val = criteriosMap[c.id] !== undefined ? Number(criteriosMap[c.id]) : 0;
-                                    const lockNote = sparLocked && c.isSparring ? ' (teto 3)' : '';
+                                    const lockNote = sparLocked && c.isSparring ? ` (teto ${SPARRING_CAP})` : '';
                                     return `
                                         <div class="rpg-breakdown-item">
                                             <span class="rpg-breakdown-name">
                                                 ${c.numero}. ${escapeHtml(c.nome)}
                                                 ${c.isSparring ? '<span class="rpg-sparring-tag mini">SPARRING</span>' : ''}
                                             </span>
-                                            <strong class="rpg-breakdown-score">${val}/5${escapeHtml(lockNote)}</strong>
+                                            <strong class="rpg-breakdown-score">${val}/${CRITERIA_MAX}${escapeHtml(lockNote)}</strong>
                                         </div>
                                     `;
                                 }).join('')}
@@ -1101,7 +1112,7 @@
             ctx.textAlign = 'center';
             ctx.font = '600 24px "Plus Jakarta Sans", sans-serif';
             ctx.fillStyle = '#94a3b8';
-            ctx.fillText('Em busca da primeira insígnia de excelência 5/5 no tatame!', W / 2, 1630);
+            ctx.fillText('Em busca da primeira insígnia de excelência 10/10 no tatame!', W / 2, 1630);
         } else {
             const cols = 2;
             const chipW = 418;
@@ -1268,6 +1279,8 @@
     }
 
     global.RpgAvaliacaoUI = {
+        CRITERIA_MAX,
+        SPARRING_CAP,
         PILLARS,
         CRITERIA,
         RANK_ORDER,

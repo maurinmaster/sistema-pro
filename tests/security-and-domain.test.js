@@ -1220,11 +1220,11 @@ test('Avaliações Técnicas do Professor (Clinch, Socos, Chutes, Postura) e Exi
             { expiresIn: '1h', algorithm: 'HS256' }
         );
 
-        // 1. Professor registra Avaliação Técnica RPG com 20 critérios (0 a 5)
+        // 1. Professor registra Avaliação Técnica RPG com 20 critérios (0 a 10)
         const rpgService = require('../services/rpgEvaluationService');
         const criteriosPayload = {};
         rpgService.RPG_CRITERIA.forEach((c) => {
-            criteriosPayload[c.id] = 4;
+            criteriosPayload[c.id] = 8;
         });
 
         const postRes = await fetch(`${baseUrl}/api/alunos/1/avaliacoes-desempenho`, {
@@ -2180,27 +2180,33 @@ test('Avaliação Técnica RPG (Muay Thai): 20 Critérios, Trava de Sparring, Ra
     const missingSpar = rpg.evaluateRpgPayload({ criterios: {} });
     assert.equal(missingSpar.valid, false);
 
-    // Nota fora do intervalo 0..5 ou decimal deve falhar
-    const baseAllFive = {};
-    rpg.RPG_CRITERIA.forEach((c) => { baseAllFive[c.id] = 5; });
+    // Nota fora do intervalo 0..10 ou decimal deve falhar
+    const baseAllTen = {};
+    rpg.RPG_CRITERIA.forEach((c) => { baseAllTen[c.id] = 10; });
     const invalidDecimal = rpg.evaluateRpgPayload({
         apto_sparring: true,
-        criterios: { ...baseAllFive, precisao: 4.5 }
+        criterios: { ...baseAllTen, precisao: 8.5 }
     });
     assert.equal(invalidDecimal.valid, false);
 
-    // Regra de trava: apto_sparring = false limita [SPARRING] ao máximo 3
+    const invalidAboveMax = rpg.evaluateRpgPayload({
+        apto_sparring: true,
+        criterios: { ...baseAllTen, precisao: 11 }
+    });
+    assert.equal(invalidAboveMax.valid, false);
+
+    // Regra de trava: apto_sparring = false limita [SPARRING] ao máximo 6
     const lockedRes = rpg.evaluateRpgPayload({
         apto_sparring: false,
         data_avaliacao: '2026-11-21',
-        criterios: baseAllFive,
+        criterios: baseAllTen,
         observacoes_instrutor: 'Focar em guarda antes do sparring livre.'
     });
     assert.equal(lockedRes.valid, true);
     assert.equal(lockedRes.data.trava_sparring_aplicada, true);
-    assert.equal(lockedRes.data.criterios.controle_emocional_sparring, 3);
-    assert.equal(lockedRes.data.criterios.controle_tecnica_sparring, 3);
-    assert.equal(lockedRes.data.criterios.controle_forca_golpes, 3);
+    assert.equal(lockedRes.data.criterios.controle_emocional_sparring, 6);
+    assert.equal(lockedRes.data.criterios.controle_tecnica_sparring, 6);
+    assert.equal(lockedRes.data.criterios.controle_forca_golpes, 6);
     assert.equal(lockedRes.data.score_inteligencia, 18);
     assert.equal(lockedRes.data.score_destreza, 18);
     assert.equal(lockedRes.data.score_agilidade, 20);
@@ -2289,24 +2295,24 @@ test('Gamificação Avançada RPG: Arquétipo, Insígnias, Foco de Evolução e 
         assert.equal(rpg.computeFighterArchetype(pillarsB, 51).titulo, expectedTitle, `Ordem ${p2}>${p1}`);
     }
 
-    // 2. Insígnias: verificação individual e trava de sparring em "Parceiro de Confiança"
-    const baseFour = {};
-    rpg.RPG_CRITERIA.forEach((c) => { baseFour[c.id] = 4; });
+    // 2. Insígnias: verificação individual e trava de sparring em "Parceiro de Confiança" (escala 0..10)
+    const baseEight = {};
+    rpg.RPG_CRITERIA.forEach((c) => { baseEight[c.id] = 8; });
 
-    const onlyMuralha = rpg.computeRpgBadges({ ...baseFour, defesas: 5, manutencao_guarda_fadiga: 5 }, true);
+    const onlyMuralha = rpg.computeRpgBadges({ ...baseEight, defesas: 10, manutencao_guarda_fadiga: 10 }, true);
     assert.equal(onlyMuralha.find(b => b.id === 'muralha').desbloqueada, true);
     assert.equal(onlyMuralha.filter(b => b.desbloqueada).length, 1);
 
-    const partialClinch = rpg.computeRpgBadges({ ...baseFour, dominio_clinch_tatico: 5, saidas_clinch: 5, forca_isometrica_clinch: 4 }, true);
+    const partialClinch = rpg.computeRpgBadges({ ...baseEight, dominio_clinch_tatico: 10, saidas_clinch: 10, forca_isometrica_clinch: 9 }, true);
     assert.equal(partialClinch.find(b => b.id === 'rei_do_clinch').desbloqueada, false);
 
     const fullClinchAndSniper = rpg.computeRpgBadges({
-        ...baseFour,
-        dominio_clinch_tatico: 5, saidas_clinch: 5, forca_isometrica_clinch: 5,
-        precisao: 5, contra_ataques: 5,
-        resistencia_cardiovascular: 5, recuperacao_entre_rounds: 5,
-        jogo_pernas_footwork: 5, tempo_reacao: 5,
-        controle_forca_golpes: 5, controle_emocional_sparring: 5
+        ...baseEight,
+        dominio_clinch_tatico: 10, saidas_clinch: 10, forca_isometrica_clinch: 10,
+        precisao: 10, contra_ataques: 10,
+        resistencia_cardiovascular: 10, recuperacao_entre_rounds: 10,
+        jogo_pernas_footwork: 10, tempo_reacao: 10,
+        controle_forca_golpes: 10, controle_emocional_sparring: 10
     }, true);
     assert.equal(fullClinchAndSniper.find(b => b.id === 'rei_do_clinch').desbloqueada, true);
     assert.equal(fullClinchAndSniper.find(b => b.id === 'sniper').desbloqueada, true);
@@ -2314,27 +2320,64 @@ test('Gamificação Avançada RPG: Arquétipo, Insígnias, Foco de Evolução e 
     assert.equal(fullClinchAndSniper.find(b => b.id === 'intocavel').desbloqueada, true);
     assert.equal(fullClinchAndSniper.find(b => b.id === 'parceiro_confianca').desbloqueada, true);
 
-    const sparringLockedBadge = rpg.computeRpgBadges({ ...baseFour, controle_forca_golpes: 5, controle_emocional_sparring: 5 }, false);
+    const sparringLockedBadge = rpg.computeRpgBadges({ ...baseEight, controle_forca_golpes: 10, controle_emocional_sparring: 10 }, false);
     assert.equal(sparringLockedBadge.find(b => b.id === 'parceiro_confianca').desbloqueada, false);
+
+    // 2b. Compatibilidade retroativa: registro legado (0..5 sem _escala_max) é convertido p/ 0..10 automaticamente
+    const legacyFiveMap = {};
+    rpg.RPG_CRITERIA.forEach((c) => { legacyFiveMap[c.id] = 5; });
+    const legacyNormalized = rpg.normalizeRpgRow({
+        modelo_avaliacao: 'rpg',
+        apto_sparring: 1,
+        score_inteligencia: 20,
+        score_destreza: 20,
+        score_agilidade: 20,
+        score_forca: 20,
+        score_vitalidade: 20,
+        score_total: 100,
+        rank_combate: 'S',
+        criterios_json: JSON.stringify(legacyFiveMap)
+    });
+    assert.equal(legacyNormalized.criterios.defesas, 10);
+    assert.equal(legacyNormalized.badges_desbloqueadas.length, 6);
+
+    // Registro na escala nova (_escala_max: 10) com notas <= 5 NÃO deve ser multiplicado por 2
+    const modernThreeMap = { _escala_max: 10 };
+    rpg.RPG_CRITERIA.forEach((c) => { modernThreeMap[c.id] = 3; });
+    const modernNormalized = rpg.normalizeRpgRow({
+        modelo_avaliacao: 'rpg',
+        apto_sparring: 1,
+        score_inteligencia: 6,
+        score_destreza: 6,
+        score_agilidade: 6,
+        score_forca: 6,
+        score_vitalidade: 6,
+        score_total: 30,
+        rank_combate: 'C',
+        criterios_json: JSON.stringify(modernThreeMap)
+    });
+    assert.equal(modernNormalized.criterios.defesas, 3);
+    assert.equal(modernNormalized.criterios._escala_max, undefined);
 
     // 3. Foco de Evolução ("Missão Atual"): escolhe os 2 piores e desempata pelo pilar mais baixo
     const focusMap = {};
-    rpg.RPG_CRITERIA.forEach((c) => { focusMap[c.id] = 4; });
-    focusMap.contra_ataques = 2;        // inteligencia (pilar = 14)
-    focusMap.saidas_clinch = 2;         // agilidade (pilar = 11)
-    focusMap.potencia_impacto = 2;      // forca (pilar = 9)
-    focusMap.explosao_combinacoes = 1;  // forca (pilar = 9)
-    focusMap.forca_isometrica_clinch = 2;
+    rpg.RPG_CRITERIA.forEach((c) => { focusMap[c.id] = 8; });
+    focusMap.contra_ataques = 4;        // inteligencia (pilar = 14)
+    focusMap.saidas_clinch = 4;         // agilidade (pilar = 11)
+    focusMap.potencia_impacto = 4;      // forca (pilar = 9)
+    focusMap.explosao_combinacoes = 2;  // forca (pilar = 9)
+    focusMap.forca_isometrica_clinch = 4;
 
     const focusPilares = { inteligencia: 14, destreza: 16, agilidade: 11, forca: 9, vitalidade: 16 };
     const focusRes = rpg.computeTrainingFocus(focusMap, focusPilares);
     assert.ok(focusRes);
     assert.equal(focusRes.criterios.length, 2);
     assert.equal(focusRes.criterios[0].id, 'explosao_combinacoes');
-    assert.equal(focusRes.criterios[0].nota, 1);
-    assert.equal(focusRes.criterios[1].pilar, 'forca'); // empate nota 2 quebrado pelo menor pilar (forca=9)
-    assert.equal(focusRes.criterios[1].nota, 2);
+    assert.equal(focusRes.criterios[0].nota, 2);
+    assert.equal(focusRes.criterios[1].pilar, 'forca'); // empate nota 4 quebrado pelo menor pilar (forca=9)
+    assert.equal(focusRes.criterios[1].nota, 4);
     assert.ok(focusRes.mensagem.includes('Melhorar'));
+    assert.ok(focusRes.mensagem.includes('/10'));
 
     // 4. Requisitos de Exame (Trava de Progressão)
     const noLock = rpg.evaluateExamProgressionLock(null, { id: 2, nome: 'Prajied Amarelo' });

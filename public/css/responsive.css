@@ -520,12 +520,14 @@
 
     .rpg-seg-group {
         width: 100%;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 5px;
     }
 
     .rpg-seg-btn {
         min-width: 0;
-        height: 40px;
-        font-size: 13.5px;
+        height: 38px;
+        font-size: 13px;
     }
 
     .dossier-desktop-table {

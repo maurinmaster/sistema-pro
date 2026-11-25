@@ -1279,12 +1279,14 @@ const PainelAlunoApp = {
                             <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.18); border-top: 2px solid ${pillarColor}; border-radius: 12px; padding: 10px 12px;">
                                 <div style="font-size: 12.5px; font-weight: 800; color: ${pillarColor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
                                 ${items.map((c) => {
+                                    const maxScale = ui.CRITERIA_MAX || 10;
+                                    const capSpar = ui.SPARRING_CAP || 6;
                                     const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
-                                    const lockTxt = !aptoSparring && c.isSparring ? ' (teto 3)' : '';
+                                    const lockTxt = !aptoSparring && c.isSparring ? ` (teto ${capSpar})` : '';
                                     return `
                                         <div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; color:#cbd5e1; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
                                             <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:12px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
-                                            <strong style="color:#f8fafc; white-space:nowrap;">${val}/5${this.escapeHtml(lockTxt)}</strong>
+                                            <strong style="color:#f8fafc; white-space:nowrap;">${val}/${maxScale}${this.escapeHtml(lockTxt)}</strong>
                                         </div>
                                     `;
                                 }).join('')}
@@ -1716,12 +1718,14 @@ const PainelAlunoApp = {
                             <div style="background: rgba(15,23,42,0.8); border: 1px solid rgba(148,163,184,0.18); border-top: 2px solid ${pillarColor}; border-radius: 12px; padding: 10px 12px;">
                                 <div style="font-size: 12.5px; font-weight: 800; color: ${pillarColor}; margin-bottom: 6px;">${this.escapeHtml(pillar.nome)}</div>
                                 ${items.map((c) => {
+                                    const maxScale = ui.CRITERIA_MAX || 10;
+                                    const capSpar = ui.SPARRING_CAP || 6;
                                     const val = atual.criterios[c.id] !== undefined ? Number(atual.criterios[c.id]) : 0;
-                                    const lockTxt = !aptoSparring && c.isSparring ? ' (teto 3)' : '';
+                                    const lockTxt = !aptoSparring && c.isSparring ? ` (teto ${capSpar})` : '';
                                     return `
                                         <div style="display:flex; justify-content:space-between; gap:8px; font-size:13px; color:#cbd5e1; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.06);">
                                             <span>${c.numero}. ${this.escapeHtml(c.nome)}${c.isSparring ? ' <span style="font-size:12px; color:#fbbf24; font-weight:700;">[SPARRING]</span>' : ''}</span>
-                                            <strong style="color:#f8fafc; white-space:nowrap;">${val}/5${this.escapeHtml(lockTxt)}</strong>
+                                            <strong style="color:#f8fafc; white-space:nowrap;">${val}/${maxScale}${this.escapeHtml(lockTxt)}</strong>
                                         </div>
                                     `;
                                 }).join('')}

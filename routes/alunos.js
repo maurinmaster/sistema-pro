@@ -1167,7 +1167,7 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
             parsed.score_total,
             parsed.rank_combate,
             parsed.rank_titulo,
-            JSON.stringify(parsed.criterios),
+            JSON.stringify({ ...parsed.criterios, _escala_max: rpgEvaluationService.RPG_CRITERIA_MAX }),
             parsed.legacy.nota_clinch,
             parsed.legacy.nota_socos,
             parsed.legacy.nota_chutes,
@@ -1178,7 +1178,9 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
         ]);
 
         const obsText = parsed.observacoes_instrutor;
-        const sparringLabel = parsed.apto_sparring ? 'Sim (Apto)' : 'Não (Simulado Controlado - máx. 3)';
+        const sparringLabel = parsed.apto_sparring
+            ? 'Sim (Apto)'
+            : `Não (Simulado Controlado - máx. ${rpgEvaluationService.RPG_SPARRING_CAP})`;
         const dataFmt = parsed.data_avaliacao
             ? new Date(parsed.data_avaliacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
             : '';
@@ -1225,7 +1227,7 @@ router.post('/:id/avaliacoes-desempenho', authenticateToken, authorizeRoles('adm
         res.status(201).json({
             success: true,
             message: parsed.trava_sparring_aplicada
-                ? `Avaliação RPG salva (Rank ${parsed.rank_combate} • ${parsed.score_total}/100). Critérios de sparring ajustados ao teto 3.`
+                ? `Avaliação RPG salva (Rank ${parsed.rank_combate} • ${parsed.score_total}/100). Critérios de sparring ajustados ao teto ${rpgEvaluationService.RPG_SPARRING_CAP}.`
                 : `Avaliação Técnica RPG registrada com sucesso (Rank ${parsed.rank_combate} • ${parsed.score_total}/100)!`,
             data: normalizedSaved
         });

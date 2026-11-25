@@ -1506,10 +1506,11 @@ const AlunoDetalhesModule = {
     // 8. Modal e Registro da Avaliação Técnica Gamificada (RPG Muay Thai)
     openModalDesempenho(alunoId, alunoNome) {
         const rpgUI = window.RpgAvaliacaoUI;
+        const maxScale = rpgUI?.CRITERIA_MAX || 10;
         document.getElementById('desempenho-aluno-id').value = alunoId;
         const sub = document.getElementById('desempenho-modal-sub');
         if (sub && alunoNome) {
-            sub.textContent = `Atleta: ${decodeURIComponent(alunoNome)} • 20 critérios (0 a 5)`;
+            sub.textContent = `Atleta: ${decodeURIComponent(alunoNome)} • 20 critérios (0 a ${maxScale})`;
         }
         const dataInput = document.getElementById('desempenho-data');
         if (dataInput) {
@@ -1545,11 +1546,12 @@ const AlunoDetalhesModule = {
         const ultima = this.currentData?.avaliacao_rpg?.atual;
         const rpgUI = window.RpgAvaliacaoUI;
         if (!ultima || !rpgUI) return;
+        const maxScale = rpgUI.CRITERIA_MAX || 10;
 
         const baseCriterios = {};
         rpgUI.CRITERIA.forEach((c) => {
             const val = ultima.criterios && ultima.criterios[c.id] !== undefined ? Number(ultima.criterios[c.id]) : 0;
-            baseCriterios[c.id] = Math.max(0, Math.min(5, isNaN(val) ? 0 : val));
+            baseCriterios[c.id] = Math.max(0, Math.min(maxScale, isNaN(val) ? 0 : val));
         });
 
         this.rpgFormState.criterios = baseCriterios;
@@ -1571,17 +1573,18 @@ const AlunoDetalhesModule = {
     setRpgAptoSparring(isApto) {
         this.rpgFormState.apto_sparring = Boolean(isApto);
         const rpgUI = window.RpgAvaliacaoUI;
+        const sparringCap = rpgUI?.SPARRING_CAP || 6;
 
         if (!this.rpgFormState.apto_sparring && rpgUI) {
             let ajustados = false;
             rpgUI.CRITERIA.forEach((c) => {
-                if (c.isSparring && Number(this.rpgFormState.criterios[c.id] || 0) > 3) {
-                    this.rpgFormState.criterios[c.id] = 3;
+                if (c.isSparring && Number(this.rpgFormState.criterios[c.id] || 0) > sparringCap) {
+                    this.rpgFormState.criterios[c.id] = sparringCap;
                     ajustados = true;
                 }
             });
             if (ajustados) {
-                UI.showToast('Critérios [SPARRING] limitados a 3 pontos para simulado controlado.', 'warning');
+                UI.showToast(`Critérios [SPARRING] limitados a ${sparringCap} pontos para simulado controlado.`, 'warning');
             }
         }
 
@@ -1596,10 +1599,12 @@ const AlunoDetalhesModule = {
         const criterion = rpgUI.CRITERIA.find(c => c.id === criterionId);
         if (!criterion) return;
 
-        let safeVal = Math.max(0, Math.min(5, Math.round(Number(val) || 0)));
-        if (this.rpgFormState.apto_sparring === false && criterion.isSparring && safeVal > 3) {
-            safeVal = 3;
-            UI.showToast('Trava ativa: aluno não apto ao sparring possui teto máximo de 3 neste critério.', 'warning');
+        const maxScale = rpgUI.CRITERIA_MAX || 10;
+        const sparringCap = rpgUI.SPARRING_CAP || 6;
+        let safeVal = Math.max(0, Math.min(maxScale, Math.round(Number(val) || 0)));
+        if (this.rpgFormState.apto_sparring === false && criterion.isSparring && safeVal > sparringCap) {
+            safeVal = sparringCap;
+            UI.showToast(`Trava ativa: aluno não apto ao sparring possui teto máximo de ${sparringCap} neste critério.`, 'warning');
         }
 
         this.rpgFormState.criterios[criterionId] = safeVal;
@@ -1612,6 +1617,9 @@ const AlunoDetalhesModule = {
         const rpgUI = window.RpgAvaliacaoUI;
         if (!container || !rpgUI) return;
 
+        const maxScale = rpgUI.CRITERIA_MAX || 10;
+        const sparringCap = rpgUI.SPARRING_CAP || 6;
+        const scaleValues = Array.from({ length: maxScale + 1 }, (_, i) => i);
         const isSparLocked = this.rpgFormState.apto_sparring === false;
         const totals = rpgUI.calculateTotals(this.rpgFormState.criterios, this.rpgFormState.apto_sparring !== false);
 
@@ -1637,19 +1645,22 @@ const AlunoDetalhesModule = {
                         return `
                             <div class="rpg-criterion-row">
                                 <div class="rpg-criterion-top">
-                                    <span class="rpg-criterion-name">
-                                        <span>${c.numero}. ${UI.escapeHtml(c.nome)}</span>
-                                        ${c.isSparring ? `<span class="rpg-sparring-tag" title="Limitado ao máximo de 3 pontos quando Apto para Sparring = Não">SPARRING</span>` : ''}
-                                    </span>
+                                    <div class="rpg-criterion-head-line">
+                                        <span class="rpg-criterion-name">
+                                            <span>${c.numero}. ${UI.escapeHtml(c.nome)}</span>
+                                            ${c.isSparring ? `<span class="rpg-sparring-tag" title="Limitado ao máximo de ${sparringCap} pontos quando Apto para Sparring = Não">SPARRING</span>` : ''}
+                                        </span>
+                                        <span class="rpg-criterion-val-badge">${curVal}/${maxScale}</span>
+                                    </div>
                                     <div class="rpg-seg-group" role="group" aria-label="${UI.escapeHtml(c.nome)}">
-                                        ${[0, 1, 2, 3, 4, 5].map((n) => {
-                                            const blocked = isSparLocked && c.isSparring && n > 3;
+                                        ${scaleValues.map((n) => {
+                                            const blocked = isSparLocked && c.isSparring && n > sparringCap;
                                             return `
                                                 <button type="button"
                                                     class="rpg-seg-btn ${curVal === n ? 'active' : ''}"
                                                     data-criterion-id="${UI.escapeHtml(c.id)}"
                                                     data-val="${n}"
-                                                    ${blocked ? 'disabled title="Bloqueado (máx. 3 para simulado controlado)"' : ''}>
+                                                    ${blocked ? `disabled title="Bloqueado (máx. ${sparringCap} para simulado controlado)"` : ''}>
                                                     ${n}
                                                 </button>
                                             `;
@@ -1658,7 +1669,7 @@ const AlunoDetalhesModule = {
                                 </div>
                                 <div class="rpg-criterion-legend">
                                     <span>0: ${UI.escapeHtml(c.minLabel)}</span>
-                                    <span style="text-align: right;">5: ${UI.escapeHtml(c.maxLabel)}</span>
+                                    <span style="text-align: right;">${maxScale}: ${UI.escapeHtml(c.maxLabel)}</span>
                                 </div>
                                 ${landmarksHtml}
                             </div>

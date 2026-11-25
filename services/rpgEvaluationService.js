@@ -1,9 +1,12 @@
 /**
  * PRO COMBATE - Domínio de Avaliação Técnica Gamificada (Estilo RPG - Muay Thai)
- * Define os 5 pilares, os 20 critérios técnicos (escala 0..5), trava de sparring (teto 3),
+ * Define os 5 pilares, os 20 critérios técnicos (escala 0..10), trava de sparring (teto 6),
  * cálculo de pontuações (0..20 por pilar | 0..100 geral), classificação de Rank (D..S)
- * e comparação evolutiva (deltas).
+ * e comparação evolutiva (deltas), com conversão retroativa automática de registros antigos (0..5).
  */
+
+const RPG_CRITERIA_MAX = 10;
+const RPG_SPARRING_CAP = 6;
 
 const RPG_PILLARS = [
     {
@@ -64,9 +67,9 @@ const RPG_CRITERIA = [
         maxLabel: 'Domínio total: longa, média e curta',
         landmarks: {
             0: 'Não domina',
-            3: 'Domina 1 distância',
-            4: 'Domina 2 distâncias',
-            5: 'Domínio total: longa, média e curta'
+            6: 'Domina 1 distância',
+            8: 'Domina 2 distâncias',
+            10: 'Domínio total: longa, média e curta'
         }
     },
     {
@@ -317,8 +320,8 @@ const RPG_BADGES_CATALOG = [
         icone: '🛡️',
         cor: '#38bdf8',
         criterios_ids: ['defesas', 'manutencao_guarda_fadiga'],
-        requisito: 'Atingir nota 5/5 em Defesas e 5/5 em Manutenção de guarda sob fadiga',
-        check: (c) => Number(c.defesas) === 5 && Number(c.manutencao_guarda_fadiga) === 5
+        requisito: 'Atingir nota 10/10 em Defesas e 10/10 em Manutenção de guarda sob fadiga',
+        check: (c) => Number(c.defesas) === 10 && Number(c.manutencao_guarda_fadiga) === 10
     },
     {
         id: 'sniper',
@@ -326,8 +329,8 @@ const RPG_BADGES_CATALOG = [
         icone: '🎯',
         cor: '#a855f7',
         criterios_ids: ['precisao', 'contra_ataques'],
-        requisito: 'Atingir nota 5/5 em Precisão e 5/5 em Contra-ataques',
-        check: (c) => Number(c.precisao) === 5 && Number(c.contra_ataques) === 5
+        requisito: 'Atingir nota 10/10 em Precisão e 10/10 em Contra-ataques',
+        check: (c) => Number(c.precisao) === 10 && Number(c.contra_ataques) === 10
     },
     {
         id: 'pulmao_de_aco',
@@ -335,8 +338,8 @@ const RPG_BADGES_CATALOG = [
         icone: '🫁',
         cor: '#ef4444',
         criterios_ids: ['resistencia_cardiovascular', 'recuperacao_entre_rounds'],
-        requisito: 'Atingir nota 5/5 em Resistência cardiovascular (Gás) e 5/5 em Recuperação entre rounds',
-        check: (c) => Number(c.resistencia_cardiovascular) === 5 && Number(c.recuperacao_entre_rounds) === 5
+        requisito: 'Atingir nota 10/10 em Resistência cardiovascular (Gás) e 10/10 em Recuperação entre rounds',
+        check: (c) => Number(c.resistencia_cardiovascular) === 10 && Number(c.recuperacao_entre_rounds) === 10
     },
     {
         id: 'parceiro_confianca',
@@ -344,8 +347,8 @@ const RPG_BADGES_CATALOG = [
         icone: '🤝',
         cor: '#10b981',
         criterios_ids: ['controle_forca_golpes', 'controle_emocional_sparring'],
-        requisito: 'Estar Apto para Sparring e atingir 5/5 em Controle de força nos golpes e 5/5 em Controle emocional no sparring',
-        check: (c, aptoSparring) => aptoSparring !== false && Number(c.controle_forca_golpes) === 5 && Number(c.controle_emocional_sparring) === 5
+        requisito: 'Estar Apto para Sparring e atingir 10/10 em Controle de força nos golpes e 10/10 em Controle emocional no sparring',
+        check: (c, aptoSparring) => aptoSparring !== false && Number(c.controle_forca_golpes) === 10 && Number(c.controle_emocional_sparring) === 10
     },
     {
         id: 'rei_do_clinch',
@@ -353,8 +356,8 @@ const RPG_BADGES_CATALOG = [
         icone: '👑',
         cor: '#f59e0b',
         criterios_ids: ['dominio_clinch_tatico', 'saidas_clinch', 'forca_isometrica_clinch'],
-        requisito: 'Atingir nota 5/5 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
-        check: (c) => Number(c.dominio_clinch_tatico) === 5 && Number(c.saidas_clinch) === 5 && Number(c.forca_isometrica_clinch) === 5
+        requisito: 'Atingir nota 10/10 em Domínio do clinch (Tático), Saídas de clinch e Força isométrica no Clinch',
+        check: (c) => Number(c.dominio_clinch_tatico) === 10 && Number(c.saidas_clinch) === 10 && Number(c.forca_isometrica_clinch) === 10
     },
     {
         id: 'intocavel',
@@ -362,8 +365,8 @@ const RPG_BADGES_CATALOG = [
         icone: '⚡',
         cor: '#22c55e',
         criterios_ids: ['jogo_pernas_footwork', 'tempo_reacao'],
-        requisito: 'Atingir nota 5/5 em Jogo de pernas (Footwork e Ângulos) e 5/5 em Tempo de reação',
-        check: (c) => Number(c.jogo_pernas_footwork) === 5 && Number(c.tempo_reacao) === 5
+        requisito: 'Atingir nota 10/10 em Jogo de pernas (Footwork e Ângulos) e 10/10 em Tempo de reação',
+        check: (c) => Number(c.jogo_pernas_footwork) === 10 && Number(c.tempo_reacao) === 10
     }
 ];
 
@@ -455,7 +458,7 @@ function computeTrainingFocus(criteriosMap = null, pilares = {}) {
 
     const ranked = RPG_CRITERIA.map((criterion) => {
         const raw = Number(criteriosMap[criterion.id] ?? 0);
-        const nota = Number.isFinite(raw) ? Math.max(0, Math.min(5, raw)) : 0;
+        const nota = Number.isFinite(raw) ? Math.max(0, Math.min(RPG_CRITERIA_MAX, raw)) : 0;
         const pilarScore = Number(pilares?.[criterion.pilar] ?? 0) || 0;
         const pillarMeta = PILLARS_BY_ID.get(criterion.pilar);
         return {
@@ -476,10 +479,10 @@ function computeTrainingFocus(criteriosMap = null, pilares = {}) {
     if (foco.length < 2) return null;
 
     const [c1, c2] = foco;
-    const todosNoMaximo = c1.nota === 5 && c2.nota === 5;
+    const todosNoMaximo = c1.nota === RPG_CRITERIA_MAX && c2.nota === RPG_CRITERIA_MAX;
     const mensagem = todosNoMaximo
         ? 'Domínio máximo em todos os 20 critérios técnicos! Foco em consistência de combate.'
-        : `Melhorar ${c1.nome} (${c1.nota}/5) e ${c2.nome} (${c2.nota}/5) para a próxima avaliação.`;
+        : `Melhorar ${c1.nome} (${c1.nota}/${RPG_CRITERIA_MAX}) e ${c2.nome} (${c2.nota}/${RPG_CRITERIA_MAX}) para a próxima avaliação.`;
 
     return {
         titulo: 'Foco de Treino / Missão Atual',
@@ -659,7 +662,51 @@ function parseBooleanStrict(value) {
 }
 
 /**
- * Valida, aplica a trava de sparring (máx 3 nos critérios [SPARRING] quando apto_sparring = false),
+ * Normaliza mapa de critérios para a escala atual 0..10, convertendo automaticamente
+ * avaliações antigas gravadas na escala legada 0..5.
+ */
+function normalizeCriteriaToScale10(rawCriteria, scoreTotal = null) {
+    if (!rawCriteria || typeof rawCriteria !== 'object' || Array.isArray(rawCriteria)) {
+        return null;
+    }
+
+    const explicitMax = Number(rawCriteria._escala_max);
+    let maxVal = 0;
+    let sumVal = 0;
+    const clean = {};
+
+    for (const c of RPG_CRITERIA) {
+        const raw = Number(rawCriteria[c.id] ?? 0);
+        const val = Number.isFinite(raw) ? Math.max(0, Math.min(RPG_CRITERIA_MAX, Math.round(raw))) : 0;
+        clean[c.id] = val;
+        if (val > maxVal) maxVal = val;
+        sumVal += val;
+    }
+
+    const parsedScore = (scoreTotal !== null && scoreTotal !== undefined && scoreTotal !== '')
+        ? Number(scoreTotal)
+        : null;
+
+    const isLegacyScale5 = (
+        explicitMax !== RPG_CRITERIA_MAX &&
+        maxVal <= 5 &&
+        sumVal > 0 &&
+        parsedScore !== null &&
+        Number.isFinite(parsedScore) &&
+        Math.abs(sumVal - parsedScore) <= Math.abs((sumVal / 2) - parsedScore)
+    );
+
+    if (isLegacyScale5) {
+        for (const c of RPG_CRITERIA) {
+            clean[c.id] = Math.min(RPG_CRITERIA_MAX, clean[c.id] * 2);
+        }
+    }
+
+    return clean;
+}
+
+/**
+ * Valida, aplica a trava de sparring (máx 6 nos critérios [SPARRING] quando apto_sparring = false),
  * calcula os 5 pilares (0..20), score_total (0..100) e Rank.
  */
 function evaluateRpgPayload(body = {}) {
@@ -675,12 +722,12 @@ function evaluateRpgPayload(body = {}) {
     if (!rawCriterios || typeof rawCriterios !== 'object' || Array.isArray(rawCriterios)) {
         return {
             valid: false,
-            error: 'Informe as notas (0 a 5) para todos os 20 critérios técnicos RPG.'
+            error: 'Informe as notas (0 a 10) para todos os 20 critérios técnicos RPG.'
         };
     }
 
     const criteriosSanitizados = {};
-    const pilares = {
+    const pilaresRaw = {
         inteligencia: 0,
         destreza: 0,
         agilidade: 0,
@@ -699,22 +746,30 @@ function evaluateRpgPayload(body = {}) {
         }
 
         const num = Number(rawVal);
-        if (!Number.isInteger(num) || num < 0 || num > 5) {
+        if (!Number.isInteger(num) || num < 0 || num > RPG_CRITERIA_MAX) {
             return {
                 valid: false,
-                error: `A nota do critério "${criterion.nome}" deve ser um número inteiro de 0 a 5.`
+                error: `A nota do critério "${criterion.nome}" deve ser um número inteiro de 0 a ${RPG_CRITERIA_MAX}.`
             };
         }
 
         let finalVal = num;
-        if (!aptoSparring && criterion.isSparring && finalVal > 3) {
-            finalVal = 3;
+        if (!aptoSparring && criterion.isSparring && finalVal > RPG_SPARRING_CAP) {
+            finalVal = RPG_SPARRING_CAP;
             travaSparringAplicada = true;
         }
 
         criteriosSanitizados[criterion.id] = finalVal;
-        pilares[criterion.pilar] += finalVal;
+        pilaresRaw[criterion.pilar] += finalVal;
     }
+
+    const pilares = {
+        inteligencia: Math.round(pilaresRaw.inteligencia / 2),
+        destreza: Math.round(pilaresRaw.destreza / 2),
+        agilidade: Math.round(pilaresRaw.agilidade / 2),
+        forca: Math.round(pilaresRaw.forca / 2),
+        vitalidade: Math.round(pilaresRaw.vitalidade / 2)
+    };
 
     const scoreTotal = (
         pilares.inteligencia +
@@ -740,10 +795,10 @@ function evaluateRpgPayload(body = {}) {
     const observacoesInstrutor = rawObs ? String(rawObs).trim().substring(0, 1000) : null;
 
     // Equivalentes legados (0..10) apenas para manter colunas antigas NOT NULL consistentes
-    const notaClinch = Number((((criteriosSanitizados.dominio_clinch_tatico + criteriosSanitizados.forca_isometrica_clinch + criteriosSanitizados.saidas_clinch) / 15) * 10).toFixed(1));
-    const notaSocos = Number((((criteriosSanitizados.precisao + criteriosSanitizados.explosao_combinacoes) / 10) * 10).toFixed(1));
-    const notaChutes = Number((((criteriosSanitizados.velocidade_execucao + criteriosSanitizados.potencia_impacto) / 10) * 10).toFixed(1));
-    const notaPostura = Number((((criteriosSanitizados.postura_base + criteriosSanitizados.defesas) / 10) * 10).toFixed(1));
+    const notaClinch = Number((((criteriosSanitizados.dominio_clinch_tatico + criteriosSanitizados.forca_isometrica_clinch + criteriosSanitizados.saidas_clinch) / 30) * 10).toFixed(1));
+    const notaSocos = Number((((criteriosSanitizados.precisao + criteriosSanitizados.explosao_combinacoes) / 20) * 10).toFixed(1));
+    const notaChutes = Number((((criteriosSanitizados.velocidade_execucao + criteriosSanitizados.potencia_impacto) / 20) * 10).toFixed(1));
+    const notaPostura = Number((((criteriosSanitizados.postura_base + criteriosSanitizados.defesas) / 20) * 10).toFixed(1));
     const notaClinchSparring = Number((((pilares.destreza + pilares.inteligencia) / 40) * 10).toFixed(1));
     const notaCondicionamento = Number(((pilares.vitalidade / 20) * 10).toFixed(1));
 
@@ -751,6 +806,7 @@ function evaluateRpgPayload(body = {}) {
         valid: true,
         data: {
             modelo_avaliacao: 'rpg',
+            escala_criterios: RPG_CRITERIA_MAX,
             data_avaliacao: dataAval,
             apto_sparring: aptoSparring,
             trava_sparring_aplicada: travaSparringAplicada,
@@ -803,7 +859,8 @@ function normalizeRpgRow(dbRow = {}) {
     const isRpg = String(dbRow.modelo_avaliacao || '').toLowerCase() === 'rpg';
     const scoreTotal = Number(dbRow.score_total || 0);
     const rankInfo = classifyRpgRank(scoreTotal);
-    const criterios = safeParseCriteriaJson(dbRow.criterios_json || dbRow.criterios);
+    const criteriosRaw = safeParseCriteriaJson(dbRow.criterios_json || dbRow.criterios);
+    const criterios = isRpg ? normalizeCriteriaToScale10(criteriosRaw, scoreTotal) : criteriosRaw;
     const pilares = {
         inteligencia: Number(dbRow.score_inteligencia || 0),
         destreza: Number(dbRow.score_destreza || 0),
@@ -820,6 +877,7 @@ function normalizeRpgRow(dbRow = {}) {
     return {
         ...dbRow,
         is_rpg: isRpg,
+        escala_criterios: RPG_CRITERIA_MAX,
         modelo_avaliacao: isRpg ? 'rpg' : 'legado',
         apto_sparring: aptoSparring,
         pilares,
@@ -860,6 +918,8 @@ function computeRpgDeltas(currentEval, previousEval) {
 }
 
 module.exports = {
+    RPG_CRITERIA_MAX,
+    RPG_SPARRING_CAP,
     RPG_PILLARS,
     RPG_CRITERIA,
     CRITERIA_BY_ID,
@@ -872,6 +932,7 @@ module.exports = {
     computeRpgBadges,
     computeTrainingFocus,
     evaluateExamProgressionLock,
+    normalizeCriteriaToScale10,
     evaluateRpgPayload,
     normalizeRpgRow,
     computeRpgDeltas
