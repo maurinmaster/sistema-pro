@@ -459,6 +459,164 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 });
 
+// GET /api/checkins/turmas - Listar turmas ativas
+router.get('/turmas', authenticateToken, async (req, res) => {
+    try {
+        const [turmas] = await pool.query(`
+            SELECT
+                t.*,
+                TIME_FORMAT(t.horario_inicio, '%H:%i') AS horario_inicio_hm,
+                TIME_FORMAT(t.horario_fim, '%H:%i') AS horario_fim_hm,
+                m.nome AS modalidade_nome,
+                ue.nome AS professor_nome
+            FROM turmas t
+            JOIN modalidades m ON m.id = t.modalidade_id
+            LEFT JOIN usuarios_equipe ue ON ue.id = t.professor_id
+            WHERE t.ativo = 1
+            ORDER BY m.nome ASC, t.horario_inicio ASC, t.nome ASC
+        `);
+        res.json({ success: true, data: turmas });
+    } catch (err) {
+        console.error('Erro ao listar turmas:', err);
+        res.status(500).json({ success: false, error: 'Erro ao listar turmas.' });
+    }
+});
+
+// POST /api/checkins/turmas - Cadastrar nova turma com dias da semana e horários (admin/professor)
+router.post('/turmas', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    try {
+        const validation = checkinSmartService.validateTurmaPayload(req.body || {});
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        const d = validation.data;
+        const [modRows] = await pool.query('SELECT id FROM modalidades WHERE id = ? LIMIT 1', [d.modalidade_id]);
+        if (modRows.length === 0) {
+            return res.status(400).json({ success: false, error: 'Modalidade não encontrada.' });
+        }
+
+        if (d.professor_id) {
+            const [profRows] = await pool.query(
+                "SELECT id FROM usuarios_equipe WHERE id = ? AND ativo = 1 AND cargo IN ('professor', 'admin') LIMIT 1",
+                [d.professor_id]
+            );
+            if (profRows.length === 0) {
+                return res.status(400).json({ success: false, error: 'Professor não encontrado ou inativo.' });
+            }
+        }
+
+        const [result] = await pool.query(`
+            INSERT INTO turmas (modalidade_id, professor_id, nome, dias_semana, horario_inicio, horario_fim, capacidade_maxima, ativo)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+        `, [d.modalidade_id, d.professor_id, d.nome, d.dias_semana, d.horario_inicio, d.horario_fim, d.capacidade_maxima]);
+
+        const [rows] = await pool.query(`
+            SELECT
+                t.*,
+                TIME_FORMAT(t.horario_inicio, '%H:%i') AS horario_inicio_hm,
+                TIME_FORMAT(t.horario_fim, '%H:%i') AS horario_fim_hm,
+                m.nome AS modalidade_nome,
+                ue.nome AS professor_nome
+            FROM turmas t
+            JOIN modalidades m ON m.id = t.modalidade_id
+            LEFT JOIN usuarios_equipe ue ON ue.id = t.professor_id
+            WHERE t.id = ?
+            LIMIT 1
+        `, [result.insertId]);
+
+        res.status(201).json({
+            success: true,
+            data: rows[0] || { id: result.insertId, ...d },
+            message: `Turma "${d.nome}" cadastrada com sucesso!`
+        });
+    } catch (err) {
+        console.error('Erro ao cadastrar turma:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao cadastrar turma.' });
+    }
+});
+
+// PUT /api/checkins/turmas/:id - Editar turma (dias e horários)
+router.put('/turmas/:id', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    const turmaId = parseInt(req.params.id, 10);
+    if (Number.isNaN(turmaId) || turmaId <= 0) {
+        return res.status(400).json({ success: false, error: 'ID de turma inválido.' });
+    }
+
+    try {
+        const validation = checkinSmartService.validateTurmaPayload(req.body || {});
+        if (!validation.valid) {
+            return res.status(400).json({ success: false, error: validation.error });
+        }
+
+        const d = validation.data;
+        const [modRows] = await pool.query('SELECT id FROM modalidades WHERE id = ? LIMIT 1', [d.modalidade_id]);
+        if (modRows.length === 0) {
+            return res.status(400).json({ success: false, error: 'Modalidade não encontrada.' });
+        }
+
+        const [result] = await pool.query(`
+            UPDATE turmas
+            SET modalidade_id = ?, professor_id = ?, nome = ?, dias_semana = ?, horario_inicio = ?, horario_fim = ?, capacidade_maxima = ?
+            WHERE id = ? AND ativo = 1
+        `, [d.modalidade_id, d.professor_id, d.nome, d.dias_semana, d.horario_inicio, d.horario_fim, d.capacidade_maxima, turmaId]);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Turma não encontrada.' });
+        }
+
+        const [rows] = await pool.query(`
+            SELECT
+                t.*,
+                TIME_FORMAT(t.horario_inicio, '%H:%i') AS horario_inicio_hm,
+                TIME_FORMAT(t.horario_fim, '%H:%i') AS horario_fim_hm,
+                m.nome AS modalidade_nome,
+                ue.nome AS professor_nome
+            FROM turmas t
+            JOIN modalidades m ON m.id = t.modalidade_id
+            LEFT JOIN usuarios_equipe ue ON ue.id = t.professor_id
+            WHERE t.id = ?
+            LIMIT 1
+        `, [turmaId]);
+
+        res.json({
+            success: true,
+            data: rows[0] || { id: turmaId, ...d },
+            message: `Turma "${d.nome}" atualizada com sucesso!`
+        });
+    } catch (err) {
+        console.error('Erro ao atualizar turma:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao atualizar turma.' });
+    }
+});
+
+// DELETE /api/checkins/turmas/:id - Desativa turma preservando histórico de check-ins
+router.delete('/turmas/:id', authenticateToken, authorizeRoles('admin', 'professor'), async (req, res) => {
+    const turmaId = parseInt(req.params.id, 10);
+    if (Number.isNaN(turmaId) || turmaId <= 0) {
+        return res.status(400).json({ success: false, error: 'ID de turma inválido.' });
+    }
+
+    try {
+        const [result] = await pool.query(
+            'UPDATE turmas SET ativo = 0 WHERE id = ? AND ativo = 1',
+            [turmaId]
+        );
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ success: false, error: 'Turma não encontrada.' });
+        }
+
+        res.json({
+            success: true,
+            id: turmaId,
+            message: 'Turma removida da lista ativa com sucesso!'
+        });
+    } catch (err) {
+        console.error('Erro ao remover turma:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao remover turma.' });
+    }
+});
+
 // DELETE /api/checkins/:id - Desfaz um check-in registrado (admin, professor, recepcao)
 router.delete('/:id', authenticateToken, authorizeRoles('admin', 'professor', 'recepcao'), async (req, res) => {
     const checkinId = parseInt(req.params.id, 10);
@@ -490,24 +648,6 @@ router.delete('/:id', authenticateToken, authorizeRoles('admin', 'professor', 'r
     } catch (err) {
         console.error('Erro ao desfazer check-in:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao desfazer check-in.' });
-    }
-});
-
-// GET /api/checkins/turmas - Listar turmas ativas
-router.get('/turmas', authenticateToken, async (req, res) => {
-    try {
-        const [turmas] = await pool.query(`
-            SELECT t.*, m.nome AS modalidade_nome, ue.nome AS professor_nome
-            FROM turmas t
-            JOIN modalidades m ON m.id = t.modalidade_id
-            LEFT JOIN usuarios_equipe ue ON ue.id = t.professor_id
-            WHERE t.ativo = 1
-            ORDER BY t.modalidade_id, t.horario_inicio
-        `);
-        res.json({ success: true, data: turmas });
-    } catch (err) {
-        console.error('Erro ao listar turmas:', err);
-        res.status(500).json({ success: false, error: 'Erro ao listar turmas.' });
     }
 });
 

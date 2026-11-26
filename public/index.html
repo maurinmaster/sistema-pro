@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.7">
+    <link rel="stylesheet" href="/css/style.css?v=5.8">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.4">
 </head>
@@ -445,6 +445,9 @@
                             <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-smart-checkins" title="Atualizar painel">
                                 ↻ Atualizar
                             </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.openTurmasModal()" title="Cadastrar horários e dias das turmas">
+                                📅 Turmas &amp; Horários
+                            </button>
                             <button type="button" class="btn btn-primary btn-sm" onclick="CheckinsModule.openCheckinModal()">
                                 <svg viewBox="0 0 24 24" width="16" height="16">
                                     <polyline points="20 6 9 17 4 12" />
@@ -452,11 +455,6 @@
                                 <span>Manual</span>
                             </button>
                         </div>
-                    </div>
-
-                    <div class="checkin-hour-pills" id="checkin-hour-filters">
-                        <button type="button" class="checkin-hour-pill active" data-hour="auto">✨ Inteligente (Agora)</button>
-                        <button type="button" class="checkin-hour-pill" data-hour="primeiro">🆕 1º Check-in</button>
                     </div>
 
                     <!-- Card Superior: Fotos ativas aguardando check-in -->
@@ -2533,32 +2531,38 @@
             <form id="form-quick-checkin">
                 <div class="modal-body">
                     <div class="form-group" style="margin-bottom: 14px;">
-                        <label>Aluno <span class="required">*</span></label>
-                        <select id="checkin-aluno-id" class="form-select" required>
-                            <option value="">Selecione o aluno</option>
-                        </select>
+                        <label for="checkin-aluno-search">Aluno <span class="required">*</span></label>
+                        <input type="hidden" id="checkin-aluno-id">
+                        <div class="checkin-autocomplete-wrap">
+                            <input type="text" id="checkin-aluno-search" class="form-input"
+                                placeholder="Digite o nome do aluno..." autocomplete="off">
+                            <button type="button" id="btn-clear-checkin-aluno" class="checkin-autocomplete-clear"
+                                style="display: none;" title="Limpar aluno selecionado">&times;</button>
+                            <div id="checkin-aluno-autocomplete" class="checkin-autocomplete-list" style="display: none;"></div>
+                        </div>
+                        <small id="checkin-aluno-selected-hint" style="font-size: 11.5px; color: var(--text-muted); display: block; margin-top: 4px;">
+                            Digite para filtrar e clique no aluno desejado
+                        </small>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 14px;">
-                        <label>Modalidade do Treino <span class="required">*</span></label>
+                        <label for="checkin-modalidade-id">Modalidade do Treino <span class="required">*</span></label>
                         <select id="checkin-modalidade-id" class="form-select" required>
                             <option value="">Selecione a modalidade</option>
                         </select>
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 14px;">
-                        <label>Turma / Horário</label>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
+                            <label for="checkin-turma-id" style="margin: 0;">Turma / Horário</label>
+                            <button type="button" class="btn btn-secondary btn-sm"
+                                style="padding: 3px 9px; font-size: 11px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.4);"
+                                onclick="CheckinsModule.openTurmasModal()">
+                                + Cadastrar / Gerenciar Turmas
+                            </button>
+                        </div>
                         <select id="checkin-turma-id" class="form-select">
                             <option value="">Treino Livre / Sem Turma Fixa</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Método de Registro</label>
-                        <select id="checkin-metodo" class="form-select">
-                            <option value="manual_professor">Manual (Recepção / Professor)</option>
-                            <option value="reconhecimento_facial">Reconhecimento Facial (Totem)</option>
-                            <option value="app_aluno">App do Aluno (QR Code)</option>
                         </select>
                     </div>
                 </div>
@@ -2569,6 +2573,102 @@
                     <button type="submit" class="btn btn-success">Confirmar Presença</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL: CADASTRO DE TURMAS & HORÁRIOS       -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-gerenciar-turmas">
+        <div class="modal-box" style="max-width: 680px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2">
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    Cadastro de Turmas, Dias &amp; Horários
+                </h3>
+                <button type="button" class="modal-close" onclick="UI.closeModal('modal-gerenciar-turmas')">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+                <form id="form-turma" style="background: rgba(15, 23, 42, 0.55); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                    <input type="hidden" id="turma-edit-id">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+                        <strong id="turma-form-title" style="font-size: 13.5px; color: #f8fafc;">Nova Turma</strong>
+                        <button type="button" id="btn-cancel-edit-turma" class="btn btn-secondary btn-sm"
+                            style="display: none; padding: 3px 10px; font-size: 11px;" onclick="CheckinsModule.resetTurmaForm()">
+                            Cancelar Edição
+                        </button>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 10px;">
+                        <div class="form-group">
+                            <label for="turma-nome">Nome da Turma <span class="required">*</span></label>
+                            <input type="text" id="turma-nome" class="form-input" placeholder="Ex: Muay Thai Noturno 19h" required minlength="2" maxlength="80">
+                        </div>
+                        <div class="form-group">
+                            <label for="turma-modalidade-id">Modalidade <span class="required">*</span></label>
+                            <select id="turma-modalidade-id" class="form-select" required>
+                                <option value="">Selecione a modalidade</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 10px;">
+                        <label>Dias da Semana <span class="required">*</span></label>
+                        <div class="turma-days-picker" id="turma-days-picker">
+                            <label class="turma-day-chip"><input type="checkbox" value="SEG"><span>Seg</span></label>
+                            <label class="turma-day-chip"><input type="checkbox" value="TER"><span>Ter</span></label>
+                            <label class="turma-day-chip"><input type="checkbox" value="QUA"><span>Qua</span></label>
+                            <label class="turma-day-chip"><input type="checkbox" value="QUI"><span>Qui</span></label>
+                            <label class="turma-day-chip"><input type="checkbox" value="SEX"><span>Sex</span></label>
+                            <label class="turma-day-chip"><input type="checkbox" value="SAB"><span>Sáb</span></label>
+                            <label class="turma-day-chip"><input type="checkbox" value="DOM"><span>Dom</span></label>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label for="turma-horario-inicio">Horário Início <span class="required">*</span></label>
+                            <input type="time" id="turma-horario-inicio" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="turma-horario-fim">Horário Término <span class="required">*</span></label>
+                            <input type="time" id="turma-horario-fim" class="form-input" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid" style="margin-bottom: 12px;">
+                        <div class="form-group">
+                            <label for="turma-professor-id">Professor Responsável</label>
+                            <select id="turma-professor-id" class="form-select">
+                                <option value="">Sem professor fixo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="turma-capacidade">Capacidade Máxima (Opcional)</label>
+                            <input type="number" id="turma-capacidade" class="form-input" min="1" max="500" placeholder="Ex: 25">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary btn-sm" id="btn-salvar-turma">Salvar Turma</button>
+                    </div>
+                </form>
+
+                <div>
+                    <h4 style="font-size: 13.5px; color: #cbd5e1; margin: 0 0 10px 0;">Turmas Ativas Cadastradas</h4>
+                    <div class="turma-list-grid" id="turmas-gerenciar-list">
+                        <div class="checkin-grid-empty">Carregando turmas...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-gerenciar-turmas')">Fechar</button>
+            </div>
         </div>
     </div>
 
@@ -3981,7 +4081,7 @@
     <script src="/js/aluno-detalhes.js?v=2.5"></script>
     <script src="/js/alunos.js?v=5.8"></script>
     <script src="/js/dashboard.js?v=1.3"></script>
-    <script src="/js/checkins.js?v=2.0"></script>
+    <script src="/js/checkins.js?v=2.1"></script>
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.6"></script>

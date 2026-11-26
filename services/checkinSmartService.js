@@ -334,12 +334,89 @@ function buildAttendanceCalendarMonth(year, month1to12, checkinsList = [], optio
     };
 }
 
+const ALLOWED_WEEKDAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+
+/**
+ * Valida e normaliza payload de criação/edição de turmas (dias da semana, horários e capacidade).
+ */
+function validateTurmaPayload(body = {}) {
+    const nome = String(body.nome || '').trim();
+    if (nome.length < 2 || nome.length > 80) {
+        return { valid: false, error: 'Informe um nome válido para a turma (entre 2 e 80 caracteres).' };
+    }
+
+    const modalidadeId = parseInt(body.modalidade_id, 10);
+    if (Number.isNaN(modalidadeId) || modalidadeId <= 0) {
+        return { valid: false, error: 'Selecione uma modalidade válida para a turma.' };
+    }
+
+    let professorId = null;
+    if (body.professor_id !== undefined && body.professor_id !== null && String(body.professor_id).trim() !== '') {
+        const parsedProf = parseInt(String(body.professor_id), 10);
+        if (Number.isNaN(parsedProf) || parsedProf <= 0) {
+            return { valid: false, error: 'Professor selecionado inválido.' };
+        }
+        professorId = parsedProf;
+    }
+
+    const rawDias = Array.isArray(body.dias_semana)
+        ? body.dias_semana
+        : String(body.dias_semana || '').split(',');
+    const uniqueDiasSet = new Set(
+        rawDias
+            .map(d => String(d || '').trim().toUpperCase())
+            .filter(d => ALLOWED_WEEKDAYS.includes(d))
+    );
+    const diasOrdenados = ALLOWED_WEEKDAYS.filter(d => uniqueDiasSet.has(d));
+    if (diasOrdenados.length === 0) {
+        return { valid: false, error: 'Selecione pelo menos um dia da semana para a turma.' };
+    }
+
+    const timeRegex = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/;
+    const rawIni = String(body.horario_inicio || '').trim();
+    const rawFim = String(body.horario_fim || '').trim();
+    if (!timeRegex.test(rawIni) || !timeRegex.test(rawFim)) {
+        return { valid: false, error: 'Informe horários válidos de início e término (formato HH:mm).' };
+    }
+
+    const normalizeTime = (t) => (t.length === 5 ? `${t}:00` : t);
+    const horarioInicio = normalizeTime(rawIni);
+    const horarioFim = normalizeTime(rawFim);
+    if (horarioFim <= horarioInicio) {
+        return { valid: false, error: 'O horário de término deve ser maior que o horário de início.' };
+    }
+
+    let capacidadeMaxima = null;
+    if (body.capacidade_maxima !== undefined && body.capacidade_maxima !== null && String(body.capacidade_maxima).trim() !== '') {
+        const cap = parseInt(String(body.capacidade_maxima), 10);
+        if (Number.isNaN(cap) || cap < 1 || cap > 500) {
+            return { valid: false, error: 'A capacidade máxima deve ser entre 1 e 500 alunos.' };
+        }
+        capacidadeMaxima = cap;
+    }
+
+    return {
+        valid: true,
+        data: {
+            nome,
+            modalidade_id: modalidadeId,
+            professor_id: professorId,
+            dias_semana: diasOrdenados.join(','),
+            horario_inicio: horarioInicio,
+            horario_fim: horarioFim,
+            capacidade_maxima: capacidadeMaxima
+        }
+    };
+}
+
 module.exports = {
+    ALLOWED_WEEKDAYS,
     getDisplayShortNames,
     circularMinutesDiff,
     extractIsoDate,
     getBrazilNowParts,
     rankStudentsForSmartCheckin,
     extractDetectedHours,
-    buildAttendanceCalendarMonth
+    buildAttendanceCalendarMonth,
+    validateTurmaPayload
 };

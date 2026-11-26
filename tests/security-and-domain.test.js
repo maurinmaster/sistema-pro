@@ -3261,6 +3261,30 @@ test('Regras de Domínio: Check-in Inteligente por Horário e Calendário de Pre
     assert.equal(brPrevNight.hora, 22);
     assert.equal(brPrevNight.minuto, 15);
     assert.equal(brPrevNight.sqlDateTime, '2026-11-25 22:15:00');
+
+    // 7. Validação de cadastro de turmas, dias da semana e horários
+    const turmaOk = smart.validateTurmaPayload({
+        nome: '  Muay Thai Noturno  ',
+        modalidade_id: '1',
+        professor_id: '2',
+        dias_semana: ['sex', 'seg', 'QUA', 'SEG'],
+        horario_inicio: '19:00',
+        horario_fim: '20:15',
+        capacidade_maxima: '25'
+    });
+    assert.equal(turmaOk.valid, true);
+    assert.equal(turmaOk.data.nome, 'Muay Thai Noturno');
+    assert.equal(turmaOk.data.modalidade_id, 1);
+    assert.equal(turmaOk.data.professor_id, 2);
+    assert.equal(turmaOk.data.dias_semana, 'SEG,QUA,SEX');
+    assert.equal(turmaOk.data.horario_inicio, '19:00:00');
+    assert.equal(turmaOk.data.horario_fim, '20:15:00');
+    assert.equal(turmaOk.data.capacidade_maxima, 25);
+
+    assert.equal(smart.validateTurmaPayload({ nome: 'A', modalidade_id: 1, dias_semana: ['SEG'], horario_inicio: '19:00', horario_fim: '20:00' }).valid, false);
+    assert.equal(smart.validateTurmaPayload({ nome: 'Turma 1', modalidade_id: 1, dias_semana: [], horario_inicio: '19:00', horario_fim: '20:00' }).valid, false);
+    assert.equal(smart.validateTurmaPayload({ nome: 'Turma 1', modalidade_id: 1, dias_semana: ['SEG'], horario_inicio: '20:00', horario_fim: '19:00' }).valid, false);
+    assert.equal(smart.validateTurmaPayload({ nome: 'Turma 1', modalidade_id: 1, dias_semana: ['SEG'], horario_inicio: '19:00', horario_fim: '20:00', capacidade_maxima: 999 }).valid, false);
 });
 
 test.after(async () => {
