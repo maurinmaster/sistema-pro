@@ -28,6 +28,11 @@ const pool = mysql.createPool({
     charset: 'utf8mb4'
 });
 
+// Garante que cada conexão da sessão MySQL utilize GMT-3 (Feira de Santana / Bahia) em NOW(), CURDATE() e CURRENT_TIMESTAMP
+pool.on('connection', (connection) => {
+    connection.query("SET time_zone = '-03:00'");
+});
+
 module.exports = pool;
 
 // Testa conexão inicial e garante schema sincronizado fora de ambiente de testes unitários

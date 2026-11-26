@@ -64,6 +64,43 @@ function extractIsoDate(val) {
 }
 
 /**
+ * Retorna data e hora exatas no fuso GMT-3 (America/Bahia — Feira de Santana, BA),
+ * independente do fuso horário do SO ou do servidor MySQL.
+ */
+function getBrazilNowParts(referenceDate = new Date()) {
+    const baseMs = referenceDate instanceof Date && !isNaN(referenceDate.getTime())
+        ? referenceDate.getTime()
+        : Date.now();
+    // Brasil/Bahia é fixo em UTC-03:00 (sem horário de verão)
+    const brDate = new Date(baseMs - (3 * 60 * 60 * 1000));
+    const ano = brDate.getUTCFullYear();
+    const mes = brDate.getUTCMonth() + 1;
+    const dia = brDate.getUTCDate();
+    const hora = brDate.getUTCHours();
+    const minuto = brDate.getUTCMinutes();
+    const segundo = brDate.getUTCSeconds();
+
+    const mm = String(mes).padStart(2, '0');
+    const dd = String(dia).padStart(2, '0');
+    const hh = String(hora).padStart(2, '0');
+    const mi = String(minuto).padStart(2, '0');
+    const ss = String(segundo).padStart(2, '0');
+
+    return {
+        ano,
+        mes,
+        dia,
+        hora,
+        minuto,
+        segundo,
+        dateIso: `${ano}-${mm}-${dd}`,
+        timeHm: `${hh}:${mi}`,
+        sqlDateTime: `${ano}-${mm}-${dd} ${hh}:${mi}:${ss}`,
+        minutesOfDay: (hora * 60) + minuto
+    };
+}
+
+/**
  * Classifica e ordena alunos para o grid de check-in inteligente:
  * - Grupo 0 (Topo absoluto): alunos sem nenhum check-in anterior (1º Check-in)
  * - Grupo 1 (Horário atual / filtro): alunos que costumam treinar na faixa de horário (±windowMinutes)
@@ -301,6 +338,7 @@ module.exports = {
     getDisplayShortNames,
     circularMinutesDiff,
     extractIsoDate,
+    getBrazilNowParts,
     rankStudentsForSmartCheckin,
     extractDetectedHours,
     buildAttendanceCalendarMonth

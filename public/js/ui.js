@@ -199,7 +199,8 @@ const UI = {
     formatDateTime(dateString) {
         if (!dateString) return '-';
         const d = new Date(dateString);
-        return d.toLocaleString('pt-BR');
+        if (isNaN(d.getTime())) return '-';
+        return d.toLocaleString('pt-BR', { timeZone: 'America/Bahia' });
     },
 
     // Cálculo exato de idade

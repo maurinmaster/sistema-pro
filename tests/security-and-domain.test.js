@@ -3242,6 +3242,25 @@ test('Regras de Domínio: Check-in Inteligente por Horário e Calendário de Pre
     assert.equal(cal.dias[9].estado, 'futuro');         // 10/11 futuro
     assert.equal(cal.totais.presentes, 1);
     assert.equal(cal.totais.bloqueados, 1);
+
+    // 6. Conversão determinística para Feira de Santana / Bahia (GMT-3)
+    const brMorning = smart.getBrazilNowParts(new Date('2026-11-26T09:30:00Z'));
+    assert.equal(brMorning.dateIso, '2026-11-26');
+    assert.equal(brMorning.hora, 6);
+    assert.equal(brMorning.minuto, 30);
+    assert.equal(brMorning.timeHm, '06:30');
+    assert.equal(brMorning.sqlDateTime, '2026-11-26 06:30:00');
+
+    const brSeven = smart.getBrazilNowParts(new Date('2026-11-26T10:00:00Z'));
+    assert.equal(brSeven.hora, 7);
+    assert.equal(brSeven.minuto, 0);
+    assert.equal(brSeven.timeHm, '07:00');
+
+    const brPrevNight = smart.getBrazilNowParts(new Date('2026-11-26T01:15:00Z'));
+    assert.equal(brPrevNight.dateIso, '2026-11-25');
+    assert.equal(brPrevNight.hora, 22);
+    assert.equal(brPrevNight.minuto, 15);
+    assert.equal(brPrevNight.sqlDateTime, '2026-11-25 22:15:00');
 });
 
 test.after(async () => {

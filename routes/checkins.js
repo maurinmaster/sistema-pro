@@ -48,17 +48,11 @@ async function resolveDefaultModalidadeForAluno(alunoId) {
 // GET /api/checkins/painel-inteligente - Painel visual de presenças com ordenação por 1º check-in e horário habitual
 router.get('/painel-inteligente', authenticateToken, async (req, res) => {
     try {
-        const [[clockRow]] = await pool.query(`
-            SELECT
-                DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoje,
-                HOUR(NOW()) AS hora_atual,
-                MINUTE(NOW()) AS minuto_atual
-        `);
-
-        const hoje = clockRow?.hoje || new Date().toISOString().slice(0, 10);
-        const horaAtual = Number(clockRow?.hora_atual ?? new Date().getHours());
-        const minutoAtual = Number(clockRow?.minuto_atual ?? new Date().getMinutes());
-        const currentMinutes = (horaAtual * 60) + minutoAtual;
+        const nowBr = checkinSmartService.getBrazilNowParts();
+        const hoje = nowBr.dateIso;
+        const horaAtual = nowBr.hora;
+        const minutoAtual = nowBr.minuto;
+        const currentMinutes = nowBr.minutesOfDay;
 
         const rawData = typeof req.query.data === 'string' ? req.query.data.trim() : '';
         const dataReferencia = /^\d{4}-\d{2}-\d{2}$/.test(rawData) ? rawData : hoje;
@@ -99,13 +93,13 @@ router.get('/painel-inteligente', authenticateToken, async (req, res) => {
                     SELECT COUNT(*)
                     FROM faturas f
                     WHERE f.aluno_id = a.id
-                      AND (f.status = 'atrasado' OR (f.status = 'pendente' AND f.data_vencimento < CURDATE()))
+                      AND (f.status = 'atrasado' OR (f.status = 'pendente' AND f.data_vencimento < ?))
                 ) AS faturas_atrasadas
             FROM alunos a
             WHERE a.deleted_at IS NULL
               AND a.status = 'ativo'
             ORDER BY a.nome_completo ASC
-        `);
+        `, [hoje]);
 
         // 2. Check-ins já registrados na data selecionada
         const [registradosRows] = await pool.query(`
@@ -275,17 +269,12 @@ router.get('/aluno/:alunoId/calendario', authenticateToken, async (req, res) => 
     }
 
     try {
-        const [[clockRow]] = await pool.query(`
-            SELECT
-                DATE_FORMAT(CURDATE(), '%Y-%m-%d') AS hoje,
-                YEAR(CURDATE()) AS ano_atual,
-                MONTH(CURDATE()) AS mes_atual
-        `);
+        const nowBr = checkinSmartService.getBrazilNowParts();
 
-        const anoRaw = parseInt(String(req.query.ano || clockRow.ano_atual), 10);
-        const mesRaw = parseInt(String(req.query.mes || clockRow.mes_atual), 10);
-        const ano = (!Number.isNaN(anoRaw) && anoRaw >= 2020 && anoRaw <= 2100) ? anoRaw : Number(clockRow.ano_atual);
-        const mes = (!Number.isNaN(mesRaw) && mesRaw >= 1 && mesRaw <= 12) ? mesRaw : Number(clockRow.mes_atual);
+        const anoRaw = parseInt(String(req.query.ano || nowBr.ano), 10);
+        const mesRaw = parseInt(String(req.query.mes || nowBr.mes), 10);
+        const ano = (!Number.isNaN(anoRaw) && anoRaw >= 2020 && anoRaw <= 2100) ? anoRaw : nowBr.ano;
+        const mes = (!Number.isNaN(mesRaw) && mesRaw >= 1 && mesRaw <= 12) ? mesRaw : nowBr.mes;
 
         const [alunoRows] = await pool.query(`
             SELECT id, nome_completo, DATE_FORMAT(created_at, '%Y-%m-%d') AS data_cadastro
@@ -318,7 +307,7 @@ router.get('/aluno/:alunoId/calendario', authenticateToken, async (req, res) => 
         `, [alunoId, ano, mes]);
 
         const calendario = checkinSmartService.buildAttendanceCalendarMonth(ano, mes, checkinsRows, {
-            todayIso: clockRow.hoje,
+            todayIso: nowBr.dateIso,
             dataCadastro: alunoRows[0].data_cadastro
         });
 
@@ -327,7 +316,7 @@ router.get('/aluno/:alunoId/calendario', authenticateToken, async (req, res) => 
             data: {
                 ano,
                 mes,
-                hoje: clockRow.hoje,
+                hoje: nowBr.dateIso,
                 data_cadastro: alunoRows[0].data_cadastro,
                 checkins: checkinsRows,
                 calendario
@@ -350,6 +339,7 @@ router.post('/', authenticateToken, async (req, res) => {
         const rawMetodo = typeof req.body?.metodo === 'string' ? req.body.metodo.trim() : 'manual_professor';
         const metodo = ALLOWED_METHODS.has(rawMetodo) ? rawMetodo : 'manual_professor';
         const rapido = Boolean(req.body?.rapido);
+        const nowBr = checkinSmartService.getBrazilNowParts();
 
         // Verifica status do aluno
         const [alunos] = await pool.query(
@@ -361,7 +351,7 @@ router.post('/', authenticateToken, async (req, res) => {
         }
         const aluno = alunos[0];
 
-        // Se for check-in rápido por duplo clique, evita duplicação no mesmo dia
+        // Se for check-in rápido por duplo clique, evita duplicação no mesmo dia (fuso GMT-3)
         if (rapido) {
             const [existingToday] = await pool.query(`
                 SELECT
@@ -381,10 +371,10 @@ router.post('/', authenticateToken, async (req, res) => {
                 FROM checkins c
                 JOIN alunos a ON a.id = c.aluno_id
                 JOIN modalidades m ON m.id = c.modalidade_id
-                WHERE c.aluno_id = ? AND DATE(c.data_hora_checkin) = CURDATE()
+                WHERE c.aluno_id = ? AND DATE(c.data_hora_checkin) = ?
                 ORDER BY c.id DESC
                 LIMIT 1
-            `, [alunoId]);
+            `, [alunoId, nowBr.dateIso]);
 
             if (existingToday.length > 0) {
                 return res.status(200).json({
@@ -419,17 +409,17 @@ router.post('/', authenticateToken, async (req, res) => {
             const [atrasos] = await pool.query(`
                 SELECT COUNT(*) AS total_atrasadas 
                 FROM faturas 
-                WHERE aluno_id = ? AND (status = 'atrasado' OR (status = 'pendente' AND data_vencimento < CURDATE()))
-            `, [alunoId]);
+                WHERE aluno_id = ? AND (status = 'atrasado' OR (status = 'pendente' AND data_vencimento < ?))
+            `, [alunoId, nowBr.dateIso]);
             faturasAtrasadas = atrasos[0].total_atrasadas;
         }
 
         const { status: statusCheckin, motivoBloqueio } = evaluateCheckinEligibility(aluno.status, faturasAtrasadas);
 
         const [result] = await pool.query(`
-            INSERT INTO checkins (aluno_id, modalidade_id, turma_id, metodo, status, motivo_bloqueio, validado_por_usuario_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [alunoId, modalidadeId, turmaId, metodo, statusCheckin, motivoBloqueio, req.user ? req.user.id : null]);
+            INSERT INTO checkins (aluno_id, modalidade_id, turma_id, data_hora_checkin, metodo, status, motivo_bloqueio, validado_por_usuario_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [alunoId, modalidadeId, turmaId, nowBr.sqlDateTime, metodo, statusCheckin, motivoBloqueio, req.user ? req.user.id : null]);
 
         const [createdRows] = await pool.query(`
             SELECT
