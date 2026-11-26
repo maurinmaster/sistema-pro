@@ -729,11 +729,13 @@ router.get('/:id', authenticateToken, async (req, res) => {
             };
         });
 
-        // 5. Histórico de Check-ins / Presenças (últimos 30)
+        // 5. Histórico de Check-ins / Presenças (últimos 365 registros para calendário 360°)
         const [checkins] = await pool.query(`
             SELECT 
                 c.id,
                 c.data_hora_checkin,
+                DATE_FORMAT(c.data_hora_checkin, '%Y-%m-%d') AS data_local,
+                DATE_FORMAT(c.data_hora_checkin, '%H:%i') AS hora_local,
                 c.metodo,
                 c.status,
                 m.nome AS modalidade_nome,
@@ -743,7 +745,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
             LEFT JOIN turmas t ON t.id = c.turma_id
             WHERE c.aluno_id = ?
             ORDER BY c.data_hora_checkin DESC
-            LIMIT 30
+            LIMIT 365
         `, [id]);
 
         // 6. Avaliações Técnicas Gamificadas (RPG) & Histórico

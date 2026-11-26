@@ -3164,6 +3164,86 @@ test('Regras de Domínio: Conquistas de Luta concedidas pelo Professor', () => {
     assert.equal(parseUploadUrl('/uploads/conquistas/../secret.png'), null);
 });
 
+test('Regras de Domínio: Check-in Inteligente por Horário e Calendário de Presenças', () => {
+    const smart = require('../services/checkinSmartService');
+
+    // 1. Primeiro nome com desambiguação automática de homônimos
+    const shortNames = smart.getDisplayShortNames([
+        { id: 1, nome_completo: 'Lucas Silva' },
+        { id: 2, nome_completo: 'Lucas Martins' },
+        { id: 3, nome_completo: 'MARIA OLIVEIRA' }
+    ]);
+    assert.equal(shortNames.get(1), 'Lucas S.');
+    assert.equal(shortNames.get(2), 'Lucas M.');
+    assert.equal(shortNames.get(3), 'Maria');
+
+    // 2. Ordenação inteligente: 1º check-in no topo, seguido pelo horário habitual atual, seguido pelos demais
+    const alunos = [
+        { id: 10, nome_completo: 'Carlos Souza' },     // treina às 07:00
+        { id: 11, nome_completo: 'Ana Costa' },        // treina às 19:15 (horário atual)
+        { id: 12, nome_completo: 'Pedro Novato' },     // 0 check-ins (1º check-in -> topo)
+        { id: 13, nome_completo: 'Bruno Lima' }        // treina às 19:00 e às 20:00 (menos na faixa)
+    ];
+    const historyStats = new Map([
+        [10, { total_checkins: 12, minutos_historico: [7 * 60, 7 * 60 + 10, 7 * 60 + 5] }],
+        [11, { total_checkins: 15, minutos_historico: [19 * 60 + 15, 19 * 60 + 10, 19 * 60 + 20] }],
+        [12, { total_checkins: 0, minutos_historico: [] }],
+        [13, { total_checkins: 5, minutos_historico: [19 * 60 + 5, 21 * 60] }]
+    ]);
+
+    const ranked1910 = smart.rankStudentsForSmartCheckin(alunos, historyStats, {
+        currentMinutes: 19 * 60 + 10,
+        windowMinutes: 90
+    });
+    assert.equal(ranked1910[0].id, 12);
+    assert.equal(ranked1910[0].is_primeiro_checkin, true);
+    assert.equal(ranked1910[0].horario_habitual_label, '1º Check-in');
+    assert.equal(ranked1910[1].id, 11);
+    assert.equal(ranked1910[1].prioridade_grupo, 1);
+    assert.equal(ranked1910[2].id, 13);
+    assert.equal(ranked1910[3].id, 10);
+    assert.equal(ranked1910[3].prioridade_grupo, 2);
+
+    // 3. Filtro explícito por hora (07h coloca Carlos na frente de Ana/Bruno, mantendo 1º check-in no topo)
+    const ranked07h = smart.rankStudentsForSmartCheckin(alunos, historyStats, {
+        selectedHour: 7,
+        windowMinutes: 90
+    });
+    assert.equal(ranked07h[0].id, 12);
+    assert.equal(ranked07h[1].id, 10);
+    assert.equal(ranked07h[1].horario_habitual_label, '07h');
+
+    // 4. Extração de horários detectados
+    const detected = smart.extractDetectedHours([
+        { hora: 19 }, { hora: 19 }, { hora: 7 }, { hora: 20 }
+    ]);
+    assert.deepEqual(detected, [
+        { hora: 7, label: '07h', total: 1 },
+        { hora: 19, label: '19h', total: 2 },
+        { hora: 20, label: '20h', total: 1 }
+    ]);
+
+    // 5. Calendário mensal de presenças (Novembro 2026: dia 1 = domingo)
+    const cal = smart.buildAttendanceCalendarMonth(2026, 11, [
+        { id: 1, data_local: '2026-11-04', hora_local: '19:05', modalidade_nome: 'Muay Thai', status: 'aprovado' },
+        { id: 2, data_local: '2026-11-06', hora_local: '19:10', modalidade_nome: 'Muay Thai', status: 'bloqueado' }
+    ], {
+        todayIso: '2026-11-09',
+        dataCadastro: '2026-11-02'
+    });
+    assert.equal(cal.total_dias, 30);
+    assert.equal(cal.primeiro_dia_semana, 0);
+    assert.equal(cal.dias[0].estado, 'antes_cadastro'); // 01/11 antes do cadastro (02/11)
+    assert.equal(cal.dias[1].estado, 'ausente');        // 02/11 (segunda sem check-in)
+    assert.equal(cal.dias[3].estado, 'presente');       // 04/11 presente
+    assert.equal(cal.dias[5].estado, 'bloqueado');      // 06/11 bloqueado
+    assert.equal(cal.dias[7].estado, 'descanso');       // 08/11 domingo sem aula
+    assert.equal(cal.dias[8].hoje, true);               // 09/11 hoje
+    assert.equal(cal.dias[9].estado, 'futuro');         // 10/11 futuro
+    assert.equal(cal.totais.presentes, 1);
+    assert.equal(cal.totais.bloqueados, 1);
+});
+
 test.after(async () => {
     try {
         await pool.end();

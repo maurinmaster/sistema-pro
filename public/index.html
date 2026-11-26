@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.6">
+    <link rel="stylesheet" href="/css/style.css?v=5.7">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.4">
 </head>
@@ -428,34 +428,62 @@
                 <!-- SEÇÃO 3: CONTROLE DE PRESENÇAS / CHECK-IN  -->
                 <!-- ========================================== -->
                 <section class="view-section" id="view-checkins">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 style="font-family: var(--font-heading); font-size: 18px;">Histórico de Presenças Recentes
-                        </h3>
-                        <button class="btn btn-primary" onclick="CheckinsModule.openCheckinModal()">
-                            <svg viewBox="0 0 24 24">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            <span>Lançar Presença Manual</span>
-                        </button>
+                    <div class="checkin-smart-toolbar">
+                        <div class="checkin-smart-title-wrap">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <h3 style="font-family: var(--font-heading); font-size: 18px; margin: 0;">Chamada Inteligente por Horário</h3>
+                                <span class="checkin-clock-pill" id="checkin-smart-clock-badge">🕒 --:--</span>
+                            </div>
+                            <p style="font-size: 12px; color: var(--text-muted); margin: 3px 0 0 0;">
+                                Primeiro check-in sempre no topo e ordenação automática pelo horário habitual • Duplo clique confirma ou desfaz
+                            </p>
+                        </div>
+
+                        <div class="checkin-toolbar-actions">
+                            <input type="text" id="checkin-search-input" class="form-input" placeholder="Buscar aluno..." style="min-width: 180px;">
+                            <input type="date" id="checkin-date-input" class="form-input" title="Data de referência">
+                            <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-smart-checkins" title="Atualizar painel">
+                                ↻ Atualizar
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="CheckinsModule.openCheckinModal()">
+                                <svg viewBox="0 0 24 24" width="16" height="16">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                <span>Manual</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="table-card">
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Aluno</th>
-                                        <th>Modalidade</th>
-                                        <th>Turma</th>
-                                        <th>Data e Horário</th>
-                                        <th>Status da Validação</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="checkins-table-body">
-                                    <!-- Preenchido via JS -->
-                                </tbody>
-                            </table>
+                    <div class="checkin-hour-pills" id="checkin-hour-filters">
+                        <button type="button" class="checkin-hour-pill active" data-hour="auto">✨ Inteligente (Agora)</button>
+                        <button type="button" class="checkin-hour-pill" data-hour="primeiro">🆕 1º Check-in</button>
+                    </div>
+
+                    <!-- Card Superior: Fotos ativas aguardando check-in -->
+                    <div class="checkin-board-card" id="checkin-pending-card">
+                        <div class="checkin-board-head">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <h4>📸 Alunos para Check-in</h4>
+                                <span class="checkin-count-badge pending" id="checkin-pending-count">0 aguardando</span>
+                            </div>
+                            <span class="checkin-hint-pill">👆👆 Duplo clique na foto para confirmar</span>
+                        </div>
+                        <div class="checkin-photo-grid" id="checkin-pending-grid">
+                            <div class="checkin-grid-empty">Carregando alunos...</div>
+                        </div>
+                    </div>
+
+                    <!-- Card Inferior: Check-ins já registrados -->
+                    <div class="checkin-board-card registered" id="checkin-registered-card">
+                        <div class="checkin-board-head">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <h4>✅ Check-ins Registrados</h4>
+                                <span class="checkin-count-badge success" id="checkin-registered-count">0 confirmados</span>
+                            </div>
+                            <span class="checkin-hint-pill undo">↩ Duplo clique na foto para desfazer</span>
+                        </div>
+                        <div class="checkin-photo-grid" id="checkin-registered-grid">
+                            <div class="checkin-grid-empty">Nenhum check-in registrado na data selecionada.</div>
                         </div>
                     </div>
                 </section>
@@ -3950,10 +3978,10 @@
     <script src="/js/ui.js?v=1.2"></script>
     <script src="/js/auth.js?v=1.4"></script>
     <script src="/js/rpg-avaliacao.js?v=2.3"></script>
-    <script src="/js/aluno-detalhes.js?v=2.4"></script>
+    <script src="/js/aluno-detalhes.js?v=2.5"></script>
     <script src="/js/alunos.js?v=5.8"></script>
     <script src="/js/dashboard.js?v=1.3"></script>
-    <script src="/js/checkins.js"></script>
+    <script src="/js/checkins.js?v=2.0"></script>
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.6"></script>

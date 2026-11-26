@@ -8,6 +8,7 @@ const AlunoDetalhesModule = {
     rpgFormState: { apto_sparring: null, criterios: {} },
     rpgCompareId: null,
     rpgExpandedEvalId: null,
+    presencaCalState: { year: null, month: null, selectedDate: null, cache: {}, todayIso: null, dataCadastro: null },
 
     init() {
         // Tab switching no Dossiê
@@ -640,62 +641,9 @@ const AlunoDetalhesModule = {
             <div class="table-card">${fatHtml}</div>
         `;
 
-        // TAB 4: PRESENÇAS / CHECK-INS
-        const chkHtml = checkins.length === 0 ? `
-            <div style="text-align: center; padding: 36px; color: var(--text-muted);">Nenhum check-in registrado recentemente.</div>
-        ` : `
-            <div class="table-responsive dossier-desktop-table">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Data e Horário</th>
-                            <th>Modalidade</th>
-                            <th>Turma</th>
-                            <th>Método</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${checkins.map(c => `
-                            <tr>
-                                <td style="font-family: var(--font-mono);">${UI.formatDateTime(c.data_hora_checkin)}</td>
-                                <td><strong style="color: var(--primary-light);">${UI.escapeHtml(c.modalidade_nome)}</strong></td>
-                                <td>${UI.escapeHtml(c.turma_nome || 'Treino Livre')}</td>
-                                <td style="text-transform: capitalize; font-size: 12px;">${UI.escapeHtml((c.metodo || '').replace('_', ' '))}</td>
-                                <td><span class="badge-status ${c.status === 'aprovado' ? 'ativo' : 'bloqueado'}">${UI.escapeHtml(c.status)}</span></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-            <div class="dossier-mobile-list">
-                ${checkins.map(c => `
-                    <div class="dossier-mobile-card">
-                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                            <span style="font-family: var(--font-mono); font-size: 12.5px; color: #ffffff; font-weight: 700;">${UI.formatDateTime(c.data_hora_checkin)}</span>
-                            <span class="badge-status ${c.status === 'aprovado' ? 'ativo' : 'bloqueado'}">${UI.escapeHtml(c.status)}</span>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px;">
-                            <strong style="color: var(--primary-light);">${UI.escapeHtml(c.modalidade_nome || 'Modalidade')}</strong>
-                            <span style="color: var(--text-muted);">${UI.escapeHtml(c.turma_nome || 'Treino Livre')}</span>
-                        </div>
-                        <div style="font-size: 11.5px; color: var(--text-muted); text-transform: capitalize;">
-                            Método: ${UI.escapeHtml((c.metodo || '').replace('_', ' '))}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-        document.getElementById('dossier-tab-presencas').innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
-                <h4 style="font-family: var(--font-heading); margin: 0;">Últimas 30 Presenças</h4>
-                <button class="btn btn-primary btn-sm" style="min-height: 38px;" onclick="CheckinsModule.quickCheckin(${safeAlunoId})">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
-                    <span>Novo Check-in</span>
-                </button>
-            </div>
-            <div class="table-card">${chkHtml}</div>
-        `;
+        // TAB 4: PRESENÇAS / CHECK-INS COM CALENDÁRIO MENSAL
+        this.initPresencasCalendar(data);
+        this.renderPresencasTab(safeAlunoId);
 
         // TAB 5: AVALIAÇÃO TÉCNICA GAMIFICADA (ESTILO RPG - MUAY THAI)
         this.rpgExpandedEvalId = null;
@@ -2263,6 +2211,345 @@ const AlunoDetalhesModule = {
         } catch (err) {
             UI.showToast(err.message || 'Erro ao remover conquista.', 'error');
         }
+    },
+
+    getLocalTodayIso() {
+        const now = new Date();
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    },
+
+    initPresencasCalendar(data) {
+        const todayIso = this.getLocalTodayIso();
+        const [yStr, mStr] = todayIso.split('-');
+        const rawCad = data?.aluno?.created_at ? String(data.aluno.created_at).slice(0, 10) : '';
+        this.presencaCalState = {
+            year: parseInt(yStr, 10),
+            month: parseInt(mStr, 10),
+            selectedDate: todayIso,
+            cache: {},
+            todayIso,
+            dataCadastro: /^\d{4}-\d{2}-\d{2}$/.test(rawCad) ? rawCad : ''
+        };
+    },
+
+    buildLocalCalendarForMonth(year, month) {
+        const checkinsAll = Array.isArray(this.currentData?.checkins) ? this.currentData.checkins : [];
+        const prefix = `${year}-${String(month).padStart(2, '0')}`;
+        const monthCheckins = checkinsAll.filter((c) => {
+            const dLocal = c.data_local || (typeof c.data_hora_checkin === 'string' ? c.data_hora_checkin.slice(0, 10) : '');
+            return dLocal.startsWith(prefix);
+        });
+
+        const byDate = new Map();
+        monthCheckins.forEach((chk) => {
+            const dIso = chk.data_local || (typeof chk.data_hora_checkin === 'string' ? chk.data_hora_checkin.slice(0, 10) : '');
+            if (!dIso) return;
+            if (!byDate.has(dIso)) byDate.set(dIso, []);
+            byDate.get(dIso).push({
+                id: Number(chk.id) || null,
+                hora: chk.hora_local || (typeof chk.data_hora_checkin === 'string' && chk.data_hora_checkin.length >= 16
+                    ? chk.data_hora_checkin.slice(11, 16)
+                    : ''),
+                modalidade_nome: chk.modalidade_nome || '',
+                turma_nome: chk.turma_nome || 'Treino Livre',
+                metodo: chk.metodo || '',
+                status: chk.status || 'aprovado'
+            });
+        });
+
+        const todayIso = this.presencaCalState.todayIso || this.getLocalTodayIso();
+        const cadastroIso = this.presencaCalState.dataCadastro || '';
+        const primeiroDiaSemana = new Date(Date.UTC(year, month - 1, 1)).getUTCDay();
+        const totalDias = new Date(Date.UTC(year, month, 0)).getUTCDate();
+        const dias = [];
+        const totais = { presentes: 0, ausentes: 0, bloqueados: 0, futuros: 0, descanso: 0, taxa_frequencia: 0 };
+
+        for (let day = 1; day <= totalDias; day++) {
+            const dateIso = `${prefix}-${String(day).padStart(2, '0')}`;
+            const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+            const dayCheckins = byDate.get(dateIso) || [];
+            const hasApproved = dayCheckins.some(c => c.status === 'aprovado');
+            const hasBlocked = dayCheckins.length > 0 && !hasApproved;
+
+            let estado = 'ausente';
+            if (hasApproved) {
+                estado = 'presente';
+                totais.presentes++;
+            } else if (hasBlocked) {
+                estado = 'bloqueado';
+                totais.bloqueados++;
+            } else if (dateIso > todayIso) {
+                estado = 'futuro';
+                totais.futuros++;
+            } else if (cadastroIso && dateIso < cadastroIso) {
+                estado = 'antes_cadastro';
+            } else if (weekday === 0) {
+                estado = 'descanso';
+                totais.descanso++;
+            } else {
+                estado = 'ausente';
+                totais.ausentes++;
+            }
+
+            dias.push({
+                dia: day,
+                data: dateIso,
+                dia_semana: weekday,
+                hoje: dateIso === todayIso,
+                estado,
+                checkins: dayCheckins
+            });
+        }
+
+        const baseTaxa = totais.presentes + totais.ausentes;
+        totais.taxa_frequencia = baseTaxa > 0 ? Math.round((totais.presentes / baseTaxa) * 100) : 0;
+
+        return {
+            calendario: { ano: year, mes: month, primeiro_dia_semana: primeiroDiaSemana, total_dias: totalDias, dias, totais },
+            checkins: monthCheckins
+        };
+    },
+
+    async loadPresencasCalendarMonth(year, month) {
+        const key = `${year}-${String(month).padStart(2, '0')}`;
+        if (!this.currentAlunoId) return;
+
+        try {
+            const res = await API.get(`/checkins/aluno/${this.currentAlunoId}/calendario?ano=${year}&mes=${month}`);
+            if (res && res.data && res.data.calendario) {
+                this.presencaCalState.cache[key] = {
+                    calendario: res.data.calendario,
+                    checkins: res.data.checkins || []
+                };
+                if (res.data.hoje) this.presencaCalState.todayIso = res.data.hoje;
+                if (res.data.data_cadastro) this.presencaCalState.dataCadastro = res.data.data_cadastro;
+            }
+        } catch (err) {
+            console.warn('Falha ao buscar calendário mensal no servidor, usando fallback local:', err.message);
+        }
+        this.renderPresencasTab(Number(this.currentAlunoId));
+    },
+
+    changePresencasCalendarMonth(delta) {
+        let { year, month } = this.presencaCalState;
+        month += delta;
+        if (month < 1) {
+            month = 12;
+            year -= 1;
+        } else if (month > 12) {
+            month = 1;
+            year += 1;
+        }
+        this.presencaCalState.year = year;
+        this.presencaCalState.month = month;
+        const prefix = `${year}-${String(month).padStart(2, '0')}`;
+        const todayIso = this.presencaCalState.todayIso || this.getLocalTodayIso();
+        this.presencaCalState.selectedDate = todayIso.startsWith(prefix) ? todayIso : `${prefix}-01`;
+        this.loadPresencasCalendarMonth(year, month);
+    },
+
+    goToPresencasCalendarToday() {
+        const todayIso = this.presencaCalState.todayIso || this.getLocalTodayIso();
+        const [yStr, mStr] = todayIso.split('-');
+        this.presencaCalState.year = parseInt(yStr, 10);
+        this.presencaCalState.month = parseInt(mStr, 10);
+        this.presencaCalState.selectedDate = todayIso;
+        this.loadPresencasCalendarMonth(this.presencaCalState.year, this.presencaCalState.month);
+    },
+
+    selectPresencasCalendarDay(isoDate) {
+        this.presencaCalState.selectedDate = isoDate;
+        this.renderPresencasTab(Number(this.currentAlunoId));
+    },
+
+    renderPresencasTab(safeAlunoId) {
+        const tabEl = document.getElementById('dossier-tab-presencas');
+        if (!tabEl) return;
+
+        const { year, month } = this.presencaCalState;
+        const key = `${year}-${String(month).padStart(2, '0')}`;
+        const monthPayload = this.presencaCalState.cache[key] || this.buildLocalCalendarForMonth(year, month);
+        const cal = monthPayload.calendario;
+        const monthCheckins = monthPayload.checkins || [];
+
+        const monthNames = [
+            'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+            'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+        ];
+        const monthTitle = `${monthNames[(month - 1) % 12]} de ${year}`;
+
+        const blanksHtml = Array.from({ length: cal.primeiro_dia_semana || 0 }, () => `<div class="dossie-cal-empty"></div>`).join('');
+        const daysHtml = (cal.dias || []).map((d) => {
+            const isSelected = d.data === this.presencaCalState.selectedDate;
+            const classes = [
+                'dossie-cal-day',
+                d.estado,
+                d.hoje ? 'hoje' : '',
+                isSelected ? 'selected' : ''
+            ].filter(Boolean).join(' ');
+            const statusText = d.estado === 'presente'
+                ? 'Compareceu'
+                : d.estado === 'bloqueado'
+                    ? 'Check-in bloqueado'
+                    : d.estado === 'descanso'
+                        ? 'Domingo (Sem aula)'
+                        : d.estado === 'futuro'
+                            ? 'Dia futuro'
+                            : d.estado === 'antes_cadastro'
+                                ? 'Anterior ao cadastro'
+                                : 'Não apareceu';
+            const dotLabel = d.estado === 'presente' ? '✓' : (d.estado === 'ausente' ? '×' : (d.estado === 'bloqueado' ? '!' : ''));
+
+            return `
+                <button type="button" class="${classes}" onclick="AlunoDetalhesModule.selectPresencasCalendarDay('${UI.escapeHtml(d.data)}')" title="${UI.escapeHtml(`${UI.formatDate(d.data)} • ${statusText}`)}">
+                    <span class="dossie-cal-day-num">${Number(d.dia)}</span>
+                    ${dotLabel ? `<span class="dossie-cal-day-mark">${dotLabel}</span>` : ''}
+                </button>
+            `;
+        }).join('');
+
+        const selectedObj = (cal.dias || []).find(d => d.data === this.presencaCalState.selectedDate) || null;
+        let detailHtml = '';
+        if (selectedObj) {
+            const formattedSelDate = UI.formatDate(selectedObj.data);
+            if (selectedObj.estado === 'presente' || selectedObj.estado === 'bloqueado') {
+                const itemsStr = (selectedObj.checkins || []).map((c) => `
+                    <span class="dossie-cal-detail-chip ${c.status === 'aprovado' ? 'ok' : 'blocked'}">
+                        🕒 ${UI.escapeHtml(c.hora || '--:--')} • ${UI.escapeHtml(c.modalidade_nome || 'Treino')} (${UI.escapeHtml(c.status)})
+                    </span>
+                `).join('');
+                detailHtml = `
+                    <div class="dossie-cal-detail presente">
+                        <strong>${selectedObj.estado === 'presente' ? '✅ Compareceu' : '⚠️ Tentativa Bloqueada'} em ${UI.escapeHtml(formattedSelDate)}</strong>
+                        <div class="dossie-cal-detail-chips">${itemsStr}</div>
+                    </div>
+                `;
+            } else if (selectedObj.estado === 'ausente') {
+                detailHtml = `
+                    <div class="dossie-cal-detail ausente">
+                        <strong>❌ Não compareceu em ${UI.escapeHtml(formattedSelDate)}</strong>
+                        <span>Nenhum check-in registrado nesta data.</span>
+                    </div>
+                `;
+            } else {
+                const reasonLabel = selectedObj.estado === 'descanso'
+                    ? 'Domingo — dia de descanso sem chamada.'
+                    : selectedObj.estado === 'futuro'
+                        ? 'Data futura — aguardando treino.'
+                        : 'Data anterior ao cadastro do atleta na academia.';
+                detailHtml = `
+                    <div class="dossie-cal-detail neutro">
+                        <strong>📅 ${UI.escapeHtml(formattedSelDate)}</strong>
+                        <span>${UI.escapeHtml(reasonLabel)}</span>
+                    </div>
+                `;
+            }
+        }
+
+        const listForTable = monthCheckins.length > 0 ? monthCheckins : (Array.isArray(this.currentData?.checkins) ? this.currentData.checkins.slice(0, 15) : []);
+        const chkHtml = listForTable.length === 0 ? `
+            <div style="text-align: center; padding: 28px; color: var(--text-muted);">Nenhum check-in registrado neste mês.</div>
+        ` : `
+            <div class="table-responsive dossier-desktop-table">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Data e Horário</th>
+                            <th>Modalidade</th>
+                            <th>Turma</th>
+                            <th>Método</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${listForTable.map(c => `
+                            <tr>
+                                <td style="font-family: var(--font-mono);">${UI.formatDateTime(c.data_hora_checkin)}</td>
+                                <td><strong style="color: var(--primary-light);">${UI.escapeHtml(c.modalidade_nome)}</strong></td>
+                                <td>${UI.escapeHtml(c.turma_nome || 'Treino Livre')}</td>
+                                <td style="text-transform: capitalize; font-size: 12px;">${UI.escapeHtml((c.metodo || '').replace('_', ' '))}</td>
+                                <td><span class="badge-status ${c.status === 'aprovado' ? 'ativo' : 'bloqueado'}">${UI.escapeHtml(c.status)}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="dossier-mobile-list">
+                ${listForTable.map(c => `
+                    <div class="dossier-mobile-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                            <span style="font-family: var(--font-mono); font-size: 12.5px; color: #ffffff; font-weight: 700;">${UI.formatDateTime(c.data_hora_checkin)}</span>
+                            <span class="badge-status ${c.status === 'aprovado' ? 'ativo' : 'bloqueado'}">${UI.escapeHtml(c.status)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12.5px;">
+                            <strong style="color: var(--primary-light);">${UI.escapeHtml(c.modalidade_nome || 'Modalidade')}</strong>
+                            <span style="color: var(--text-muted);">${UI.escapeHtml(c.turma_nome || 'Treino Livre')}</span>
+                        </div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); text-transform: capitalize;">
+                            Método: ${UI.escapeHtml((c.metodo || '').replace('_', ' '))}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        tabEl.innerHTML = `
+            <div class="dossie-cal-card">
+                <div class="dossie-cal-header">
+                    <div>
+                        <h4 style="font-family: var(--font-heading); margin: 0; font-size: 16px; color: #ffffff;">📅 Calendário de Presenças</h4>
+                        <span style="font-size: 12px; color: var(--text-muted);">Clique em um dia para consultar se o atleta compareceu ou faltou</span>
+                    </div>
+                    <div class="dossie-cal-nav">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="AlunoDetalhesModule.changePresencasCalendarMonth(-1)" title="Mês anterior">‹</button>
+                        <strong class="dossie-cal-month-title">${UI.escapeHtml(monthTitle)}</strong>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="AlunoDetalhesModule.changePresencasCalendarMonth(1)" title="Próximo mês">›</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="AlunoDetalhesModule.goToPresencasCalendarToday()">Hoje</button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="CheckinsModule.quickCheckin(${safeAlunoId})">+ Check-in</button>
+                    </div>
+                </div>
+
+                <div class="dossie-cal-kpis">
+                    <div class="dossie-cal-kpi ok">
+                        <span class="kpi-label">Dias Presentes</span>
+                        <strong class="kpi-val">${Number(cal.totais.presentes || 0)}</strong>
+                    </div>
+                    <div class="dossie-cal-kpi miss">
+                        <span class="kpi-label">Dias sem Presença</span>
+                        <strong class="kpi-val">${Number(cal.totais.ausentes || 0)}</strong>
+                    </div>
+                    <div class="dossie-cal-kpi rate">
+                        <span class="kpi-label">Assiduidade (Seg–Sáb)</span>
+                        <strong class="kpi-val">${Number(cal.totais.taxa_frequencia || 0)}%</strong>
+                    </div>
+                </div>
+
+                <div class="dossie-cal-weekdays">
+                    <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+                </div>
+                <div class="dossie-cal-grid">
+                    ${blanksHtml}
+                    ${daysHtml}
+                </div>
+
+                <div class="dossie-cal-legend">
+                    <span><i class="dot ok"></i> Apareceu</span>
+                    <span><i class="dot miss"></i> Não apareceu</span>
+                    <span><i class="dot blk"></i> Bloqueado</span>
+                    <span><i class="dot rest"></i> Domingo / Sem aula</span>
+                </div>
+
+                ${detailHtml}
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin: 18px 0 10px 0;">
+                <h4 style="font-family: var(--font-heading); margin: 0; font-size: 15px;">Registros do Mês (${UI.escapeHtml(monthTitle)})</h4>
+            </div>
+            <div class="table-card">${chkHtml}</div>
+        `;
     }
 };
 
