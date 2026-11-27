@@ -9,6 +9,11 @@ const AlunoDetalhesModule = {
     rpgCompareId: null,
     rpgExpandedEvalId: null,
     presencaCalState: { year: null, month: null, selectedDate: null, cache: {}, todayIso: null, dataCadastro: null },
+    modalidadesCache: [],
+    turmasCache: [],
+    _calLongPressTimer: null,
+    _calLongPressTriggered: false,
+    _calPressStartPos: null,
 
     init() {
         // Tab switching no Dossiê
@@ -41,6 +46,7 @@ const AlunoDetalhesModule = {
 
         this.bindContractEvents();
         this.bindAvaliacaoEvents();
+        this.bindPresencasCalendarEvents();
 
         const dossieAvatarEl = document.getElementById('dossie-avatar');
         if (dossieAvatarEl) {
@@ -2683,6 +2689,384 @@ const AlunoDetalhesModule = {
         this.renderPresencasTab(Number(this.currentAlunoId));
     },
 
+    clearCalendarLongPress() {
+        if (this._calLongPressTimer) {
+            clearTimeout(this._calLongPressTimer);
+            this._calLongPressTimer = null;
+        }
+        this._calPressStartPos = null;
+        document.querySelectorAll('#dossier-tab-presencas .dossie-cal-day.is-pressing').forEach(el => {
+            el.classList.remove('is-pressing');
+        });
+    },
+
+    bindPresencasCalendarEvents() {
+        const tabEl = document.getElementById('dossier-tab-presencas');
+        if (tabEl) {
+            tabEl.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+                const dayBtn = e.target.closest('.dossie-cal-day[data-cal-date]');
+                if (!dayBtn) return;
+
+                const isoDate = dayBtn.getAttribute('data-cal-date');
+                const estado = dayBtn.getAttribute('data-cal-estado');
+                if (!isoDate || estado === 'futuro') return;
+
+                this.clearCalendarLongPress();
+                this._calLongPressTriggered = false;
+                this._calPressStartPos = { x: e.clientX, y: e.clientY };
+                dayBtn.classList.add('is-pressing');
+
+                this._calLongPressTimer = setTimeout(() => {
+                    this._calLongPressTriggered = true;
+                    this.clearCalendarLongPress();
+                    if (navigator && typeof navigator.vibrate === 'function') {
+                        try { navigator.vibrate(25); } catch { /* ignore */ }
+                    }
+                    this.presencaCalState.selectedDate = isoDate;
+                    this.renderPresencasTab(Number(this.currentAlunoId));
+                    this.openModalCheckinRetroativo(isoDate);
+                }, 500);
+            });
+
+            tabEl.addEventListener('pointermove', (e) => {
+                if (!this._calLongPressTimer || !this._calPressStartPos) return;
+                const dx = Math.abs(e.clientX - this._calPressStartPos.x);
+                const dy = Math.abs(e.clientY - this._calPressStartPos.y);
+                if (dx > 10 || dy > 10) {
+                    this.clearCalendarLongPress();
+                }
+            });
+
+            ['pointerup', 'pointercancel', 'pointerleave'].forEach(evtName => {
+                tabEl.addEventListener(evtName, () => {
+                    this.clearCalendarLongPress();
+                });
+            });
+
+            tabEl.addEventListener('contextmenu', (e) => {
+                const dayBtn = e.target.closest('.dossie-cal-day[data-cal-date]');
+                if (!dayBtn) return;
+                e.preventDefault();
+                const isoDate = dayBtn.getAttribute('data-cal-date');
+                const estado = dayBtn.getAttribute('data-cal-estado');
+                if (isoDate && estado !== 'futuro' && e.pointerType !== 'touch') {
+                    this.clearCalendarLongPress();
+                    this.presencaCalState.selectedDate = isoDate;
+                    this.renderPresencasTab(Number(this.currentAlunoId));
+                    this.openModalCheckinRetroativo(isoDate);
+                }
+            });
+
+            tabEl.addEventListener('click', (e) => {
+                const inlineBtn = e.target.closest('.dossie-cal-register-inline-btn[data-cal-date]');
+                if (inlineBtn) {
+                    const isoDate = inlineBtn.getAttribute('data-cal-date');
+                    if (isoDate) {
+                        this.openModalCheckinRetroativo(isoDate);
+                    }
+                    return;
+                }
+
+                const dayBtn = e.target.closest('.dossie-cal-day[data-cal-date]');
+                if (!dayBtn) return;
+
+                if (this._calLongPressTriggered) {
+                    this._calLongPressTriggered = false;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
+
+                const isoDate = dayBtn.getAttribute('data-cal-date');
+                if (isoDate) {
+                    this.selectPresencasCalendarDay(isoDate);
+                }
+            });
+        }
+
+        const formRetro = document.getElementById('form-checkin-retroativo');
+        if (formRetro) {
+            formRetro.addEventListener('submit', (e) => this.submitCheckinRetroativo(e));
+        }
+
+        const existingBox = document.getElementById('retro-checkin-existentes');
+        if (existingBox) {
+            existingBox.addEventListener('click', (e) => {
+                const undoBtn = e.target.closest('.retro-undo-checkin-btn[data-checkin-id]');
+                if (!undoBtn) return;
+                const checkinId = Number(undoBtn.getAttribute('data-checkin-id'));
+                const isoDate = document.getElementById('retro-checkin-data')?.value || '';
+                if (Number.isInteger(checkinId) && checkinId > 0) {
+                    this.undoRetroactiveCheckin(checkinId, isoDate, undoBtn);
+                }
+            });
+        }
+    },
+
+    getBahiaCurrentHm() {
+        try {
+            const parts = new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'America/Bahia',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            }).formatToParts(new Date());
+            const hh = parts.find(p => p.type === 'hour')?.value || '08';
+            const mi = parts.find(p => p.type === 'minute')?.value || '00';
+            return `${hh}:${mi}`;
+        } catch {
+            const now = new Date();
+            return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+    },
+
+    getSuggestedCheckinHmForStudent() {
+        const checkins = Array.isArray(this.currentData?.checkins) ? this.currentData.checkins : [];
+        const lastApproved = checkins.find(c => c && c.status === 'aprovado');
+        if (lastApproved) {
+            const hm = lastApproved.hora_local || (typeof lastApproved.data_hora_checkin === 'string' && lastApproved.data_hora_checkin.length >= 16
+                ? lastApproved.data_hora_checkin.slice(11, 16)
+                : '');
+            if (/^\d{2}:\d{2}$/.test(hm)) return hm;
+        }
+        return this.getBahiaCurrentHm();
+    },
+
+    async ensureModalidadesAndTurmasCache() {
+        const promises = [];
+        if (!Array.isArray(this.modalidadesCache) || this.modalidadesCache.length === 0) {
+            promises.push(
+                API.get('/modalidades')
+                    .then(res => { this.modalidadesCache = Array.isArray(res?.data) ? res.data : []; })
+                    .catch(() => { this.modalidadesCache = []; })
+            );
+        }
+        if (!Array.isArray(this.turmasCache) || this.turmasCache.length === 0) {
+            promises.push(
+                API.get('/checkins/turmas')
+                    .then(res => { this.turmasCache = Array.isArray(res?.data) ? res.data : []; })
+                    .catch(() => { this.turmasCache = []; })
+            );
+        }
+        if (promises.length > 0) {
+            await Promise.all(promises);
+        }
+    },
+
+    renderRetroExistingList(isoDate) {
+        const box = document.getElementById('retro-checkin-existentes');
+        if (!box) return;
+        const { year, month } = this.presencaCalState;
+        const key = `${year}-${String(month).padStart(2, '0')}`;
+        const monthPayload = this.presencaCalState.cache[key] || this.buildLocalCalendarForMonth(year, month);
+        const dayObj = (monthPayload?.calendario?.dias || []).find(d => d.data === isoDate);
+        const dayCheckins = Array.isArray(dayObj?.checkins) ? dayObj.checkins : [];
+
+        if (dayCheckins.length === 0) {
+            box.innerHTML = '';
+            box.hidden = true;
+            return;
+        }
+
+        box.innerHTML = `
+            <div class="retro-checkin-existing-title">Presenças já registradas nesta data (${dayCheckins.length})</div>
+            ${dayCheckins.map(c => `
+                <div class="retro-checkin-existing-item">
+                    <span>
+                        <strong>${UI.escapeHtml(c.hora || '--:--')}</strong> • ${UI.escapeHtml(c.modalidade_nome || 'Treino')}
+                        ${c.turma_nome ? ` (${UI.escapeHtml(c.turma_nome)})` : ''}
+                    </span>
+                    ${c.id ? `
+                        <button type="button" class="retro-undo-checkin-btn" data-checkin-id="${Number(c.id)}">
+                            Desfazer
+                        </button>
+                    ` : ''}
+                </div>
+            `).join('')}
+        `;
+        box.hidden = false;
+    },
+
+    async openModalCheckinRetroativo(isoDate) {
+        const safeAlunoId = Number(this.currentAlunoId || this.currentData?.aluno?.id);
+        if (!Number.isInteger(safeAlunoId) || safeAlunoId <= 0) return;
+
+        const todayIso = this.presencaCalState.todayIso || this.getLocalTodayIso();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(isoDate || ''))) return;
+        if (isoDate > todayIso) {
+            UI.showToast('Não é possível registrar presença em uma data futura.', 'warning');
+            return;
+        }
+
+        const alunoNome = this.currentData?.aluno?.nome_completo || 'Aluno';
+        const formattedNome = window.AlunosModule?.formatNomeDisplay
+            ? AlunosModule.formatNomeDisplay(alunoNome)
+            : alunoNome;
+
+        let dateLabelLong = UI.formatDate(isoDate);
+        try {
+            dateLabelLong = new Date(`${isoDate}T12:00:00Z`).toLocaleDateString('pt-BR', {
+                timeZone: 'America/Bahia',
+                weekday: 'long',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        } catch {
+            // mantém fallback UI.formatDate
+        }
+
+        document.getElementById('retro-checkin-aluno-id').value = String(safeAlunoId);
+        document.getElementById('retro-checkin-data').value = isoDate;
+        document.getElementById('retro-checkin-hora').value = this.getSuggestedCheckinHmForStudent();
+
+        const resumoEl = document.getElementById('retro-checkin-resumo');
+        if (resumoEl) {
+            resumoEl.innerHTML = `
+                <strong>${UI.escapeHtml(formattedNome)}</strong>
+                <span>${UI.escapeHtml(dateLabelLong)}</span>
+            `;
+        }
+
+        this.renderRetroExistingList(isoDate);
+        UI.openModal('modal-checkin-retroativo');
+
+        await this.ensureModalidadesAndTurmasCache();
+
+        const modSelect = document.getElementById('retro-checkin-modalidade');
+        if (modSelect) {
+            const firstGradModId = this.currentData?.graduacoes?.[0]?.modalidade_id || '';
+            modSelect.innerHTML = `<option value="">Automática (modalidade principal do aluno)</option>` +
+                (this.modalidadesCache || [])
+                    .filter(m => m.ativo !== 0 && m.ativo !== false)
+                    .map(m => `<option value="${Number(m.id)}">${UI.escapeHtml(m.nome)}</option>`)
+                    .join('');
+            if (firstGradModId) {
+                modSelect.value = String(firstGradModId);
+            }
+        }
+
+        const turmaSelect = document.getElementById('retro-checkin-turma');
+        if (turmaSelect) {
+            turmaSelect.innerHTML = `<option value="">Treino Livre / Sem turma específica</option>` +
+                (this.turmasCache || []).map(t => {
+                    const horario = t.horario_inicio_hm ? ` (${t.horario_inicio_hm})` : '';
+                    return `<option value="${Number(t.id)}">${UI.escapeHtml(t.nome)}${UI.escapeHtml(horario)} — ${UI.escapeHtml(t.modalidade_nome || '')}</option>`;
+                }).join('');
+        }
+    },
+
+    async submitCheckinRetroativo(e) {
+        e.preventDefault();
+        const alunoId = Number(document.getElementById('retro-checkin-aluno-id')?.value);
+        const dataCheckin = document.getElementById('retro-checkin-data')?.value || '';
+        const horaCheckin = document.getElementById('retro-checkin-hora')?.value || '';
+        const modalidadeIdRaw = document.getElementById('retro-checkin-modalidade')?.value || '';
+        const turmaIdRaw = document.getElementById('retro-checkin-turma')?.value || '';
+
+        if (!Number.isInteger(alunoId) || alunoId <= 0 || !dataCheckin || !horaCheckin) {
+            UI.showToast('Informe data e horário válidos para registrar a presença.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('btn-submit-retro-checkin');
+        const originalText = btn ? btn.textContent : 'Registrar Presença';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<div class="spinner"></div> Registrando...`;
+        }
+
+        try {
+            const res = await API.post('/checkins', {
+                aluno_id: alunoId,
+                data_checkin: dataCheckin,
+                hora_checkin: horaCheckin,
+                modalidade_id: modalidadeIdRaw ? Number(modalidadeIdRaw) : undefined,
+                turma_id: turmaIdRaw ? Number(turmaIdRaw) : undefined,
+                metodo: 'manual_professor'
+            });
+
+            UI.showToast(res.message || 'Presença registrada com sucesso!', res.status === 'bloqueado' ? 'warning' : 'success');
+            UI.closeModal('modal-checkin-retroativo');
+
+            if (res.checkin && this.currentData) {
+                if (!Array.isArray(this.currentData.checkins)) this.currentData.checkins = [];
+                this.currentData.checkins.unshift({
+                    id: res.checkin.id,
+                    data_hora_checkin: res.checkin.data_hora_checkin,
+                    data_local: res.checkin.data_local || dataCheckin,
+                    hora_local: res.checkin.hora_checkin || horaCheckin,
+                    metodo: res.checkin.metodo || 'manual_professor',
+                    status: res.checkin.status || res.status || 'aprovado',
+                    modalidade_nome: res.checkin.modalidade_nome || '',
+                    turma_nome: res.checkin.turma_nome || null
+                });
+            }
+
+            const [yStr, mStr] = dataCheckin.split('-');
+            const calYear = parseInt(yStr, 10);
+            const calMonth = parseInt(mStr, 10);
+            const key = `${calYear}-${String(calMonth).padStart(2, '0')}`;
+            delete this.presencaCalState.cache[key];
+            this.presencaCalState.year = calYear;
+            this.presencaCalState.month = calMonth;
+            this.presencaCalState.selectedDate = dataCheckin;
+            await this.loadPresencasCalendarMonth(calYear, calMonth);
+
+            if (window.AlunosModule && typeof AlunosModule.loadAlunos === 'function') {
+                AlunosModule.loadAlunos();
+            }
+            if (window.CheckinsModule && typeof CheckinsModule.loadSmartBoard === 'function') {
+                CheckinsModule.loadSmartBoard();
+            }
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao registrar presença na data.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+    },
+
+    async undoRetroactiveCheckin(checkinId, isoDate, btnEl) {
+        if (btnEl) {
+            btnEl.disabled = true;
+            btnEl.textContent = 'Desfazendo...';
+        }
+        try {
+            const res = await API.delete(`/checkins/${checkinId}`);
+            UI.showToast(res.message || 'Presença removida com sucesso.', 'success');
+
+            if (this.currentData && Array.isArray(this.currentData.checkins)) {
+                this.currentData.checkins = this.currentData.checkins.filter(c => Number(c.id) !== checkinId);
+            }
+
+            const targetDate = isoDate || this.presencaCalState.selectedDate || this.getLocalTodayIso();
+            const [yStr, mStr] = targetDate.split('-');
+            const calYear = parseInt(yStr, 10);
+            const calMonth = parseInt(mStr, 10);
+            const key = `${calYear}-${String(calMonth).padStart(2, '0')}`;
+            delete this.presencaCalState.cache[key];
+            await this.loadPresencasCalendarMonth(calYear, calMonth);
+            this.renderRetroExistingList(targetDate);
+
+            if (window.AlunosModule && typeof AlunosModule.loadAlunos === 'function') {
+                AlunosModule.loadAlunos();
+            }
+            if (window.CheckinsModule && typeof CheckinsModule.loadSmartBoard === 'function') {
+                CheckinsModule.loadSmartBoard();
+            }
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao desfazer presença.', 'error');
+            if (btnEl) {
+                btnEl.disabled = false;
+                btnEl.textContent = 'Desfazer';
+            }
+        }
+    },
+
     renderPresencasTab(safeAlunoId) {
         const tabEl = document.getElementById('dossier-tab-presencas');
         if (!tabEl) return;
@@ -2720,9 +3104,10 @@ const AlunoDetalhesModule = {
                                 ? 'Anterior ao cadastro'
                                 : 'Não apareceu';
             const dotLabel = d.estado === 'presente' ? '✓' : (d.estado === 'ausente' ? '×' : (d.estado === 'bloqueado' ? '!' : ''));
+            const holdHint = d.estado !== 'futuro' ? ' • Segure para registrar presença' : '';
 
             return `
-                <button type="button" class="${classes}" onclick="AlunoDetalhesModule.selectPresencasCalendarDay('${UI.escapeHtml(d.data)}')" title="${UI.escapeHtml(`${UI.formatDate(d.data)} • ${statusText}`)}">
+                <button type="button" class="${classes}" data-cal-date="${UI.escapeHtml(d.data)}" data-cal-estado="${UI.escapeHtml(d.estado)}" title="${UI.escapeHtml(`${UI.formatDate(d.data)} • ${statusText}${holdHint}`)}">
                     <span class="dossie-cal-day-num">${Number(d.dia)}</span>
                     ${dotLabel ? `<span class="dossie-cal-day-mark">${dotLabel}</span>` : ''}
                 </button>
@@ -2733,6 +3118,17 @@ const AlunoDetalhesModule = {
         let detailHtml = '';
         if (selectedObj) {
             const formattedSelDate = UI.formatDate(selectedObj.data);
+            const canRegisterOnDate = selectedObj.estado !== 'futuro';
+            const registerInlineBtnHtml = canRegisterOnDate ? `
+                <button type="button" class="dossie-cal-register-inline-btn" data-cal-date="${UI.escapeHtml(selectedObj.data)}">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M5 12h14" />
+                        <path d="M12 5v14" />
+                    </svg>
+                    <span>Registrar nesta data</span>
+                </button>
+            ` : '';
+
             if (selectedObj.estado === 'presente' || selectedObj.estado === 'bloqueado') {
                 const itemsStr = (selectedObj.checkins || []).map((c) => `
                     <span class="dossie-cal-detail-chip ${c.status === 'aprovado' ? 'ok' : 'blocked'}">
@@ -2741,15 +3137,21 @@ const AlunoDetalhesModule = {
                 `).join('');
                 detailHtml = `
                     <div class="dossie-cal-detail presente">
-                        <strong>${selectedObj.estado === 'presente' ? '✅ Compareceu' : '⚠️ Tentativa Bloqueada'} em ${UI.escapeHtml(formattedSelDate)}</strong>
+                        <div class="dossie-cal-detail-head">
+                            <strong>${selectedObj.estado === 'presente' ? '✅ Compareceu' : '⚠️ Tentativa Bloqueada'} em ${UI.escapeHtml(formattedSelDate)}</strong>
+                            ${registerInlineBtnHtml}
+                        </div>
                         <div class="dossie-cal-detail-chips">${itemsStr}</div>
                     </div>
                 `;
             } else if (selectedObj.estado === 'ausente') {
                 detailHtml = `
                     <div class="dossie-cal-detail ausente">
-                        <strong>❌ Não compareceu em ${UI.escapeHtml(formattedSelDate)}</strong>
-                        <span>Nenhum check-in registrado nesta data.</span>
+                        <div class="dossie-cal-detail-head">
+                            <strong>❌ Não compareceu em ${UI.escapeHtml(formattedSelDate)}</strong>
+                            ${registerInlineBtnHtml}
+                        </div>
+                        <span>Nenhum check-in registrado nesta data. Segure a data no calendário para registrar presença retroativa.</span>
                     </div>
                 `;
             } else {
@@ -2760,7 +3162,10 @@ const AlunoDetalhesModule = {
                         : 'Data anterior ao cadastro do atleta na academia.';
                 detailHtml = `
                     <div class="dossie-cal-detail neutro">
-                        <strong>📅 ${UI.escapeHtml(formattedSelDate)}</strong>
+                        <div class="dossie-cal-detail-head">
+                            <strong>📅 ${UI.escapeHtml(formattedSelDate)}</strong>
+                            ${registerInlineBtnHtml}
+                        </div>
                         <span>${UI.escapeHtml(reasonLabel)}</span>
                     </div>
                 `;
@@ -2819,7 +3224,7 @@ const AlunoDetalhesModule = {
                 <div class="dossie-cal-header">
                     <div>
                         <h4 style="font-family: var(--font-heading); margin: 0; font-size: 16px; color: #ffffff;">📅 Calendário de Presenças</h4>
-                        <span style="font-size: 12px; color: var(--text-muted);">Clique em um dia para consultar se o atleta compareceu ou faltou</span>
+                        <span style="font-size: 12px; color: var(--text-muted);">Clique para consultar • Segure o clique na data para registrar presença</span>
                     </div>
                     <div class="dossie-cal-nav">
                         <button type="button" class="btn btn-secondary btn-sm" onclick="AlunoDetalhesModule.changePresencasCalendarMonth(-1)" title="Mês anterior">‹</button>

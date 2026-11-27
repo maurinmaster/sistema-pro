@@ -101,6 +101,77 @@ function getBrazilNowParts(referenceDate = new Date()) {
 }
 
 /**
+ * Valida e resolve data/hora de check-in (atual ou retroativo) no fuso GMT-3 (America/Bahia).
+ * Rejeita formatos inválidos, datas inexistentes no calendário e datas futuras.
+ */
+function resolveRetroactiveCheckinDateTime(input = {}, referenceDate = new Date()) {
+    const nowBr = getBrazilNowParts(referenceDate);
+    const rawDate = input?.data_checkin;
+    const rawTime = input?.hora_checkin;
+
+    const hasExplicitDate = rawDate !== undefined && rawDate !== null && String(rawDate).trim() !== '';
+    if (!hasExplicitDate) {
+        return {
+            valid: true,
+            isRetroactive: false,
+            dateIso: nowBr.dateIso,
+            timeHm: nowBr.timeHm,
+            sqlDateTime: nowBr.sqlDateTime
+        };
+    }
+
+    const dateStr = String(rawDate).trim();
+    const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+        return { valid: false, error: 'Data de presença inválida. Use o formato YYYY-MM-DD.' };
+    }
+
+    const year = parseInt(dateMatch[1], 10);
+    const month = parseInt(dateMatch[2], 10);
+    const day = parseInt(dateMatch[3], 10);
+    if (year < 2020) {
+        return { valid: false, error: 'Data de presença fora do intervalo permitido.' };
+    }
+
+    const checkUtc = new Date(Date.UTC(year, month - 1, day));
+    if (
+        checkUtc.getUTCFullYear() !== year ||
+        (checkUtc.getUTCMonth() + 1) !== month ||
+        checkUtc.getUTCDate() !== day
+    ) {
+        return { valid: false, error: 'Data de presença inexistente no calendário.' };
+    }
+
+    if (dateStr > nowBr.dateIso) {
+        return { valid: false, error: 'Não é possível registrar presença em uma data futura.' };
+    }
+
+    let timeHm = nowBr.timeHm;
+    const hasExplicitTime = rawTime !== undefined && rawTime !== null && String(rawTime).trim() !== '';
+    if (hasExplicitTime) {
+        const timeStr = String(rawTime).trim();
+        const timeMatch = timeStr.match(/^(\d{2}):(\d{2})(?::\d{2})?$/);
+        if (!timeMatch) {
+            return { valid: false, error: 'Horário inválido. Informe no formato HH:MM.' };
+        }
+        const hh = parseInt(timeMatch[1], 10);
+        const mi = parseInt(timeMatch[2], 10);
+        if (hh < 0 || hh > 23 || mi < 0 || mi > 59) {
+            return { valid: false, error: 'Horário inválido. Informe um horário entre 00:00 e 23:59.' };
+        }
+        timeHm = `${String(hh).padStart(2, '0')}:${String(mi).padStart(2, '0')}`;
+    }
+
+    return {
+        valid: true,
+        isRetroactive: dateStr !== nowBr.dateIso,
+        dateIso: dateStr,
+        timeHm,
+        sqlDateTime: `${dateStr} ${timeHm}:00`
+    };
+}
+
+/**
  * Classifica e ordena alunos para o grid de check-in inteligente:
  * - Grupo 0 (Topo absoluto): alunos sem nenhum check-in anterior (1º Check-in)
  * - Grupo 1 (Horário atual / filtro): alunos que costumam treinar na faixa de horário (±windowMinutes)
@@ -495,6 +566,7 @@ module.exports = {
     circularMinutesDiff,
     extractIsoDate,
     getBrazilNowParts,
+    resolveRetroactiveCheckinDateTime,
     rankStudentsForSmartCheckin,
     extractDetectedHours,
     buildAttendanceCalendarMonth,

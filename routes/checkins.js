@@ -534,6 +534,24 @@ router.post('/', authenticateToken, async (req, res) => {
         const rapido = Boolean(req.body?.rapido);
         const nowBr = checkinSmartService.getBrazilNowParts();
 
+        const hasExplicitDate = req.body?.data_checkin !== undefined && req.body?.data_checkin !== null && String(req.body.data_checkin).trim() !== '';
+        const resolvedDt = checkinSmartService.resolveRetroactiveCheckinDateTime({
+            data_checkin: req.body?.data_checkin,
+            hora_checkin: req.body?.hora_checkin
+        });
+        if (!resolvedDt.valid) {
+            return res.status(400).json({ success: false, error: resolvedDt.error });
+        }
+
+        if (hasExplicitDate || resolvedDt.isRetroactive) {
+            if (!req.user || !['admin', 'professor', 'recepcao'].includes(req.user.cargo)) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Sem permissão para registrar presença em data específica.'
+                });
+            }
+        }
+
         // Verifica status do aluno
         const [alunos] = await pool.query(
             'SELECT id, status, nome_completo, foto_perfil_url FROM alunos WHERE id = ? AND deleted_at IS NULL',
@@ -567,7 +585,7 @@ router.post('/', authenticateToken, async (req, res) => {
                 WHERE c.aluno_id = ? AND DATE(c.data_hora_checkin) = ?
                 ORDER BY c.id DESC
                 LIMIT 1
-            `, [alunoId, nowBr.dateIso]);
+            `, [alunoId, resolvedDt.dateIso]);
 
             if (existingToday.length > 0) {
                 return res.status(200).json({
@@ -612,7 +630,7 @@ router.post('/', authenticateToken, async (req, res) => {
         const [result] = await pool.query(`
             INSERT INTO checkins (aluno_id, modalidade_id, turma_id, data_hora_checkin, metodo, status, motivo_bloqueio, validado_por_usuario_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [alunoId, modalidadeId, turmaId, nowBr.sqlDateTime, metodo, statusCheckin, motivoBloqueio, req.user ? req.user.id : null]);
+        `, [alunoId, modalidadeId, turmaId, resolvedDt.sqlDateTime, metodo, statusCheckin, motivoBloqueio, req.user ? req.user.id : null]);
 
         const [createdRows] = await pool.query(`
             SELECT
@@ -636,15 +654,21 @@ router.post('/', authenticateToken, async (req, res) => {
             LIMIT 1
         `, [result.insertId]);
 
+        const [ry, rm, rd] = resolvedDt.dateIso.split('-');
+        const brDateFormatted = `${rd}/${rm}/${ry}`;
+        const successMsg = statusCheckin === 'aprovado'
+            ? (resolvedDt.isRetroactive
+                ? `Presença de ${aluno.nome_completo} registrada para ${brDateFormatted} às ${resolvedDt.timeHm}!`
+                : `Presença de ${aluno.nome_completo} confirmada com sucesso!`)
+            : `Check-in ${statusCheckin}: ${motivoBloqueio}`;
+
         res.status(201).json({
             success: true,
             id: result.insertId,
             status: statusCheckin,
             motivo_bloqueio: motivoBloqueio,
             checkin: createdRows[0] || null,
-            message: statusCheckin === 'aprovado'
-                ? `Presença de ${aluno.nome_completo} confirmada com sucesso!`
-                : `Check-in ${statusCheckin}: ${motivoBloqueio}`
+            message: successMsg
         });
     } catch (err) {
         console.error('Erro ao registrar check-in:', err);

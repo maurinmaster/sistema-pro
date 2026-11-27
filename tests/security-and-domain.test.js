@@ -3447,6 +3447,49 @@ test('UI/UX Modal de Perfil do Aluno: ícones outline uniformes, hierarquia de a
     assert.match(responsiveCss, /\.dossier-info-grid\s*\{[^}]*grid-template-columns:\s*1fr;/);
 });
 
+test('Calendário de Presenças: registro retroativo ao segurar o clique e validação segura', () => {
+    const smart = require('../services/checkinSmartService');
+    const refNow = new Date('2026-11-27T12:45:00Z'); // 09:45 BRT
+
+    const todayDefault = smart.resolveRetroactiveCheckinDateTime({}, refNow);
+    assert.equal(todayDefault.valid, true);
+    assert.equal(todayDefault.isRetroactive, false);
+    assert.equal(todayDefault.dateIso, '2026-11-27');
+    assert.equal(todayDefault.sqlDateTime, '2026-11-27 09:45:00');
+
+    const pastOk = smart.resolveRetroactiveCheckinDateTime({ data_checkin: '2026-11-24', hora_checkin: '19:00' }, refNow);
+    assert.equal(pastOk.valid, true);
+    assert.equal(pastOk.isRetroactive, true);
+    assert.equal(pastOk.dateIso, '2026-11-24');
+    assert.equal(pastOk.timeHm, '19:00');
+    assert.equal(pastOk.sqlDateTime, '2026-11-24 19:00:00');
+
+    const sameDayWithTime = smart.resolveRetroactiveCheckinDateTime({ data_checkin: '2026-11-27', hora_checkin: '07:30' }, refNow);
+    assert.equal(sameDayWithTime.valid, true);
+    assert.equal(sameDayWithTime.isRetroactive, false);
+    assert.equal(sameDayWithTime.sqlDateTime, '2026-11-27 07:30:00');
+
+    // Rejeições de segurança / integridade
+    assert.equal(smart.resolveRetroactiveCheckinDateTime({ data_checkin: '2026-11-28' }, refNow).valid, false);
+    assert.equal(smart.resolveRetroactiveCheckinDateTime({ data_checkin: '2026-02-30' }, refNow).valid, false);
+    assert.equal(smart.resolveRetroactiveCheckinDateTime({ data_checkin: '24/11/2026' }, refNow).valid, false);
+    assert.equal(smart.resolveRetroactiveCheckinDateTime({ data_checkin: '2026-11-24', hora_checkin: '25:99' }, refNow).valid, false);
+
+    // Verifica contrato frontend + RBAC no backend
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+    const detalhesJs = fs.readFileSync(path.join(__dirname, '../public/js/aluno-detalhes.js'), 'utf8');
+    const checkinsRoute = fs.readFileSync(path.join(__dirname, '../routes/checkins.js'), 'utf8');
+
+    assert.ok(indexHtml.includes('id="modal-checkin-retroativo"'));
+    assert.ok(indexHtml.includes('id="form-checkin-retroativo"'));
+    assert.ok(detalhesJs.includes('bindPresencasCalendarEvents'));
+    assert.ok(detalhesJs.includes('openModalCheckinRetroativo'));
+    assert.ok(detalhesJs.includes('is-pressing'));
+    assert.ok(detalhesJs.includes('data-cal-date='));
+    assert.ok(checkinsRoute.includes('resolveRetroactiveCheckinDateTime'));
+    assert.ok(checkinsRoute.includes("['admin', 'professor', 'recepcao'].includes(req.user.cargo)"));
+});
+
 test.after(async () => {
     try {
         await pool.end();
