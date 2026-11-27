@@ -15,7 +15,7 @@
     <!-- CSS Design Tokens & Components -->
     <link rel="stylesheet" href="/css/variables.css?v=3.7">
     <link rel="stylesheet" href="/css/animations.css?v=3.7">
-    <link rel="stylesheet" href="/css/style.css?v=5.8">
+    <link rel="stylesheet" href="/css/style.css?v=5.9">
     <link rel="stylesheet" href="/css/components.css?v=3.9">
     <link rel="stylesheet" href="/css/responsive.css?v=4.4">
 </head>
@@ -447,6 +447,9 @@
                             </button>
                             <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.openTurmasModal()" title="Cadastrar horários e dias das turmas">
                                 📅 Turmas &amp; Horários
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.openExportModal()" title="Extrair relatório e planilha de presenças">
+                                📥 Exportar
                             </button>
                             <button type="button" class="btn btn-primary btn-sm" onclick="CheckinsModule.openCheckinModal()">
                                 <svg viewBox="0 0 24 24" width="16" height="16">
@@ -2673,6 +2676,92 @@
     </div>
 
     <!-- ========================================== -->
+    <!-- MODAL: EXTRAIR DADOS DE PRESENÇAS          -->
+    <!-- ========================================== -->
+    <div class="modal-overlay" id="modal-exportar-checkins">
+        <div class="modal-box" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#10b981" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    Extrair Dados de Presenças &amp; Check-ins
+                </h3>
+                <button type="button" class="modal-close" onclick="UI.closeModal('modal-exportar-checkins')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="export-preset-row">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.applyExportDatePreset('hoje')">Hoje</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.applyExportDatePreset('7dias')">Últimos 7 dias</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.applyExportDatePreset('mes')">Este Mês</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="CheckinsModule.applyExportDatePreset('mes_anterior')">Mês Anterior</button>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label for="export-checkin-inicio">Data Inicial</label>
+                        <input type="date" id="export-checkin-inicio" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label for="export-checkin-fim">Data Final</label>
+                        <input type="date" id="export-checkin-fim" class="form-input">
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label for="export-checkin-tipo">Modelo de Extração</label>
+                        <select id="export-checkin-tipo" class="form-select">
+                            <option value="detalhado">Histórico Detalhado (Linha por Check-in)</option>
+                            <option value="resumo_alunos">Resumo por Aluno (Totais &amp; Frequência)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-checkin-status">Status do Check-in</label>
+                        <select id="export-checkin-status" class="form-select">
+                            <option value="todos">Todos (Aprovados e Bloqueados)</option>
+                            <option value="aprovado">Somente Aprovados</option>
+                            <option value="bloqueado">Somente Bloqueados</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-bottom: 14px;">
+                    <div class="form-group">
+                        <label for="export-checkin-modalidade">Modalidade</label>
+                        <select id="export-checkin-modalidade" class="form-select">
+                            <option value="todas">Todas as modalidades</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="export-checkin-turma">Turma</label>
+                        <select id="export-checkin-turma" class="form-select">
+                            <option value="todas">Todas as turmas</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="export-preview-box" id="export-checkin-preview">
+                    <div class="checkin-grid-empty" style="padding: 14px;">Carregando prévia do período...</div>
+                </div>
+            </div>
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <button type="button" class="btn btn-secondary" onclick="UI.closeModal('modal-exportar-checkins')">Fechar</button>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" id="btn-export-checkin-print" onclick="CheckinsModule.printCheckinsReport()">
+                        🖨️ Imprimir / PDF
+                    </button>
+                    <button type="button" class="btn btn-success" id="btn-export-checkin-csv" onclick="CheckinsModule.downloadCheckinsCsv()">
+                        📥 Baixar Planilha (CSV)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
     <!-- MODAL: CADASTRO / EDIÇÃO DE MODALIDADE     -->
     <!-- ========================================== -->
     <div class="modal-overlay" id="modal-modalidade">
@@ -4081,7 +4170,7 @@
     <script src="/js/aluno-detalhes.js?v=2.5"></script>
     <script src="/js/alunos.js?v=5.8"></script>
     <script src="/js/dashboard.js?v=1.3"></script>
-    <script src="/js/checkins.js?v=2.1"></script>
+    <script src="/js/checkins.js?v=2.2"></script>
     <script src="/js/graduacoes.js?v=1.1"></script>
     <script src="/js/planos.js?v=5.0"></script>
     <script src="/js/wiki.js?v=4.6"></script>

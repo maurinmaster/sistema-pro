@@ -95,6 +95,13 @@ const CheckinsModule = {
         // Formulário de cadastro/edição de turmas
         document.getElementById('form-turma')?.addEventListener('submit', (e) => this.handleSubmitTurma(e));
 
+        // Filtros do modal de exportação atualizam a prévia ao vivo
+        ['export-checkin-inicio', 'export-checkin-fim', 'export-checkin-tipo', 'export-checkin-status', 'export-checkin-modalidade', 'export-checkin-turma'].forEach((elId) => {
+            document.getElementById(elId)?.addEventListener('change', () => {
+                this.loadExportPreview();
+            });
+        });
+
         // Duplo clique / duplo toque no grid de pendentes para confirmar presença
         const pendingGrid = document.getElementById('checkin-pending-grid');
         if (pendingGrid) {
@@ -301,7 +308,10 @@ const CheckinsModule = {
             : (a.horario_habitual_hora !== null && a.horario_habitual_hora !== undefined
                 ? `~${String(a.horario_habitual_hora).padStart(2, '0')}h`
                 : 'Ativo');
-        const tooltip = `${a.nome_completo} • ${a.modalidade_nome || 'Geral'} • Duplo clique para confirmar`;
+        const ultimoTxt = a.ultimo_checkin_data
+            ? ` • Último treino: ${UI.formatDate(a.ultimo_checkin_data)} às ${a.ultimo_checkin_hora || '--:--'}`
+            : '';
+        const tooltip = `${a.nome_completo} • ${a.modalidade_nome || 'Geral'}${ultimoTxt} • Duplo clique para confirmar`;
 
         return `
             <button type="button" class="checkin-student-tile ${slotClass}" data-aluno-id="${aid}" title="${UI.escapeHtml(tooltip)}">
@@ -896,6 +906,295 @@ const CheckinsModule = {
             this.renderTurmasList();
         } catch (err) {
             UI.showToast(err.message || 'Erro ao remover turma.', 'error');
+        }
+    },
+
+    // =========================================================================
+    // EXTRAÇÃO DE DADOS DE PRESENÇAS (CSV EXCEL & RELATÓRIO IMPRIMÍVEL/PDF)
+    // =========================================================================
+    exportPreviewData: null,
+
+    getLocalDateIso(offsetDays = 0) {
+        const dt = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth() + 1).padStart(2, '0');
+        const d = String(dt.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    },
+
+    async openExportModal() {
+        await this.populateExportSelects();
+
+        const iniEl = document.getElementById('export-checkin-inicio');
+        const fimEl = document.getElementById('export-checkin-fim');
+        if (iniEl && fimEl && (!iniEl.value || !fimEl.value)) {
+            this.applyExportDatePreset('mes');
+        } else {
+            this.loadExportPreview();
+        }
+
+        UI.openModal('modal-exportar-checkins');
+    },
+
+    async populateExportSelects() {
+        let modalidadesList = (window.AlunosModule && Array.isArray(AlunosModule.modalidades) && AlunosModule.modalidades.length > 0)
+            ? AlunosModule.modalidades
+            : [];
+        if (modalidadesList.length === 0) {
+            try {
+                const modRes = await API.get('/modalidades');
+                modalidadesList = modRes.data || [];
+            } catch { /* ignore */ }
+        }
+
+        const modEl = document.getElementById('export-checkin-modalidade');
+        if (modEl) {
+            const curM = modEl.value || 'todas';
+            modEl.innerHTML = '<option value="todas">Todas as modalidades</option>';
+            modalidadesList.forEach((m) => {
+                modEl.innerHTML += `<option value="${Number(m.id)}">${UI.escapeHtml(m.nome)}</option>`;
+            });
+            modEl.value = curM;
+        }
+
+        if (this.turmas.length === 0) {
+            await this.loadTurmas();
+        }
+        const turmaEl = document.getElementById('export-checkin-turma');
+        if (turmaEl) {
+            const curT = turmaEl.value || 'todas';
+            turmaEl.innerHTML = '<option value="todas">Todas as turmas</option>';
+            this.turmas.forEach((t) => {
+                turmaEl.innerHTML += `<option value="${Number(t.id)}">${UI.escapeHtml(t.nome)} (${UI.escapeHtml(t.dias_semana)})</option>`;
+            });
+            turmaEl.value = curT;
+        }
+    },
+
+    applyExportDatePreset(preset) {
+        const hojeIso = this.lastHoje || this.getLocalDateIso(0);
+        const [yStr, mStr] = hojeIso.split('-');
+        const year = parseInt(yStr, 10);
+        const month = parseInt(mStr, 10);
+
+        let inicio = hojeIso;
+        let fim = hojeIso;
+
+        if (preset === '7dias') {
+            inicio = this.getLocalDateIso(-6);
+            fim = hojeIso;
+        } else if (preset === 'mes') {
+            inicio = `${year}-${String(month).padStart(2, '0')}-01`;
+            fim = hojeIso;
+        } else if (preset === 'mes_anterior') {
+            const prevMonth = month === 1 ? 12 : month - 1;
+            const prevYear = month === 1 ? year - 1 : year;
+            const lastDay = new Date(prevYear, prevMonth, 0).getDate();
+            inicio = `${prevYear}-${String(prevMonth).padStart(2, '0')}-01`;
+            fim = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        }
+
+        const iniEl = document.getElementById('export-checkin-inicio');
+        const fimEl = document.getElementById('export-checkin-fim');
+        if (iniEl) iniEl.value = inicio;
+        if (fimEl) fimEl.value = fim;
+
+        this.loadExportPreview();
+    },
+
+    getExportFilterParams(formato = 'json') {
+        const params = new URLSearchParams();
+        const inicio = document.getElementById('export-checkin-inicio')?.value || '';
+        const fim = document.getElementById('export-checkin-fim')?.value || '';
+        const tipo = document.getElementById('export-checkin-tipo')?.value || 'detalhado';
+        const status = document.getElementById('export-checkin-status')?.value || 'todos';
+        const mod = document.getElementById('export-checkin-modalidade')?.value || 'todas';
+        const turma = document.getElementById('export-checkin-turma')?.value || 'todas';
+
+        if (inicio) params.set('data_inicio', inicio);
+        if (fim) params.set('data_fim', fim);
+        params.set('tipo', tipo);
+        params.set('status', status);
+        if (mod && mod !== 'todas') params.set('modalidade_id', mod);
+        if (turma && turma !== 'todas') params.set('turma_id', turma);
+        params.set('formato', formato);
+
+        return params;
+    },
+
+    async loadExportPreview() {
+        const box = document.getElementById('export-checkin-preview');
+        if (!box) return;
+
+        box.innerHTML = `<div class="checkin-grid-empty" style="padding: 12px;">Calculando prévia do relatório...</div>`;
+
+        try {
+            const qs = this.getExportFilterParams('json').toString();
+            const res = await API.get(`/checkins/exportar?${qs}`);
+            this.exportPreviewData = res.data || null;
+
+            const resumo = res.data?.resumo || {};
+            const tipo = res.data?.tipo || 'detalhado';
+            box.innerHTML = `
+                <div class="export-preview-kpis">
+                    <div class="dossie-cal-kpi rate">
+                        <span class="kpi-label">${tipo === 'resumo_alunos' ? 'Total Presenças' : 'Check-ins no Período'}</span>
+                        <strong class="kpi-val">${Number(resumo.total_registros || 0)}</strong>
+                    </div>
+                    <div class="dossie-cal-kpi ok">
+                        <span class="kpi-label">Alunos Presentes</span>
+                        <strong class="kpi-val">${Number(resumo.alunos_unicos || 0)}</strong>
+                    </div>
+                    <div class="dossie-cal-kpi">
+                        <span class="kpi-label">${tipo === 'resumo_alunos' ? 'Alunos na Base' : 'Horário de Pico'}</span>
+                        <strong class="kpi-val" style="color: #fbbf24;">${UI.escapeHtml(tipo === 'resumo_alunos' ? String(Number(resumo.total_alunos_base || 0)) : (resumo.horario_pico || '--'))}</strong>
+                    </div>
+                </div>
+            `;
+        } catch (err) {
+            this.exportPreviewData = null;
+            box.innerHTML = `<div class="checkin-grid-empty" style="padding: 12px; color: #fca5a5;">${UI.escapeHtml(err.message || 'Erro ao carregar prévia.')}</div>`;
+        }
+    },
+
+    async downloadCheckinsCsv() {
+        const btn = document.getElementById('btn-export-checkin-csv');
+        const origHtml = btn ? btn.innerHTML : '📥 Baixar Planilha (CSV)';
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Gerando CSV...';
+        }
+
+        try {
+            const params = this.getExportFilterParams('csv');
+            const token = typeof API !== 'undefined' && API.getToken ? API.getToken() : localStorage.getItem('procombate_token');
+            const res = await fetch(`/api/checkins/exportar?${params.toString()}`, {
+                method: 'GET',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            });
+
+            if (!res.ok) {
+                let errMsg = 'Falha ao exportar planilha.';
+                try {
+                    const errJson = await res.json();
+                    if (errJson.error) errMsg = errJson.error;
+                } catch { /* ignore */ }
+                throw new Error(errMsg);
+            }
+
+            const blob = await res.blob();
+            const inicio = params.get('data_inicio') || 'inicio';
+            const fim = params.get('data_fim') || 'fim';
+            const tipo = params.get('tipo') || 'detalhado';
+            const filename = `presencas-${tipo}-${inicio}-a-${fim}.csv`;
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+            UI.showToast('Planilha CSV baixada com sucesso!', 'success');
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao baixar planilha.', 'error');
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    },
+
+    async printCheckinsReport() {
+        try {
+            const qs = this.getExportFilterParams('json').toString();
+            const res = await API.get(`/checkins/exportar?${qs}`);
+            const data = res.data || {};
+            const registros = Array.isArray(data.registros) ? data.registros : [];
+            const tipo = data.tipo || 'detalhado';
+            const pIni = UI.formatDate(data.periodo?.data_inicio);
+            const pFim = UI.formatDate(data.periodo?.data_fim);
+
+            const headers = tipo === 'resumo_alunos'
+                ? ['Aluno', 'Status', 'Modalidade', 'Total Presenças', 'Horário Habitual', 'Último Check-in', 'Dias s/ Treinar']
+                : ['Data', 'Horário', 'Aluno', 'Modalidade', 'Turma', 'Status'];
+
+            const bodyRows = registros.map((r) => {
+                if (tipo === 'resumo_alunos') {
+                    const ult = r.ultimo_checkin_data
+                        ? `${UI.formatDate(r.ultimo_checkin_data)} ${r.ultimo_checkin_hora || ''}`.trim()
+                        : 'Nunca registrou';
+                    const habit = (r.horario_habitual_hora !== null && r.horario_habitual_hora !== undefined)
+                        ? `${String(r.horario_habitual_hora).padStart(2, '0')}h`
+                        : '-';
+                    return `<tr>
+                        <td><strong>${UI.escapeHtml(r.aluno_nome)}</strong></td>
+                        <td>${UI.escapeHtml(r.status_cadastro || 'ativo')}</td>
+                        <td>${UI.escapeHtml(r.modalidade_nome || 'Geral')}</td>
+                        <td style="text-align:center;"><strong>${Number(r.total_presencas || 0)}</strong></td>
+                        <td style="text-align:center;">${UI.escapeHtml(habit)}</td>
+                        <td>${UI.escapeHtml(ult)}</td>
+                        <td style="text-align:center;">${r.dias_sem_treinar !== null && r.dias_sem_treinar !== undefined ? Number(r.dias_sem_treinar) : '-'}</td>
+                    </tr>`;
+                }
+                return `<tr>
+                    <td>${UI.escapeHtml(UI.formatDate(r.data_local))}</td>
+                    <td><strong>${UI.escapeHtml(r.hora_checkin || '')}</strong></td>
+                    <td><strong>${UI.escapeHtml(r.aluno_nome)}</strong></td>
+                    <td>${UI.escapeHtml(r.modalidade_nome || '')}</td>
+                    <td>${UI.escapeHtml(r.turma_nome || 'Treino Livre')}</td>
+                    <td>${UI.escapeHtml(r.status || 'aprovado')}</td>
+                </tr>`;
+            }).join('');
+
+            const printWin = window.open('', '_blank', 'width=980,height=720');
+            if (!printWin) {
+                UI.showToast('Permita pop-ups para visualizar e imprimir o relatório em PDF.', 'warning');
+                return;
+            }
+
+            const html = `<!DOCTYPE html>
+                <html lang="pt-BR">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Relatório de Presenças — PRO COMBATE</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; color: #0f172a; padding: 24px; }
+                        h1 { margin: 0 0 6px 0; font-size: 20px; }
+                        .meta { font-size: 12.5px; color: #475569; margin-bottom: 16px; }
+                        .kpis { display: flex; gap: 16px; margin-bottom: 16px; font-size: 13px; }
+                        .kpi { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 14px; background: #f8fafc; }
+                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                        th, td { border: 1px solid #cbd5e1; padding: 7px 9px; text-align: left; }
+                        th { background: #e2e8f0; font-weight: 700; }
+                        tr:nth-child(even) td { background: #f8fafc; }
+                        @media print { .no-print { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <h1>PRO COMBATE • Relatório de Presenças (${UI.escapeHtml(tipo === 'resumo_alunos' ? 'Resumo por Aluno' : 'Histórico Detalhado')})</h1>
+                    <div class="meta">Período: ${UI.escapeHtml(pIni)} a ${UI.escapeHtml(pFim)} • Fuso horário: Feira de Santana, BA (GMT-3)</div>
+                    <div class="kpis">
+                        <div class="kpi"><strong>Total de Registros:</strong> ${Number(data.resumo?.total_registros || 0)}</div>
+                        <div class="kpi"><strong>Alunos Presentes:</strong> ${Number(data.resumo?.alunos_unicos || 0)}</div>
+                        ${data.resumo?.horario_pico ? `<div class="kpi"><strong>Horário de Pico:</strong> ${UI.escapeHtml(data.resumo.horario_pico)}</div>` : ''}
+                    </div>
+                    <table>
+                        <thead><tr>${headers.map(h => `<th>${UI.escapeHtml(h)}</th>`).join('')}</tr></thead>
+                        <tbody>${bodyRows || `<tr><td colspan="${headers.length}" style="text-align:center; padding: 20px;">Nenhum registro encontrado no período.</td></tr>`}</tbody>
+                    </table>
+                    <script>window.onload = function() { window.print(); };</script>
+                </body>
+                </html>`;
+
+            printWin.document.open();
+            printWin.document.write(html);
+            printWin.document.close();
+        } catch (err) {
+            UI.showToast(err.message || 'Erro ao gerar relatório para impressão.', 'error');
         }
     }
 };

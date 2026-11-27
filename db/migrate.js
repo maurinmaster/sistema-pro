@@ -907,6 +907,28 @@ async function runMigrations() {
         const { seedWiki } = require('./seed-wiki');
         await seedWiki().catch(() => {});
 
+        // Migração pontual idempotente: corrige check-ins legados gravados em UTC (+3h) antes de 26/11/2026 08:08 GMT-3
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS sistema_migracoes_executadas (
+                chave VARCHAR(100) NOT NULL PRIMARY KEY,
+                executada_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+        const [migDone] = await pool.query(
+            "SELECT chave FROM sistema_migracoes_executadas WHERE chave = 'fix_checkins_utc_to_bahia_20261126' LIMIT 1"
+        );
+        if (migDone.length === 0) {
+            const [updRes] = await pool.query(`
+                UPDATE checkins
+                SET data_hora_checkin = DATE_SUB(data_hora_checkin, INTERVAL 3 HOUR)
+                WHERE data_hora_checkin < '2026-11-26 08:08:00'
+            `);
+            await pool.query(
+                "INSERT INTO sistema_migracoes_executadas (chave) VALUES ('fix_checkins_utc_to_bahia_20261126')"
+            );
+            console.log(`🕒 [Migrate] Fuso de check-ins legados corrigido (-3h): ${updRes.affectedRows || 0} registro(s).`);
+        }
+
         console.log('✅ Schema do banco de dados sincronizado com sucesso!');
     } catch (err) {
         console.error('❌ Erro ao executar migrations:', err.message);

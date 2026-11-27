@@ -139,20 +139,28 @@ function rankStudentsForSmartCheckin(alunos = [], historyStatsMap = new Map(), o
 
         const isPrimeiroCheckin = totalCheckins === 0;
 
-        // Calcula hora habitual predominante (moda de horas inteiras, desempate pela mais próxima do alvo)
-        const hourCounts = new Map();
-        for (const m of minutosHistorico) {
+        // Calcula hora habitual ponderada por recência (minutosHistorico vem ordenado do mais recente ao mais antigo)
+        const hourStats = new Map();
+        minutosHistorico.forEach((m, idx) => {
             const h = Math.floor(m / 60);
-            hourCounts.set(h, (hourCounts.get(h) || 0) + 1);
-        }
+            const weight = 1 / (1 + idx * 0.35);
+            const cur = hourStats.get(h);
+            if (!cur) {
+                hourStats.set(h, { weightSum: weight, firstIdx: idx });
+            } else {
+                cur.weightSum += weight;
+            }
+        });
 
         let habitualHora = null;
-        let maxHourCount = -1;
-        for (const [h, cnt] of hourCounts.entries()) {
-            const distCand = circularMinutesDiff(h * 60 + 30, targetMinutes);
-            const distBest = habitualHora !== null ? circularMinutesDiff(habitualHora * 60 + 30, targetMinutes) : Infinity;
-            if (cnt > maxHourCount || (cnt === maxHourCount && distCand < distBest)) {
-                maxHourCount = cnt;
+        let bestWeight = -1;
+        let bestFirstIdx = Infinity;
+        for (const [h, info] of hourStats.entries()) {
+            const isBetterWeight = info.weightSum > bestWeight + 1e-9;
+            const isTieMoreRecent = Math.abs(info.weightSum - bestWeight) <= 1e-9 && info.firstIdx < bestFirstIdx;
+            if (isBetterWeight || isTieMoreRecent) {
+                bestWeight = info.weightSum;
+                bestFirstIdx = info.firstIdx;
                 habitualHora = h;
             }
         }
@@ -193,6 +201,8 @@ function rankStudentsForSmartCheckin(alunos = [], historyStatsMap = new Map(), o
             prioridade_grupo: prioridadeGrupo,
             horario_habitual_hora: habitualHora,
             horario_habitual_label: habitualLabel,
+            ultimo_checkin_data: stats?.ultimo_checkin_data || null,
+            ultimo_checkin_hora: stats?.ultimo_checkin_hora || null,
             checkins_na_faixa: checkinsNaFaixa,
             distancia_min: isPrimeiroCheckin ? 0 : minDistancia
         };
@@ -409,6 +419,76 @@ function validateTurmaPayload(body = {}) {
     };
 }
 
+/**
+ * Sanitiza célula CSV para Excel PT-BR com proteção contra CSV/Formula Injection.
+ */
+function escapeCsvCell(val) {
+    if (val === null || val === undefined) return '';
+    let str = String(val).replace(/\r\n/g, ' ').replace(/[\r\n]/g, ' ');
+    if (/^[=+\-@\t]/.test(str)) {
+        str = `'${str}`;
+    }
+    if (/[;"]/.test(str)) {
+        return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+}
+
+function formatBrDateFromIso(isoStr) {
+    const clean = extractIsoDate(isoStr);
+    if (!clean) return '';
+    const [y, m, d] = clean.split('-');
+    return `${d}/${m}/${y}`;
+}
+
+/**
+ * Gera conteúdo CSV UTF-8 com BOM e separador ';' pronto para Excel PT-BR.
+ */
+function buildCheckinsCsv(rows = [], tipo = 'detalhado') {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const lines = [];
+
+    if (tipo === 'resumo_alunos') {
+        lines.push(['Aluno', 'Status Cadastro', 'Modalidade', 'Total Presenças', 'Horário Habitual', 'Último Check-in', 'Dias sem Treinar'].map(escapeCsvCell).join(';'));
+        for (const r of safeRows) {
+            const ultimoFmt = r.ultimo_checkin_data
+                ? `${formatBrDateFromIso(r.ultimo_checkin_data)}${r.ultimo_checkin_hora ? ` ${r.ultimo_checkin_hora}` : ''}`
+                : 'Nunca registrou';
+            const habit = (r.horario_habitual_hora !== null && r.horario_habitual_hora !== undefined)
+                ? `${String(r.horario_habitual_hora).padStart(2, '0')}h`
+                : '-';
+            const diasSem = (r.dias_sem_treinar !== null && r.dias_sem_treinar !== undefined)
+                ? String(r.dias_sem_treinar)
+                : '-';
+            lines.push([
+                r.aluno_nome || r.nome_completo || '',
+                r.status_cadastro || 'ativo',
+                r.modalidade_nome || 'Geral',
+                String(Number(r.total_presencas || 0)),
+                habit,
+                ultimoFmt,
+                diasSem
+            ].map(escapeCsvCell).join(';'));
+        }
+    } else {
+        lines.push(['Data', 'Horário', 'Aluno', 'CPF', 'Modalidade', 'Turma', 'Status', 'Observação'].map(escapeCsvCell).join(';'));
+        for (const r of safeRows) {
+            lines.push([
+                formatBrDateFromIso(r.data_local || r.data_hora_checkin),
+                r.hora_checkin || '',
+                r.aluno_nome || r.nome_completo || '',
+                r.cpf || '',
+                r.modalidade_nome || '',
+                r.turma_nome || 'Treino Livre',
+                r.status || 'aprovado',
+                r.motivo_bloqueio || ''
+            ].map(escapeCsvCell).join(';'));
+        }
+    }
+
+    return `\uFEFF${lines.join('\r\n')}`;
+}
+
 module.exports = {
     ALLOWED_WEEKDAYS,
     getDisplayShortNames,
@@ -418,5 +498,7 @@ module.exports = {
     rankStudentsForSmartCheckin,
     extractDetectedHours,
     buildAttendanceCalendarMonth,
-    validateTurmaPayload
+    validateTurmaPayload,
+    escapeCsvCell,
+    buildCheckinsCsv
 };

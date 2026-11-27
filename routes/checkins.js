@@ -134,32 +134,47 @@ router.get('/painel-inteligente', authenticateToken, async (req, res) => {
             GROUP BY aluno_id
         `);
 
-        // 4. Minutos históricos dos últimos 120 dias (para reconhecer horário habitual)
+        // 4. Minutos históricos dos últimos 120 dias ordenados do mais recente para o mais antigo
         const [horariosHistoricoRows] = await pool.query(`
             SELECT
                 aluno_id,
+                DATE_FORMAT(data_hora_checkin, '%Y-%m-%d') AS data_local,
+                DATE_FORMAT(data_hora_checkin, '%H:%i') AS hora_local,
                 HOUR(data_hora_checkin) AS hora,
                 MINUTE(data_hora_checkin) AS minuto
             FROM checkins
             WHERE status = 'aprovado'
-              AND data_hora_checkin >= DATE_SUB(CURDATE(), INTERVAL 120 DAY)
-        `);
+              AND data_hora_checkin >= DATE_SUB(?, INTERVAL 120 DAY)
+            ORDER BY data_hora_checkin DESC, id DESC
+        `, [hoje]);
 
         const historyStatsMap = new Map();
         for (const row of totaisRows) {
             const aid = Number(row.aluno_id);
             historyStatsMap.set(aid, {
                 total_checkins: Number(row.total_checkins || 0),
-                minutos_historico: []
+                minutos_historico: [],
+                ultimo_checkin_data: null,
+                ultimo_checkin_hora: null
             });
         }
         for (const row of horariosHistoricoRows) {
             const aid = Number(row.aluno_id);
             if (!historyStatsMap.has(aid)) {
-                historyStatsMap.set(aid, { total_checkins: 1, minutos_historico: [] });
+                historyStatsMap.set(aid, {
+                    total_checkins: 1,
+                    minutos_historico: [],
+                    ultimo_checkin_data: null,
+                    ultimo_checkin_hora: null
+                });
             }
+            const entry = historyStatsMap.get(aid);
             const mins = (Number(row.hora || 0) * 60) + Number(row.minuto || 0);
-            historyStatsMap.get(aid).minutos_historico.push(mins);
+            entry.minutos_historico.push(mins);
+            if (!entry.ultimo_checkin_data && row.data_local) {
+                entry.ultimo_checkin_data = row.data_local;
+                entry.ultimo_checkin_hora = row.hora_local || null;
+            }
         }
 
         // Consolida nomes curtos consistentes considerando todos os alunos envolvidos
@@ -227,6 +242,184 @@ router.get('/painel-inteligente', authenticateToken, async (req, res) => {
     } catch (err) {
         console.error('Erro ao carregar painel inteligente de check-ins:', err);
         res.status(500).json({ success: false, error: 'Erro interno ao carregar painel inteligente de presenças.' });
+    }
+});
+
+// GET /api/checkins/exportar - Extração de dados de presenças (CSV Excel ou JSON para impressão/PDF)
+router.get('/exportar', authenticateToken, authorizeRoles('admin', 'professor', 'recepcao'), async (req, res) => {
+    try {
+        const nowBr = checkinSmartService.getBrazilNowParts();
+        const defaultEnd = nowBr.dateIso;
+        const startDt = new Date(Date.parse(`${defaultEnd}T12:00:00Z`) - (29 * 24 * 60 * 60 * 1000));
+        const defaultStart = startDt.toISOString().slice(0, 10);
+
+        const rawStart = typeof req.query.data_inicio === 'string' ? req.query.data_inicio.trim() : '';
+        const rawEnd = typeof req.query.data_fim === 'string' ? req.query.data_fim.trim() : '';
+        const dataInicio = /^\d{4}-\d{2}-\d{2}$/.test(rawStart) ? rawStart : defaultStart;
+        const dataFim = /^\d{4}-\d{2}-\d{2}$/.test(rawEnd) ? rawEnd : defaultEnd;
+
+        if (dataFim < dataInicio) {
+            return res.status(400).json({ success: false, error: 'A data final deve ser maior ou igual à data inicial.' });
+        }
+        const diffDays = Math.round((Date.parse(`${dataFim}T12:00:00Z`) - Date.parse(`${dataInicio}T12:00:00Z`)) / (24 * 60 * 60 * 1000));
+        if (diffDays > 366) {
+            return res.status(400).json({ success: false, error: 'O período máximo de extração é de 366 dias.' });
+        }
+
+        const rawModId = req.query.modalidade_id;
+        const modalidadeId = (rawModId && String(rawModId).trim() !== '' && rawModId !== 'todas')
+            ? parseInt(String(rawModId), 10)
+            : null;
+        const rawTurmaId = req.query.turma_id;
+        const turmaId = (rawTurmaId && String(rawTurmaId).trim() !== '' && rawTurmaId !== 'todas')
+            ? parseInt(String(rawTurmaId), 10)
+            : null;
+
+        const statusRaw = typeof req.query.status === 'string' ? req.query.status.trim().toLowerCase() : 'todos';
+        const statusFilter = ['aprovado', 'bloqueado'].includes(statusRaw) ? statusRaw : 'todos';
+        const tipo = req.query.tipo === 'resumo_alunos' ? 'resumo_alunos' : 'detalhado';
+        const formato = req.query.formato === 'csv' ? 'csv' : 'json';
+
+        if (tipo === 'resumo_alunos') {
+            let sqlResumo = `
+                SELECT
+                    a.id AS aluno_id,
+                    a.nome_completo AS aluno_nome,
+                    a.status AS status_cadastro,
+                    COALESCE(MAX(m.nome), 'Geral') AS modalidade_nome,
+                    SUM(CASE WHEN c.id IS NOT NULL AND DATE(c.data_hora_checkin) BETWEEN ? AND ? ${statusFilter !== 'todos' ? 'AND c.status = ?' : "AND c.status = 'aprovado'"} THEN 1 ELSE 0 END) AS total_presencas,
+                    DATE_FORMAT(MAX(CASE WHEN c.id IS NOT NULL AND DATE(c.data_hora_checkin) BETWEEN ? AND ? THEN c.data_hora_checkin ELSE NULL END), '%Y-%m-%d') AS ultimo_checkin_data,
+                    DATE_FORMAT(MAX(CASE WHEN c.id IS NOT NULL AND DATE(c.data_hora_checkin) BETWEEN ? AND ? THEN c.data_hora_checkin ELSE NULL END), '%H:%i') AS ultimo_checkin_hora,
+                    DATEDIFF(?, MAX(DATE(c.data_hora_checkin))) AS dias_sem_treinar,
+                    ROUND(AVG(CASE WHEN c.id IS NOT NULL AND DATE(c.data_hora_checkin) BETWEEN ? AND ? AND c.status = 'aprovado' THEN HOUR(c.data_hora_checkin) ELSE NULL END)) AS horario_habitual_hora
+                FROM alunos a
+                LEFT JOIN aluno_graduacoes ag ON ag.id = (
+                    SELECT ag2.id FROM aluno_graduacoes ag2
+                    WHERE ag2.aluno_id = a.id AND ag2.atual = 1
+                    ORDER BY ag2.id DESC LIMIT 1
+                )
+                LEFT JOIN modalidades m ON m.id = ag.modalidade_id
+                LEFT JOIN checkins c ON c.aluno_id = a.id
+                    ${modalidadeId && !Number.isNaN(modalidadeId) ? 'AND c.modalidade_id = ?' : ''}
+                    ${turmaId && !Number.isNaN(turmaId) ? 'AND c.turma_id = ?' : ''}
+                WHERE a.deleted_at IS NULL
+            `;
+            const paramsResumo = [dataInicio, dataFim];
+            if (statusFilter !== 'todos') paramsResumo.push(statusFilter);
+            paramsResumo.push(dataInicio, dataFim, dataInicio, dataFim, nowBr.dateIso, dataInicio, dataFim);
+            if (modalidadeId && !Number.isNaN(modalidadeId)) paramsResumo.push(modalidadeId);
+            if (turmaId && !Number.isNaN(turmaId)) paramsResumo.push(turmaId);
+            if (modalidadeId && !Number.isNaN(modalidadeId)) {
+                sqlResumo += ' AND (ag.modalidade_id = ? OR c.modalidade_id = ?)';
+                paramsResumo.push(modalidadeId, modalidadeId);
+            }
+            sqlResumo += ' GROUP BY a.id, a.nome_completo, a.status ORDER BY total_presencas DESC, a.nome_completo ASC';
+
+            const [rows] = await pool.query(sqlResumo, paramsResumo);
+
+            if (formato === 'csv') {
+                const csv = checkinSmartService.buildCheckinsCsv(rows, 'resumo_alunos');
+                res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+                res.setHeader('Content-Disposition', `attachment; filename="presencas-resumo-alunos-${dataInicio}-a-${dataFim}.csv"`);
+                return res.send(csv);
+            }
+
+            const totalPresencasPeriodo = rows.reduce((acc, r) => acc + Number(r.total_presencas || 0), 0);
+            const alunosComPresenca = rows.filter(r => Number(r.total_presencas || 0) > 0).length;
+
+            return res.json({
+                success: true,
+                data: {
+                    periodo: { data_inicio: dataInicio, data_fim: dataFim },
+                    tipo,
+                    resumo: {
+                        total_registros: totalPresencasPeriodo,
+                        alunos_unicos: alunosComPresenca,
+                        total_alunos_base: rows.length,
+                        horario_pico: null
+                    },
+                    registros: rows
+                }
+            });
+        }
+
+        // Modo detalhado (cada check-in do período)
+        let sqlDet = `
+            SELECT
+                c.id,
+                c.aluno_id,
+                DATE_FORMAT(c.data_hora_checkin, '%Y-%m-%d') AS data_local,
+                DATE_FORMAT(c.data_hora_checkin, '%H:%i') AS hora_checkin,
+                HOUR(c.data_hora_checkin) AS hora_cheia,
+                c.status,
+                c.motivo_bloqueio,
+                c.metodo,
+                a.nome_completo AS aluno_nome,
+                a.cpf,
+                m.nome AS modalidade_nome,
+                t.nome AS turma_nome
+            FROM checkins c
+            JOIN alunos a ON a.id = c.aluno_id
+            JOIN modalidades m ON m.id = c.modalidade_id
+            LEFT JOIN turmas t ON t.id = c.turma_id
+            WHERE a.deleted_at IS NULL
+              AND DATE(c.data_hora_checkin) BETWEEN ? AND ?
+        `;
+        const paramsDet = [dataInicio, dataFim];
+        if (modalidadeId && !Number.isNaN(modalidadeId) && modalidadeId > 0) {
+            sqlDet += ' AND c.modalidade_id = ?';
+            paramsDet.push(modalidadeId);
+        }
+        if (turmaId && !Number.isNaN(turmaId) && turmaId > 0) {
+            sqlDet += ' AND c.turma_id = ?';
+            paramsDet.push(turmaId);
+        }
+        if (statusFilter !== 'todos') {
+            sqlDet += ' AND c.status = ?';
+            paramsDet.push(statusFilter);
+        }
+        sqlDet += ' ORDER BY c.data_hora_checkin DESC, c.id DESC';
+
+        const [rows] = await pool.query(sqlDet, paramsDet);
+
+        if (formato === 'csv') {
+            const csv = checkinSmartService.buildCheckinsCsv(rows, 'detalhado');
+            res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+            res.setHeader('Content-Disposition', `attachment; filename="presencas-detalhado-${dataInicio}-a-${dataFim}.csv"`);
+            return res.send(csv);
+        }
+
+        const uniqueAlunos = new Set(rows.map(r => Number(r.aluno_id)));
+        const hourMap = new Map();
+        rows.forEach((r) => {
+            const h = Number(r.hora_cheia);
+            if (Number.isInteger(h)) hourMap.set(h, (hourMap.get(h) || 0) + 1);
+        });
+        let picoHora = null;
+        let picoTotal = 0;
+        for (const [h, cnt] of hourMap.entries()) {
+            if (cnt > picoTotal) {
+                picoTotal = cnt;
+                picoHora = `${String(h).padStart(2, '0')}h`;
+            }
+        }
+
+        res.json({
+            success: true,
+            data: {
+                periodo: { data_inicio: dataInicio, data_fim: dataFim },
+                tipo,
+                resumo: {
+                    total_registros: rows.length,
+                    alunos_unicos: uniqueAlunos.size,
+                    horario_pico: picoHora
+                },
+                registros: rows
+            }
+        });
+    } catch (err) {
+        console.error('Erro ao exportar presenças:', err);
+        res.status(500).json({ success: false, error: 'Erro interno ao exportar registros de presenças.' });
     }
 });
 

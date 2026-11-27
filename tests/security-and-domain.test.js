@@ -3285,6 +3285,59 @@ test('Regras de Domínio: Check-in Inteligente por Horário e Calendário de Pre
     assert.equal(smart.validateTurmaPayload({ nome: 'Turma 1', modalidade_id: 1, dias_semana: [], horario_inicio: '19:00', horario_fim: '20:00' }).valid, false);
     assert.equal(smart.validateTurmaPayload({ nome: 'Turma 1', modalidade_id: 1, dias_semana: ['SEG'], horario_inicio: '20:00', horario_fim: '19:00' }).valid, false);
     assert.equal(smart.validateTurmaPayload({ nome: 'Turma 1', modalidade_id: 1, dias_semana: ['SEG'], horario_inicio: '19:00', horario_fim: '20:00', capacidade_maxima: 999 }).valid, false);
+
+    // 8. Ponderação por recência: check-in recente (18:32) vence empate contra antigo (01:00) mesmo às 07:50 da manhã
+    const recencyStats = new Map([
+        [99, {
+            total_checkins: 2,
+            minutos_historico: [18 * 60 + 32, 1 * 60 + 0],
+            ultimo_checkin_data: '2026-11-26',
+            ultimo_checkin_hora: '18:32'
+        }]
+    ]);
+    const recencyRanked = smart.rankStudentsForSmartCheckin(
+        [{ id: 99, nome_completo: 'Davi Almeida' }],
+        recencyStats,
+        { currentMinutes: 7 * 60 + 50, windowMinutes: 90 }
+    );
+    assert.equal(recencyRanked[0].horario_habitual_hora, 18);
+    assert.equal(recencyRanked[0].horario_habitual_label, '18h');
+    assert.equal(recencyRanked[0].ultimo_checkin_hora, '18:32');
+
+    // 9. Sanitização anti-CSV Injection e geração de CSV UTF-8 BOM para Excel PT-BR
+    assert.equal(smart.escapeCsvCell('=SUM(A1)'), "'=SUM(A1)");
+    assert.equal(smart.escapeCsvCell('+cmd'), "'+cmd");
+    assert.equal(smart.escapeCsvCell('Aluno; "Teste"'), '"Aluno; ""Teste"""');
+
+    const csvDetalhado = smart.buildCheckinsCsv([
+        {
+            data_local: '2026-11-26',
+            hora_checkin: '18:32',
+            aluno_nome: 'Davi Almeida',
+            cpf: '12345678901',
+            modalidade_nome: 'Muay Thai',
+            turma_nome: 'Noturno',
+            status: 'aprovado',
+            motivo_bloqueio: ''
+        }
+    ], 'detalhado');
+    assert.equal(csvDetalhado.startsWith('\uFEFFData;Horário;Aluno;CPF;Modalidade;Turma;Status;Observação'), true);
+    assert.equal(csvDetalhado.includes('26/11/2026;18:32;Davi Almeida;12345678901;Muay Thai;Noturno;aprovado;'), true);
+
+    const csvResumo = smart.buildCheckinsCsv([
+        {
+            aluno_nome: 'Hosana Silva',
+            status_cadastro: 'ativo',
+            modalidade_nome: 'Muay Thai',
+            total_presencas: 8,
+            horario_habitual_hora: 8,
+            ultimo_checkin_data: '2026-11-26',
+            ultimo_checkin_hora: '08:05',
+            dias_sem_treinar: 1
+        }
+    ], 'resumo_alunos');
+    assert.equal(csvResumo.startsWith('\uFEFFAluno;Status Cadastro;Modalidade;Total Presenças;Horário Habitual;Último Check-in;Dias sem Treinar'), true);
+    assert.equal(csvResumo.includes('Hosana Silva;ativo;Muay Thai;8;08h;26/11/2026 08:05;1'), true);
 });
 
 test.after(async () => {
