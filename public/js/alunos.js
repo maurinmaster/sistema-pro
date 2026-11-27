@@ -835,7 +835,7 @@ const AlunosModule = {
         UI.openModal('modal-aluno');
     },
 
-    async openEditModal(id) {
+    async openEditModal(id, options = {}) {
         try {
             const res = await API.get(`/alunos/${id}`);
             const aluno = res.data.aluno;
@@ -916,6 +916,15 @@ const AlunosModule = {
             `;
 
             UI.openModal('modal-aluno');
+            if (options && options.focusField) {
+                setTimeout(() => {
+                    const targetEl = document.getElementById(options.focusField);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.focus();
+                    }
+                }, 80);
+            }
         } catch (err) {
             UI.showToast('Erro ao carregar dados do aluno para edição: ' + err.message, 'error');
         }

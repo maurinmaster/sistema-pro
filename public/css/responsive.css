@@ -289,8 +289,8 @@
     }
 
     .dossier-tab-btn {
-        padding: 8px 12px;
-        font-size: 12px;
+        padding: 10px 16px;
+        font-size: 12.5px;
     }
 
     /* Contrato / Matrícula atual dentro do Dossiê */
@@ -422,7 +422,8 @@
         padding: 14px 14px 12px;
     }
 
-    #dossie-avatar {
+    #dossie-avatar,
+    .dossier-avatar {
         width: 44px !important;
         height: 44px !important;
     }
@@ -433,7 +434,7 @@
 
     #dossie-meta {
         font-size: 11px !important;
-        gap: 4px 6px !important;
+        gap: 5px 7px !important;
     }
 
     .dossier-tabs-wrap::after {
@@ -446,29 +447,33 @@
     }
 
     .modal-box-dossier .dossier-tab-btn {
-        padding: 10px 12px;
+        padding: 11px 16px;
         font-size: 12.5px;
-        gap: 6px;
+        gap: 7px;
     }
 
     .modal-box-dossier .dossier-scroll-body {
-        padding: 14px;
-    }
-
-    .modal-box-dossier .modal-footer {
-        padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-    }
-
-    .dossier-btn-fechar {
-        width: 100%;
-        min-height: 42px;
-        justify-content: center;
+        padding: 14px 14px calc(18px + env(safe-area-inset-bottom));
     }
 
     .dossier-quick-actions {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
+    }
+
+    .dossier-action-btn {
+        width: 100%;
+    }
+
+    .dossier-action-danger {
+        margin-left: 0;
+        grid-column: 1 / -1;
+    }
+
+    .dossier-info-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
     }
 
     .dossier-resp-grid {
@@ -605,5 +610,11 @@
     .toast {
         min-width: 100%;
         max-width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .dossier-quick-actions {
+        grid-template-columns: 1fr;
     }
 }

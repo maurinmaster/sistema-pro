@@ -3400,6 +3400,53 @@ test('Regras de Domínio: Check-in Inteligente por Horário e Calendário de Pre
     assert.equal(csvResumo.includes('Hosana Silva;ativo;Muay Thai;8;08h;26/11/2026 08:05;1'), true);
 });
 
+test('UI/UX Modal de Perfil do Aluno: ícones outline uniformes, hierarquia de ações, abas e escaneabilidade', () => {
+    const indexHtml = fs.readFileSync(path.join(__dirname, '../public/index.html'), 'utf8');
+    const detalhesJs = fs.readFileSync(path.join(__dirname, '../public/js/aluno-detalhes.js'), 'utf8');
+    const componentsCss = fs.readFileSync(path.join(__dirname, '../public/css/components.css'), 'utf8');
+    const responsiveCss = fs.readFileSync(path.join(__dirname, '../public/css/responsive.css'), 'utf8');
+
+    const dossieSectionMatch = indexHtml.match(/<div class="modal-overlay" id="modal-dossie"[\s\S]*?<!-- MODAL: PROMOÇÃO/);
+    assert.ok(dossieSectionMatch, 'Seção #modal-dossie deve existir em index.html');
+    const dossieHtml = dossieSectionMatch[0];
+
+    // Sem botão Fechar redundante no rodapé; mantém botão X com suporte a Esc/backdrop
+    assert.equal(dossieHtml.includes('dossier-btn-fechar'), false);
+    assert.equal(dossieHtml.includes('class="modal-footer"'), false);
+    assert.ok(dossieHtml.includes('class="modal-close dossier-close-btn"'));
+
+    // Ícones de aba padronizados em 17px outline com stroke-width 1.75 + circle-dollar-sign + indicadores
+    const tabIconMatches = dossieHtml.match(/width="17" height="17"[^>]*stroke-width="1\.75"/g) || [];
+    assert.equal(tabIconMatches.length, 5);
+    assert.ok(dossieHtml.includes('data-lucide="circle-dollar-sign"'));
+    assert.ok(dossieHtml.includes('id="dossie-tab-dot-graduacoes"'));
+    assert.ok(dossieHtml.includes('id="dossie-tab-badge-financeiro"'));
+
+    // Barra de ações sem emoji de luva, com hierarquia e botões outline 16px / ações inline 14px
+    assert.equal(detalhesJs.includes('🥊'), false);
+    assert.ok(detalhesJs.includes('dossier-action-primary'));
+    assert.ok(detalhesJs.includes('dossier-action-amber'));
+    assert.ok(detalhesJs.includes('dossier-action-neutral'));
+    assert.ok(detalhesJs.includes('dossier-action-danger'));
+
+    // Escaneabilidade, gênero por extenso, cópia segura sem XSS em onclick, Tipo Sanguíneo neutro e Emergência limpa
+    assert.ok(detalhesJs.includes('formatGeneroDisplay'));
+    assert.ok(detalhesJs.includes("'Feminino'"));
+    assert.ok(detalhesJs.includes("'Masculino'"));
+    assert.ok(detalhesJs.includes('data-copy-value="${UI.escapeHtml(phoneRaw)}"'));
+    assert.ok(detalhesJs.includes('dossier-open-medical-btn'));
+    assert.equal(detalhesJs.includes('Não registrado'), false);
+    assert.ok(detalhesJs.includes('<span class="dossier-empty-value">Não informado</span>'));
+    assert.ok(detalhesJs.includes('<span class="dossier-empty-value">—</span>'));
+    assert.ok(detalhesJs.includes('getCurrentGraduationSummary'));
+
+    // CSS desktop e responsivo mobile-first
+    assert.match(componentsCss, /\.dossier-action-danger\s*\{[^}]*margin-left:\s*auto;/);
+    assert.match(componentsCss, /\.dossier-info-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,/);
+    assert.match(responsiveCss, /\.dossier-action-danger\s*\{[^}]*margin-left:\s*0;/);
+    assert.match(responsiveCss, /\.dossier-info-grid\s*\{[^}]*grid-template-columns:\s*1fr;/);
+});
+
 test.after(async () => {
     try {
         await pool.end();

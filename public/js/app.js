@@ -190,8 +190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (overlay.id === 'modal-auth' && (!window.AuthModule || !AuthModule.currentUser)) {
                     return;
                 }
-                overlay.classList.remove('active');
-                document.body.style.overflow = '';
+                UI.closeModal(overlay.id);
             }
         });
     });

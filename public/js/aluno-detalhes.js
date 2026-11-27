@@ -19,6 +19,26 @@ const AlunoDetalhesModule = {
             });
         });
 
+        // Ações rápidas inline nos cards da aba Geral (delegação segura sem interpolação inline)
+        const tabGeralEl = document.getElementById('dossier-tab-geral');
+        if (tabGeralEl) {
+            tabGeralEl.addEventListener('click', (e) => {
+                const copyBtn = e.target.closest('.dossier-copy-btn[data-copy-value]');
+                if (copyBtn) {
+                    const copyVal = copyBtn.getAttribute('data-copy-value') || '';
+                    this.copyToClipboard(copyVal, copyBtn);
+                    return;
+                }
+                const medicalBtn = e.target.closest('.dossier-open-medical-btn[data-aluno-id]');
+                if (medicalBtn) {
+                    const alunoId = Number(medicalBtn.getAttribute('data-aluno-id'));
+                    if (Number.isInteger(alunoId) && alunoId > 0) {
+                        this.openMedicalEdit(alunoId);
+                    }
+                }
+            });
+        }
+
         this.bindContractEvents();
         this.bindAvaliacaoEvents();
 
@@ -179,8 +199,151 @@ const AlunoDetalhesModule = {
         }
     },
 
+    formatGeneroDisplay(genero) {
+        if (!genero || typeof genero !== 'string') return null;
+        const normalized = genero.trim().toLowerCase();
+        if (!normalized) return null;
+        if (normalized === 'f' || normalized === 'feminino') return 'Feminino';
+        if (normalized === 'm' || normalized === 'masculino') return 'Masculino';
+        if (normalized === 'o' || normalized === 'outro') return 'Outro';
+        return genero.trim();
+    },
+
+    getCurrentGraduationSummary(graduacoes = [], avaliacoes = []) {
+        const atualGrad = (graduacoes || []).find(g => Number(g.atual) === 1 || g.atual === true) || (graduacoes || [])[0] || null;
+        const atualAval = (avaliacoes || [])[0] || null;
+        if (atualGrad) {
+            const mod = atualGrad.modalidade_nome ? `${atualGrad.modalidade_nome} - ` : '';
+            const extraCount = Math.max((avaliacoes || []).length - 1, 0);
+            return {
+                label: `${mod}${atualGrad.nivel_nome || ''}`.trim(),
+                color: atualGrad.cor_hex_primaria || '#38bdf8',
+                extraCount
+            };
+        }
+        if (atualAval) {
+            const mod = atualAval.modalidade_nome ? `${atualAval.modalidade_nome} - ` : '';
+            const extraCount = Math.max((avaliacoes || []).length - 1, 0);
+            return {
+                label: `${mod}${atualAval.nivel_nome || ''}`.trim(),
+                color: atualAval.cor_hex_primaria || '#38bdf8',
+                extraCount
+            };
+        }
+        return null;
+    },
+
+    updateTabIndicators(faturas = [], avaliacoes = [], graduacoes = []) {
+        const finBadge = document.getElementById('dossie-tab-badge-financeiro');
+        if (finBadge) {
+            const openInvoices = (faturas || []).filter(f => f && (f.status === 'pendente' || f.status === 'atrasado'));
+            if (openInvoices.length > 0) {
+                const hasOverdue = openInvoices.some(f => f.status === 'atrasado');
+                finBadge.textContent = String(openInvoices.length);
+                finBadge.classList.toggle('is-danger', hasOverdue);
+                finBadge.classList.toggle('is-warning', !hasOverdue);
+                finBadge.title = hasOverdue
+                    ? `${openInvoices.length} pendência(s) financeira(s) com atraso`
+                    : `${openInvoices.length} fatura(s) em aberto`;
+                finBadge.setAttribute('aria-label', finBadge.title);
+                finBadge.hidden = false;
+            } else {
+                finBadge.textContent = '';
+                finBadge.classList.remove('is-danger', 'is-warning');
+                finBadge.hidden = true;
+            }
+        }
+
+        const gradDot = document.getElementById('dossie-tab-dot-graduacoes');
+        if (gradDot) {
+            const hasReadyForPromo = (avaliacoes || []).some(av => Number(av.apto) === 1 && Boolean(av.proxima_graduacao));
+            const nowMs = Date.now();
+            const recentWindowMs = 14 * 24 * 60 * 60 * 1000;
+            const hasRecentGrad = (graduacoes || []).some(g => {
+                if (!g || !g.data_graduacao) return false;
+                const ts = new Date(g.data_graduacao).getTime();
+                return Number.isFinite(ts) && (nowMs - ts) <= recentWindowMs && (nowMs - ts) >= 0;
+            });
+            if (hasReadyForPromo || hasRecentGrad) {
+                gradDot.title = hasReadyForPromo
+                    ? 'Aluno apto para promoção de graduação'
+                    : 'Graduação recente registrada nos últimos 14 dias';
+                gradDot.hidden = false;
+            } else {
+                gradDot.removeAttribute('title');
+                gradDot.hidden = true;
+            }
+        }
+    },
+
+    async copyToClipboard(text, buttonEl) {
+        if (!text) return;
+        let copied = false;
+        try {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(text);
+                copied = true;
+            }
+        } catch {
+            copied = false;
+        }
+        if (!copied) {
+            try {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                copied = document.execCommand('copy');
+                document.body.removeChild(ta);
+            } catch {
+                copied = false;
+            }
+        }
+        if (!copied) {
+            UI.showToast('Não foi possível copiar o número.', 'warning');
+            return;
+        }
+        if (buttonEl) {
+            if (buttonEl._copyResetTimer) {
+                clearTimeout(buttonEl._copyResetTimer);
+            }
+            const defaultMarkup = `
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                <span>Copiar</span>
+            `;
+            buttonEl.classList.add('is-copied');
+            buttonEl.innerHTML = `
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Copiado</span>
+            `;
+            buttonEl._copyResetTimer = setTimeout(() => {
+                buttonEl.classList.remove('is-copied');
+                buttonEl.innerHTML = defaultMarkup;
+                buttonEl._copyResetTimer = null;
+            }, 2000);
+        }
+    },
+
+    openMedicalEdit(alunoId) {
+        UI.closeModal('modal-dossie');
+        if (window.AlunosModule && typeof AlunosModule.openEditModal === 'function') {
+            AlunosModule.openEditModal(alunoId, { focusField: 'aluno-tipo-sanguineo' });
+        }
+    },
+
     switchTab(tabId) {
-        document.querySelectorAll('.dossier-tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.dossier-tab-btn').forEach(b => {
+            b.classList.remove('active');
+            b.setAttribute('aria-selected', 'false');
+        });
         document.querySelectorAll('.dossier-tab-content').forEach(c => c.classList.remove('active'));
 
         const targetBtn = document.querySelector(`.dossier-tab-btn[data-tab="${tabId}"]`);
@@ -188,6 +351,7 @@ const AlunoDetalhesModule = {
 
         if (targetBtn) {
             targetBtn.classList.add('active');
+            targetBtn.setAttribute('aria-selected', 'true');
             try {
                 targetBtn.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
             } catch {
@@ -202,6 +366,7 @@ const AlunoDetalhesModule = {
 
     async openDossier(id) {
         this.currentAlunoId = id;
+        this.updateTabIndicators([], [], []);
         this.switchTab('geral');
         UI.openModal('modal-dossie');
 
@@ -238,7 +403,7 @@ const AlunoDetalhesModule = {
             : (aluno.nome_completo || '');
         const encodedAlunoNome = encodeURIComponent(formattedNome).replace(/'/g, '%27');
 
-        // Atualiza cabeçalho enxuto do dossiê
+        // Atualiza cabeçalho enxuto do dossiê com contexto imediato da graduação
         const avatarEl = document.getElementById('dossie-avatar');
         if (avatarEl) {
             const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(formattedNome || 'Aluno')}&background=0284c7&color=fff`;
@@ -246,89 +411,215 @@ const AlunoDetalhesModule = {
             avatarEl.title = `Clique para ampliar a foto de ${formattedNome || 'Aluno'}`;
         }
         document.getElementById('dossie-nome').textContent = formattedNome;
+
+        this.updateTabIndicators(faturas || [], avaliacoes || [], graduacoes || []);
+        const gradSummary = this.getCurrentGraduationSummary(graduacoes || [], avaliacoes || []);
+        const gradMetaHtml = gradSummary ? `
+            <span class="dossier-meta-grad" title="Graduação atual">
+                <span class="dossier-meta-grad-dot" style="background: ${UI.sanitizeColor(gradSummary.color, '#38bdf8')};"></span>
+                <span>Graduação: <strong>${UI.escapeHtml(gradSummary.label)}</strong></span>
+                ${gradSummary.extraCount > 0 ? `<span class="dossier-meta-extra">+${gradSummary.extraCount}</span>` : ''}
+            </span>
+        ` : '';
+
         document.getElementById('dossie-meta').innerHTML = `
             ${UI.renderStatusBadge(aluno.status)}
-            <span style="white-space: nowrap;">CPF: ${UI.escapeHtml(aluno.cpf || 'Não informado')}</span>
-            <span style="white-space: nowrap;">${aluno.idade !== null ? Number(aluno.idade) + ' anos' : 'Idade não inf.'}</span>
+            ${gradMetaHtml}
+            <span class="dossier-meta-item">CPF: ${UI.escapeHtml(aluno.cpf || 'Não informado')}</span>
+            <span class="dossier-meta-item">${aluno.idade !== null ? Number(aluno.idade) + ' anos' : 'Idade não inf.'}</span>
             ${isMenor ? '<span class="minor-tag">MENOR</span>' : ''}
-            <span style="white-space: nowrap;">Cadastro: ${UI.formatDate(aluno.created_at)}</span>
+            <span class="dossier-meta-item">Cadastro: ${UI.formatDate(aluno.created_at)}</span>
         `;
 
-        // Links clicáveis seguros de contato
-        const phoneDigitsRaw = String(aluno.telefone_whatsapp || '').replace(/\D/g, '');
+        // Links clicáveis seguros de contato com ações inline e ícones outline 14px
+        const phoneRaw = typeof aluno.telefone_whatsapp === 'string' ? aluno.telefone_whatsapp.trim() : '';
+        const phoneDigitsRaw = phoneRaw.replace(/\D/g, '');
         const waDigits = phoneDigitsRaw.length >= 10
             ? ((phoneDigitsRaw.length === 10 || phoneDigitsRaw.length === 11) && !phoneDigitsRaw.startsWith('55') ? `55${phoneDigitsRaw}` : phoneDigitsRaw)
             : '';
+        const copyPhoneBtnHtml = phoneRaw ? `
+            <button type="button" class="dossier-inline-btn dossier-copy-btn" data-copy-value="${UI.escapeHtml(phoneRaw)}" title="Copiar número de WhatsApp" aria-label="Copiar número de WhatsApp">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                <span>Copiar</span>
+            </button>
+        ` : '';
         const whatsappHtml = waDigits
-            ? `<a href="https://wa.me/${waDigits}" target="_blank" rel="noopener noreferrer" class="dossier-contact-link">${UI.escapeHtml(aluno.telefone_whatsapp)}</a>`
-            : UI.escapeHtml(aluno.telefone_whatsapp || 'Não informado');
+            ? `
+                <a href="https://wa.me/${waDigits}" target="_blank" rel="noopener noreferrer" class="dossier-contact-link" title="Abrir conversa no WhatsApp">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                    </svg>
+                    <span>${UI.escapeHtml(phoneRaw)}</span>
+                </a>
+                ${copyPhoneBtnHtml}
+            `
+            : (phoneRaw
+                ? `<span>${UI.escapeHtml(phoneRaw)}</span>${copyPhoneBtnHtml}`
+                : `<span class="dossier-empty-value">Não informado</span>`);
 
         const emailClean = typeof aluno.email === 'string' ? aluno.email.trim() : '';
         const emailHtml = /^[^\s<>"']+@[^\s<>"']+$/.test(emailClean)
-            ? `<a href="mailto:${UI.escapeHtml(emailClean)}" class="dossier-contact-link">${UI.escapeHtml(emailClean)}</a>`
-            : UI.escapeHtml(emailClean || 'Não informado');
+            ? `
+                <a href="mailto:${UI.escapeHtml(emailClean)}" class="dossier-contact-link" title="Enviar e-mail">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <rect width="20" height="16" x="2" y="4" rx="2" />
+                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                    </svg>
+                    <span>${UI.escapeHtml(emailClean)}</span>
+                </a>
+            `
+            : (emailClean ? `<span>${UI.escapeHtml(emailClean)}</span>` : `<span class="dossier-empty-value">Não informado</span>`);
+
+        const generoExtenso = this.formatGeneroDisplay(aluno.genero);
+        const generoHtml = generoExtenso
+            ? `<span>${UI.escapeHtml(generoExtenso)}</span>`
+            : `<span class="dossier-empty-value">Não informado</span>`;
+
+        const nascimentoHtml = aluno.data_nascimento
+            ? `<span>${UI.formatDate(aluno.data_nascimento)}</span>`
+            : `<span class="dossier-empty-value">Não informado</span>`;
+
+        const canEditAluno = !window.AuthModule || AuthModule.can('manage_alunos');
+        const tipoSangClean = typeof aluno.tipo_sanguineo === 'string' ? aluno.tipo_sanguineo.trim() : '';
+        const tipoSanguineoHtml = tipoSangClean
+            ? `<span class="dossier-blood-badge">${UI.escapeHtml(tipoSangClean)}</span>`
+            : `
+                <span class="dossier-empty-value">Não informado</span>
+                ${canEditAluno ? `
+                    <button type="button" class="dossier-inline-action dossier-open-medical-btn" data-aluno-id="${safeAlunoId}" title="Adicionar tipo sanguíneo na ficha médica">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M5 12h14" />
+                            <path d="M12 5v14" />
+                        </svg>
+                        <span>Adicionar</span>
+                    </button>
+                ` : ''}
+            `;
+
+        const emergNome = typeof aluno.contato_emergencia_nome === 'string' ? aluno.contato_emergencia_nome.trim() : '';
+        const emergFone = typeof aluno.contato_emergencia_fone === 'string' ? aluno.contato_emergencia_fone.trim() : '';
+        let emergenciaHtml = `<span class="dossier-empty-value">—</span>`;
+        if (emergNome && emergFone) {
+            emergenciaHtml = `<span>${UI.escapeHtml(emergNome)} (${UI.escapeHtml(emergFone)})</span>`;
+        } else if (emergNome) {
+            emergenciaHtml = `<span>${UI.escapeHtml(emergNome)}</span>`;
+        } else if (emergFone) {
+            emergenciaHtml = `<span>${UI.escapeHtml(emergFone)}</span>`;
+        }
 
         // TAB 1: GERAL & SAÚDE
         document.getElementById('dossier-tab-geral').innerHTML = `
             <div class="dossier-quick-actions">
-                ${(!window.AuthModule || AuthModule.can('manage_alunos')) ? `
-                    <button type="button" class="btn btn-secondary btn-sm"
+                ${canEditAluno ? `
+                    <button type="button" class="dossier-action-btn dossier-action-primary"
                         onclick="UI.closeModal('modal-dossie'); AlunosModule.openEditModal(${safeAlunoId})">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
+                        </svg>
                         <span>Editar Dados</span>
                     </button>
                 ` : ''}
-                <button type="button" class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.35);"
-                    onclick="AlunosModule.openResetSenhaModal(${safeAlunoId}, '${encodedAlunoNome}')">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6M15.5 7.5l3 3M18.5 4.5l2 2"/></svg>
-                    <span>Resetar Senha</span>
-                </button>
                 ${(!window.AuthModule || AuthModule.can('manage_conquistas') || AuthModule.can('promote_faixas')) ? `
-                    <button type="button" class="btn btn-secondary btn-sm" style="color: #fbbf24; border-color: rgba(245, 158, 11, 0.45);"
+                    <button type="button" class="dossier-action-btn dossier-action-amber"
                         onclick="AlunoDetalhesModule.openModalConquistaProfessor(${safeAlunoId})">
-                        <span>🥊 + Conquista de Luta</span>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                            <path d="M4 22h16" />
+                            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                        </svg>
+                        <span>Conquista de Luta</span>
                     </button>
                 ` : ''}
+                <button type="button" class="dossier-action-btn dossier-action-neutral"
+                    onclick="AlunosModule.openResetSenhaModal(${safeAlunoId}, '${encodedAlunoNome}')">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
+                        <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
+                    </svg>
+                    <span>Resetar Senha</span>
+                </button>
                 ${(!window.AuthModule || AuthModule.can('delete_alunos')) ? `
-                    <button type="button" class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.35);"
+                    <button type="button" class="dossier-action-btn dossier-action-danger"
                         onclick="UI.closeModal('modal-dossie'); AlunosModule.deleteAluno(${safeAlunoId}, '${encodedAlunoNome}')">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M3 6h18" />
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                            <line x1="10" x2="10" y1="11" y2="17" />
+                            <line x1="14" x2="14" y1="11" y2="17" />
+                        </svg>
                         <span>Excluir</span>
                     </button>
                 ` : ''}
             </div>
 
-            <div class="form-grid" style="margin-bottom: 18px;">
-                <div class="stat-card" style="padding: 16px;">
+            <div class="dossier-info-grid">
+                <div class="stat-card dossier-info-card">
                     <div class="stat-title">Dados de Contato</div>
-                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-                        <div class="dossier-info-row"><strong>WhatsApp:</strong> ${whatsappHtml}</div>
-                        <div class="dossier-info-row"><strong>E-mail:</strong> ${emailHtml}</div>
-                        <div class="dossier-info-row"><strong>Gênero:</strong> ${UI.escapeHtml(aluno.genero || 'Não informado')}</div>
-                        <div class="dossier-info-row"><strong>Nascimento:</strong> ${UI.formatDate(aluno.data_nascimento)}</div>
+                    <div class="dossier-info-list">
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">WhatsApp:</span>
+                            <div class="dossier-info-value">${whatsappHtml}</div>
+                        </div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">E-mail:</span>
+                            <div class="dossier-info-value">${emailHtml}</div>
+                        </div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">Gênero:</span>
+                            <div class="dossier-info-value">${generoHtml}</div>
+                        </div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">Nascimento:</span>
+                            <div class="dossier-info-value">${nascimentoHtml}</div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="stat-card" style="padding: 16px;">
+                <div class="stat-card dossier-info-card">
                     <div class="stat-title">Ficha Médica &amp; Emergência</div>
-                    <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px;">
-                        <div class="dossier-info-row"><strong>Tipo Sanguíneo:</strong> <span style="font-weight: 700; color: #ef4444;">${UI.escapeHtml(aluno.tipo_sanguineo || 'Não registrado')}</span></div>
-                        <div class="dossier-info-row"><strong>Emergência:</strong> ${UI.escapeHtml(aluno.contato_emergencia_nome || '-')} (${UI.escapeHtml(aluno.contato_emergencia_fone || '-')})</div>
-                        <div class="dossier-info-row"><strong>Histórico / Restrições:</strong></div>
-                        <div style="background: rgba(0,0,0,0.25); padding: 8px 12px; border-radius: 6px; font-size: 12px; color: var(--text-secondary); word-break: break-word;">
-                            ${UI.escapeHtml(aluno.observacoes_medicas || 'Nenhuma restrição médica ou lesão reportada.')}
+                    <div class="dossier-info-list">
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">Tipo Sanguíneo:</span>
+                            <div class="dossier-info-value">${tipoSanguineoHtml}</div>
+                        </div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">Emergência:</span>
+                            <div class="dossier-info-value">${emergenciaHtml}</div>
+                        </div>
+                        <div class="dossier-info-row dossier-info-row-block">
+                            <span class="dossier-info-label">Histórico / Restrições:</span>
+                            <div class="dossier-medical-notes">
+                                ${UI.escapeHtml(aluno.observacoes_medicas || 'Nenhuma restrição médica ou lesão reportada.')}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             ${isMenor ? `
-                <div class="stat-card" style="padding: 16px; border-color: rgba(245, 158, 11, 0.4); margin-bottom: 12px;">
+                <div class="stat-card dossier-info-card" style="border-color: rgba(245, 158, 11, 0.4); margin-bottom: 12px;">
                     <div class="stat-title" style="color: var(--accent);">Responsável Legal (Obrigatório p/ Menor de Idade)</div>
                     <div class="dossier-resp-grid">
-                        <div class="dossier-info-row"><strong>Nome:</strong> ${UI.escapeHtml(aluno.responsavel_nome || '-')}</div>
-                        <div class="dossier-info-row"><strong>CPF:</strong> <span style="white-space: nowrap;">${UI.escapeHtml(aluno.responsavel_cpf || 'Não informado')}</span></div>
-                        <div class="dossier-info-row"><strong>Telefone:</strong> ${UI.escapeHtml(aluno.responsavel_telefone || '-')}</div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">Nome:</span>
+                            <span class="dossier-info-value">${aluno.responsavel_nome ? UI.escapeHtml(aluno.responsavel_nome) : '<span class="dossier-empty-value">—</span>'}</span>
+                        </div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">CPF:</span>
+                            <span class="dossier-info-value" style="white-space: nowrap;">${aluno.responsavel_cpf ? UI.escapeHtml(aluno.responsavel_cpf) : '<span class="dossier-empty-value">Não informado</span>'}</span>
+                        </div>
+                        <div class="dossier-info-row">
+                            <span class="dossier-info-label">Telefone:</span>
+                            <span class="dossier-info-value">${aluno.responsavel_telefone ? UI.escapeHtml(aluno.responsavel_telefone) : '<span class="dossier-empty-value">—</span>'}</span>
+                        </div>
                     </div>
                 </div>
             ` : ''}
@@ -496,15 +787,15 @@ const AlunoDetalhesModule = {
             contractActionsHtml = `
                 <div class="dossier-actions-row">
                     <button class="btn btn-secondary btn-sm" onclick="AlunoDetalhesModule.openModalTrocarPlano(${safeMatId}, ${safePlanoId}, decodeURIComponent('${encodedPlanoNome}'), ${Number(matricula.valor_acordado) || 0})">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
                         <span>Trocar Plano</span>
                     </button>
                     <button class="btn btn-secondary btn-sm" style="color: #f59e0b; border-color: rgba(245, 158, 11, 0.3);" onclick="AlunoDetalhesModule.openModalTrancarMatricula(${safeMatId})">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><rect width="4" height="8" x="9" y="8" rx="1"/><rect width="4" height="8" x="15" y="8" rx="1"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><rect width="4" height="8" x="9" y="8" rx="1"/><rect width="4" height="8" x="15" y="8" rx="1"/></svg>
                         <span>Trancar Matrícula</span>
                     </button>
                     <button class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="AlunoDetalhesModule.openModalCancelarMatricula(${safeMatId})">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                         <span>Cancelar Contrato</span>
                     </button>
                 </div>
@@ -520,7 +811,7 @@ const AlunoDetalhesModule = {
             contractActionsHtml = `
                 <div class="dossier-actions-row">
                     <button class="btn btn-success btn-sm" onclick="AlunoDetalhesModule.openModalDestrancar(${safeMatId})">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         <span>Destrancar / Reativar</span>
                     </button>
                     <button class="btn btn-secondary btn-sm" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="AlunoDetalhesModule.openModalCancelarMatricula(${safeMatId})">
@@ -537,7 +828,7 @@ const AlunoDetalhesModule = {
             contractActionsHtml = `
                 <div class="dossier-actions-row" style="justify-content: flex-end;">
                     <button class="btn btn-primary btn-sm" onclick="AlunoDetalhesModule.openModalNovaMatricula(${safeAlunoId})">
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
                         <span>Contratar Novo Plano</span>
                     </button>
                 </div>
@@ -826,12 +1117,26 @@ const AlunoDetalhesModule = {
             <div class="conquistas-prof-section">
                 <div class="conquistas-prof-head">
                     <div>
-                        <h4>🥊 Conquistas de Luta &amp; Honrarias (Professor)</h4>
+                        <h4 style="display: inline-flex; align-items: center; gap: 8px;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fbbf24" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                                <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                                <path d="M4 22h16" />
+                                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                            </svg>
+                            <span>Conquistas de Luta &amp; Honrarias (Professor)</span>
+                        </h4>
                         <p>Prêmios de cartel, sequências de vitórias e feitos concedidos manualmente ao atleta (exibidos no Painel do Aluno).</p>
                     </div>
                     ${canGrantConquista ? `
-                        <button type="button" class="btn btn-secondary btn-sm" style="border-color: rgba(245, 158, 11, 0.45); color: #fbbf24;" onclick="AlunoDetalhesModule.openModalConquistaProfessor(${safeAlunoId})">
-                            + Adicionar Conquista
+                        <button type="button" class="dossier-action-btn dossier-action-amber" onclick="AlunoDetalhesModule.openModalConquistaProfessor(${safeAlunoId})">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                <path d="M5 12h14" />
+                                <path d="M12 5v14" />
+                            </svg>
+                            <span>Adicionar Conquista</span>
                         </button>
                     ` : ''}
                 </div>
