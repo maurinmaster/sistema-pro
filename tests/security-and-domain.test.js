@@ -14,6 +14,9 @@ const {
     validateMinorGuardian,
     evaluateCheckinEligibility,
     classifyPlanTransition,
+    getCurrentDueDay,
+    normalizeDueDay,
+    parseDueDay,
     computeNextDueDate,
     hasValidImageSignature
 } = require('../services/domainRules');
@@ -87,6 +90,63 @@ test('Regras de Domínio: classifyPlanTransition e computeNextDueDate', () => {
     const nextMonth = computeNextDueDate(10, refDate, 'next_month_if_past');
     assert.equal(nextMonth.competencia, '2026-10');
     assert.equal(nextMonth.dataVencimento, '2026-11-10');
+});
+
+test('Regras de Domínio: dia de vencimento 1..31 e ajuste seguro em meses curtos', () => {
+    assert.equal(parseDueDay('1').valid, true);
+    assert.equal(parseDueDay('1').value, 1);
+    assert.equal(parseDueDay('27').value, 27);
+    assert.equal(parseDueDay(31).value, 31);
+
+    const refHoje = new Date('2026-11-27T12:00:00Z');
+    const currentFromEmpty = parseDueDay('', refHoje);
+    assert.equal(currentFromEmpty.valid, true);
+    assert.equal(currentFromEmpty.value, 27);
+    assert.equal(getCurrentDueDay(refHoje), 27);
+    assert.equal(normalizeDueDay(undefined, 27), 27);
+
+    assert.equal(parseDueDay(0).valid, false);
+    assert.equal(parseDueDay(32).valid, false);
+    assert.equal(parseDueDay(-5).valid, false);
+    assert.equal(parseDueDay('abc').valid, false);
+    assert.equal(parseDueDay('10.5').valid, false);
+
+    // Suporte completo até dia 31 com clamping em meses de 28/29/30 dias
+    assert.deepEqual(computeNextDueDate(31, new Date('2026-01-15T12:00:00Z'), 'keep_current_month'), {
+        competencia: '2026-01',
+        dataVencimento: '2026-01-31'
+    });
+    assert.deepEqual(computeNextDueDate(31, new Date('2026-04-10T12:00:00Z'), 'keep_current_month'), {
+        competencia: '2026-04',
+        dataVencimento: '2026-04-30'
+    });
+    assert.deepEqual(computeNextDueDate(31, new Date('2026-02-10T12:00:00Z'), 'keep_current_month'), {
+        competencia: '2026-02',
+        dataVencimento: '2026-02-28'
+    });
+    assert.deepEqual(computeNextDueDate(31, new Date('2028-02-10T12:00:00Z'), 'keep_current_month'), {
+        competencia: '2028-02',
+        dataVencimento: '2028-02-29'
+    });
+
+    // Mesmo dia do vencimento no mês atual não empurra para o próximo mês
+    assert.deepEqual(computeNextDueDate(31, new Date('2026-01-31T12:00:00Z'), 'next_month_if_past'), {
+        competencia: '2026-01',
+        dataVencimento: '2026-01-31'
+    });
+    // Dia passado avançando para mês curto (Janeiro dia 30 -> vencimento dia 29 em Fevereiro -> 28/02)
+    assert.deepEqual(computeNextDueDate(29, new Date('2026-01-30T12:00:00Z'), 'next_month_if_past'), {
+        competencia: '2026-01',
+        dataVencimento: '2026-02-28'
+    });
+    // Default quando diaVencimento omitido = dia atual da referência
+    assert.deepEqual(computeNextDueDate(undefined, new Date('2026-11-27T12:00:00Z'), 'keep_current_month'), {
+        competencia: '2026-11',
+        dataVencimento: '2026-11-27'
+    });
+
+    const uiDay = UI.getCurrentDayOfMonth(new Date('2026-11-27T12:00:00Z'));
+    assert.equal(uiDay, 27);
 });
 
 // ============================================================================

@@ -831,6 +831,7 @@ const AlunosModule = {
         const chkWa = document.getElementById('aluno-receber-whatsapp');
         if (chkWa) chkWa.checked = true;
         this.updateGraduacaoSelect('');
+        UI.populateDueDaySelect(document.getElementById('aluno-vencimento'), UI.getCurrentDayOfMonth());
         UI.openModal('modal-aluno');
     },
 
@@ -969,7 +970,7 @@ const AlunosModule = {
             modalidade_id: document.getElementById('aluno-modalidade-id')?.value || null,
             graduacao_nivel_id: document.getElementById('aluno-graduacao-id')?.value || null,
             plano_id: document.getElementById('aluno-plano-id')?.value || null,
-            dia_vencimento: parseInt(document.getElementById('aluno-vencimento')?.value || '10', 10)
+            dia_vencimento: parseInt(document.getElementById('aluno-vencimento')?.value || String(UI.getCurrentDayOfMonth()), 10)
         };
 
         try {

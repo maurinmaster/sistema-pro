@@ -203,6 +203,51 @@ const UI = {
         return d.toLocaleString('pt-BR', { timeZone: 'America/Bahia' });
     },
 
+    // Dia atual do mês (1..31) no fuso America/Bahia
+    getCurrentDayOfMonth(referenceDate = new Date()) {
+        const ref = referenceDate instanceof Date && !isNaN(referenceDate.getTime())
+            ? referenceDate
+            : new Date();
+        try {
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Bahia',
+                day: '2-digit'
+            }).formatToParts(ref);
+            const day = Number(parts.find(p => p.type === 'day')?.value);
+            if (Number.isInteger(day) && day >= 1 && day <= 31) {
+                return day;
+            }
+        } catch {
+            // Fallback local
+        }
+        return ref.getDate();
+    },
+
+    // Popula select de dia de vencimento com todos os dias do calendário (1..31) e pré-seleciona o dia indicado ou o dia atual
+    populateDueDaySelect(selectEl, selectedDay = null) {
+        if (!selectEl) return;
+        const hoje = this.getCurrentDayOfMonth();
+        const parsedSelected = selectedDay !== null && selectedDay !== undefined && String(selectedDay).trim() !== ''
+            ? parseInt(String(selectedDay), 10)
+            : NaN;
+        const targetDay = Number.isInteger(parsedSelected) && parsedSelected >= 1 && parsedSelected <= 31
+            ? parsedSelected
+            : hoje;
+
+        selectEl.innerHTML = '';
+        for (let d = 1; d <= 31; d += 1) {
+            const opt = document.createElement('option');
+            opt.value = String(d);
+            const labelNum = String(d).padStart(2, '0');
+            opt.textContent = d === hoje ? `Dia ${labelNum} (Hoje)` : `Dia ${labelNum}`;
+            if (d === targetDay) {
+                opt.selected = true;
+            }
+            selectEl.appendChild(opt);
+        }
+        selectEl.value = String(targetDay);
+    },
+
     // Cálculo exato de idade
     calculateAge(birthDateString) {
         if (!birthDateString) return null;

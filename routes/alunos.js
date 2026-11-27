@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
-const { validateMinorGuardian, hasValidImageSignature } = require('../services/domainRules');
+const { validateMinorGuardian, hasValidImageSignature, parseDueDay } = require('../services/domainRules');
 const { persistUploadedFile, removeUploadedFile, detectImageMimeFromFile } = require('../services/uploadStorage');
 const MatriculaService = require('../services/matriculaService');
 const emailService = require('../services/emailService');
@@ -849,8 +849,16 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
             modalidade_id,
             graduacao_nivel_id,
             plano_id,
-            dia_vencimento = 10
+            dia_vencimento
         } = req.body;
+
+        const parsedDueDay = parseDueDay(dia_vencimento);
+        if (plano_id && !parsedDueDay.valid) {
+            return res.status(400).json({
+                success: false,
+                error: parsedDueDay.error
+            });
+        }
 
         if (!nome_completo || !data_nascimento || !telefone_whatsapp) {
             return res.status(400).json({
@@ -983,7 +991,7 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
             await MatriculaService.createEnrollmentWithInvoice(conn, {
                 alunoId,
                 planoId: plano_id,
-                diaVencimento: dia_vencimento,
+                diaVencimento: parsedDueDay.value,
                 dueDateMode: 'next_month_if_past'
             });
         }

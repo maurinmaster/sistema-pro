@@ -84,31 +84,117 @@ function classifyPlanTransition(valorPlanoAtual, valorPlanoNovo, novoValorAcorda
 }
 
 /**
- * Calcula a competência (YYYY-MM) e a data de vencimento (YYYY-MM-DD) para geração de fatura
+ * Extrai ano, mês (0..11) e dia (1..31) no fuso horário America/Bahia (-03:00)
  */
-function computeNextDueDate(diaVencimento = 10, referenceDate = new Date(), mode = 'next_month_if_past') {
-    const dia = Math.min(Math.max(parseInt(String(diaVencimento), 10) || 10, 1), 28);
-    const competencia = referenceDate.toISOString().slice(0, 7);
-    const vencimento = new Date(referenceDate.getTime());
-    vencimento.setDate(dia);
+function getBahiaDateParts(referenceDate = new Date()) {
+    const ref = referenceDate instanceof Date && !isNaN(referenceDate.getTime())
+        ? referenceDate
+        : new Date();
+    try {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'America/Bahia',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).formatToParts(ref);
+        const year = Number(parts.find(p => p.type === 'year')?.value);
+        const month = Number(parts.find(p => p.type === 'month')?.value) - 1;
+        const day = Number(parts.find(p => p.type === 'day')?.value);
+        if (Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day) && day >= 1 && day <= 31) {
+            return { year, month, day };
+        }
+    } catch {
+        // Fallback para ambiente sem suporte ao timezone IANA
+    }
+    return {
+        year: ref.getFullYear(),
+        month: ref.getMonth(),
+        day: ref.getDate()
+    };
+}
 
-    if (vencimento < referenceDate) {
+/**
+ * Retorna o dia atual do mês (1..31) no fuso horário America/Bahia
+ */
+function getCurrentDueDay(referenceDate = new Date()) {
+    return getBahiaDateParts(referenceDate).day;
+}
+
+/**
+ * Normaliza o dia de vencimento para o intervalo válido de calendário (1..31)
+ */
+function normalizeDueDay(diaVencimento, fallbackDay = getCurrentDueDay()) {
+    const safeFallback = Math.min(Math.max(parseInt(String(fallbackDay), 10) || 1, 1), 31);
+    if (diaVencimento === undefined || diaVencimento === null || String(diaVencimento).trim() === '') {
+        return safeFallback;
+    }
+    const parsed = parseInt(String(diaVencimento).trim(), 10);
+    if (!Number.isInteger(parsed)) {
+        return safeFallback;
+    }
+    return Math.min(Math.max(parsed, 1), 31);
+}
+
+/**
+ * Valida explicitamente o dia de vencimento recebido na API (1..31),
+ * assumindo o dia atual quando omitido ou vazio.
+ */
+function parseDueDay(rawValue, referenceDate = new Date()) {
+    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === '') {
+        return { valid: true, value: getCurrentDueDay(referenceDate) };
+    }
+    const trimmed = String(rawValue).trim();
+    if (!/^\d{1,2}$/.test(trimmed)) {
+        return { valid: false, error: 'O dia de vencimento deve ser um número inteiro entre 1 e 31.' };
+    }
+    const num = Number(trimmed);
+    if (!Number.isInteger(num) || num < 1 || num > 31) {
+        return { valid: false, error: 'O dia de vencimento deve ser um número inteiro entre 1 e 31.' };
+    }
+    return { valid: true, value: num };
+}
+
+function lastDayOfMonth(year, monthIndexZeroBased) {
+    return new Date(Date.UTC(year, monthIndexZeroBased + 1, 0)).getUTCDate();
+}
+
+function formatYMD(year, monthIndexZeroBased, day) {
+    return `${year}-${String(monthIndexZeroBased + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+/**
+ * Calcula a competência (YYYY-MM) e a data de vencimento (YYYY-MM-DD) para geração de fatura,
+ * suportando dias 1..31 com ajuste automático para o último dia real em meses mais curtos.
+ */
+function computeNextDueDate(diaVencimento, referenceDate = new Date(), mode = 'next_month_if_past') {
+    const { year: refYear, month: refMonth, day: refDay } = getBahiaDateParts(referenceDate);
+    const dia = normalizeDueDay(diaVencimento, refDay);
+    const competencia = `${refYear}-${String(refMonth + 1).padStart(2, '0')}`;
+    const effectiveDayThisMonth = Math.min(dia, lastDayOfMonth(refYear, refMonth));
+
+    if (effectiveDayThisMonth < refDay) {
         if (mode === 'plus_5_days_if_past') {
-            const plus5 = new Date(referenceDate.getTime());
-            plus5.setDate(referenceDate.getDate() + 5);
+            const plus5 = new Date(Date.UTC(refYear, refMonth, refDay + 5));
             return {
                 competencia,
-                dataVencimento: plus5.toISOString().slice(0, 10)
+                dataVencimento: formatYMD(plus5.getUTCFullYear(), plus5.getUTCMonth(), plus5.getUTCDate())
             };
         }
         if (mode === 'next_month_if_past') {
-            vencimento.setMonth(vencimento.getMonth() + 1);
+            const nextMonthRef = new Date(Date.UTC(refYear, refMonth + 1, 1));
+            const nextYear = nextMonthRef.getUTCFullYear();
+            const nextMonth = nextMonthRef.getUTCMonth();
+            const nextDay = Math.min(dia, lastDayOfMonth(nextYear, nextMonth));
+            return {
+                competencia,
+                dataVencimento: formatYMD(nextYear, nextMonth, nextDay)
+            };
         }
     }
 
     return {
         competencia,
-        dataVencimento: vencimento.toISOString().slice(0, 10)
+        dataVencimento: formatYMD(refYear, refMonth, effectiveDayThisMonth)
     };
 }
 
@@ -200,6 +286,9 @@ module.exports = {
     validateMinorGuardian,
     evaluateCheckinEligibility,
     classifyPlanTransition,
+    getCurrentDueDay,
+    normalizeDueDay,
+    parseDueDay,
     computeNextDueDate,
     calculateCompetenceInvoiceAmount,
     hasValidImageSignature

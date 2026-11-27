@@ -3,6 +3,7 @@ const router = express.Router();
 const pool = require('../db/connection');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 const MatriculaService = require('../services/matriculaService');
+const { parseDueDay } = require('../services/domainRules');
 const notificationConfigService = require('../services/notificationConfigService');
 
 async function notifyMatriculaStatus(matriculaId, status, detalhe) {
@@ -28,17 +29,23 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
     const conn = await pool.getConnection();
     try {
         await conn.beginTransaction();
-        const { aluno_id, plano_id, dia_vencimento = 10, valor_acordado, desconto_motivo } = req.body;
+        const { aluno_id, plano_id, dia_vencimento, valor_acordado, desconto_motivo } = req.body;
 
         if (!aluno_id || !plano_id) {
             await conn.rollback();
             return res.status(400).json({ success: false, error: 'Aluno e Plano são obrigatórios.' });
         }
 
+        const parsedDueDay = parseDueDay(dia_vencimento);
+        if (!parsedDueDay.valid) {
+            await conn.rollback();
+            return res.status(400).json({ success: false, error: parsedDueDay.error });
+        }
+
         await MatriculaService.createEnrollmentWithInvoice(conn, {
             alunoId: aluno_id,
             planoId: plano_id,
-            diaVencimento: dia_vencimento,
+            diaVencimento: parsedDueDay.value,
             valorAcordado: valor_acordado,
             descontoMotivo: desconto_motivo,
             dueDateMode: 'keep_current_month'
@@ -48,9 +55,9 @@ router.post('/', authenticateToken, authorizeRoles('admin', 'recepcao'), async (
 
         notificationConfigService.dispatchEvent('matricula_confirmada', {
             alunoId: Number(aluno_id),
-            variables: { dia_vencimento: String(dia_vencimento) },
+            variables: { dia_vencimento: String(parsedDueDay.value) },
             detalhes: [
-                { label: 'Dia de Vencimento', value: `Todo dia ${dia_vencimento}` }
+                { label: 'Dia de Vencimento', value: `Todo dia ${parsedDueDay.value}` }
             ]
         });
 
@@ -184,11 +191,21 @@ router.post('/:id/trocar-plano', authenticateToken, authorizeRoles('admin', 'rec
             return res.status(400).json({ success: false, error: 'O novo plano é obrigatório.' });
         }
 
+        let novoDiaValidado;
+        if (novo_dia_vencimento !== undefined && novo_dia_vencimento !== null && String(novo_dia_vencimento).trim() !== '') {
+            const parsedNovoDia = parseDueDay(novo_dia_vencimento);
+            if (!parsedNovoDia.valid) {
+                await conn.rollback();
+                return res.status(400).json({ success: false, error: parsedNovoDia.error });
+            }
+            novoDiaValidado = parsedNovoDia.value;
+        }
+
         const result = await MatriculaService.switchEnrollmentPlan(conn, {
             matriculaId: id,
             novoPlanoId: novo_plano_id,
             novoValorAcordado: novo_valor_acordado,
-            novoDiaVencimento: novo_dia_vencimento,
+            novoDiaVencimento: novoDiaValidado,
             motivo
         });
 

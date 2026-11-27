@@ -1127,7 +1127,10 @@ const AlunoDetalhesModule = {
                 .join('');
 
         document.getElementById('troca-novo-valor').value = '';
-        document.getElementById('troca-novo-vencimento').value = this.currentMatricula ? this.currentMatricula.dia_vencimento : '10';
+        const diaPadrao = (this.currentMatricula && this.currentMatricula.dia_vencimento)
+            ? Number(this.currentMatricula.dia_vencimento)
+            : UI.getCurrentDayOfMonth();
+        UI.populateDueDaySelect(document.getElementById('troca-novo-vencimento'), diaPadrao);
         document.getElementById('troca-motivo').value = '';
         document.getElementById('troca-badge-tipo').style.display = 'none';
 
@@ -1170,11 +1173,16 @@ const AlunoDetalhesModule = {
         const matriculaId = document.getElementById('troca-matricula-id').value;
         const novo_plano_id = document.getElementById('troca-novo-plano-id').value;
         const novo_valor_acordado = parseFloat(document.getElementById('troca-novo-valor').value);
-        const novo_dia_vencimento = document.getElementById('troca-novo-vencimento').value;
+        const novo_dia_vencimento = parseInt(document.getElementById('troca-novo-vencimento').value, 10);
         const motivo = document.getElementById('troca-motivo').value.trim();
 
         if (!novo_plano_id || isNaN(novo_valor_acordado) || novo_valor_acordado <= 0) {
             UI.showToast('Selecione o novo plano e informe um valor mensal válido.', 'warning');
+            return;
+        }
+
+        if (!Number.isInteger(novo_dia_vencimento) || novo_dia_vencimento < 1 || novo_dia_vencimento > 31) {
+            UI.showToast('Selecione um dia de vencimento válido entre 1 e 31.', 'warning');
             return;
         }
 
@@ -1259,7 +1267,7 @@ const AlunoDetalhesModule = {
             `).join('');
 
         document.getElementById('nova-mat-valor').value = '';
-        document.getElementById('nova-mat-vencimento').value = '10';
+        UI.populateDueDaySelect(document.getElementById('nova-mat-vencimento'), UI.getCurrentDayOfMonth());
         document.getElementById('nova-mat-desconto').value = '';
         UI.openModal('modal-nova-matricula-aluno');
     },
@@ -1269,11 +1277,16 @@ const AlunoDetalhesModule = {
         const aluno_id = document.getElementById('nova-mat-aluno-id').value;
         const plano_id = document.getElementById('nova-mat-plano-id').value;
         const valor_acordado = parseFloat(document.getElementById('nova-mat-valor').value);
-        const dia_vencimento = document.getElementById('nova-mat-vencimento').value;
+        const dia_vencimento = parseInt(document.getElementById('nova-mat-vencimento').value, 10);
         const desconto_motivo = document.getElementById('nova-mat-desconto').value.trim();
 
         if (!plano_id || isNaN(valor_acordado) || valor_acordado <= 0) {
             UI.showToast('Selecione o plano e confirme o valor mensal.', 'warning');
+            return;
+        }
+
+        if (!Number.isInteger(dia_vencimento) || dia_vencimento < 1 || dia_vencimento > 31) {
+            UI.showToast('Selecione um dia de vencimento válido entre 1 e 31.', 'warning');
             return;
         }
 

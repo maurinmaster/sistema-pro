@@ -1,5 +1,6 @@
 const {
     classifyPlanTransition,
+    normalizeDueDay,
     computeNextDueDate,
     calculateCompetenceInvoiceAmount
 } = require('./domainRules');
@@ -12,8 +13,9 @@ const MatriculaService = {
     /**
      * Garante a existência de uma fatura para a competência atual (evitando duplicidade)
      */
-    async ensureCurrentMonthInvoice(conn, { matriculaId, alunoId, valor, diaVencimento = 10, dueDateMode = 'keep_current_month' }) {
-        const { competencia, dataVencimento } = computeNextDueDate(diaVencimento, new Date(), dueDateMode);
+    async ensureCurrentMonthInvoice(conn, { matriculaId, alunoId, valor, diaVencimento, dueDateMode = 'keep_current_month' }) {
+        const diaNormalizado = normalizeDueDay(diaVencimento);
+        const { competencia, dataVencimento } = computeNextDueDate(diaNormalizado, new Date(), dueDateMode);
 
         const [fatExist] = await conn.query(
             `SELECT id, matricula_id, status, valor_original, valor_pago
@@ -41,7 +43,7 @@ const MatriculaService = {
         const {
             alunoId,
             planoId,
-            diaVencimento = 10,
+            diaVencimento,
             valorAcordado,
             descontoMotivo,
             dueDateMode = 'keep_current_month'
@@ -84,7 +86,7 @@ const MatriculaService = {
             valorFinal = planos.length > 0 ? Number(planos[0].valor_mensal) : 0;
         }
 
-        const diaVenc = parseInt(String(diaVencimento), 10) || 10;
+        const diaVenc = normalizeDueDay(diaVencimento);
 
         const [matResult] = await conn.query(`
             INSERT INTO matriculas (aluno_id, plano_id, data_inicio, dia_vencimento, valor_acordado, desconto_motivo, status)
@@ -338,7 +340,8 @@ const MatriculaService = {
             novoValorAcordado
         );
 
-        const diaVenc = novoDiaVencimento ? parseInt(novoDiaVencimento, 10) : matAtual.dia_vencimento;
+        const hasNovoDia = novoDiaVencimento !== undefined && novoDiaVencimento !== null && String(novoDiaVencimento).trim() !== '';
+        const diaVenc = hasNovoDia ? normalizeDueDay(novoDiaVencimento) : normalizeDueDay(matAtual.dia_vencimento);
 
         const motivoTransicao = `Migração para plano ${novoPlano.nome} (${tipoTransicao.toUpperCase()})${motivo ? ' - ' + motivo.trim() : ''}`;
         await conn.query(`
@@ -358,7 +361,7 @@ const MatriculaService = {
 
         await conn.query(`UPDATE alunos SET status = 'ativo' WHERE id = ?`, [matAtual.aluno_id]);
 
-        const anoMes = new Date().toISOString().slice(0, 7);
+        const { competencia: anoMes } = computeNextDueDate(diaVenc, new Date(), 'keep_current_month');
         const [fatPendente] = await conn.query(`
             SELECT id
             FROM faturas 
